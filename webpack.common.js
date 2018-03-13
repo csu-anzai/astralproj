@@ -3,5 +3,8 @@ module.exports = {
 	output: {
 		filename: "[name].bundle.js",
 		path: __dirname + "/build"
+	},
+	resolve: {
+		extensions: [".js", ".jsx"]
 	}
 }
