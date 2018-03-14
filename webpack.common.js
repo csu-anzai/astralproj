@@ -8,6 +8,7 @@ module.exports = {
 		chunkFilename: '[name].[id].[hash].chunk.js',
 		path: __dirname
 	},
+	target: "node",
 	resolve: {
 		extensions: [".js", ".jsx"]
 	}
