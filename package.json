@@ -1,10 +1,10 @@
 {
   "name": "astralinside",
   "scripts": {
-    "build": "npm run clean && npm run copy && webpack --config webpack.prod.js",
+    "build": "npm run clean && npm run copy && screen -dmS build webpack --config webpack.prod.js --progress --watch && screen -dmS back node build/back/back.bundle.js",
     "copy": "cp src/client/static/* build/",
     "clean": "rm -rf build && mkdir build",
-    "start": "npm run clean && npm run copy && webpack-dev-server --open --config webpack.dev.js"
+    "start": "npm run clean && npm run copy && screen -dmS front webpack-dev-server --open --progress --config webpack.dev.js && screen -dmS back node src/server/index.js && screen -ls"
   },
   "license": "ISC",
   "dependencies": {
