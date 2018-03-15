@@ -2,12 +2,12 @@ const merge = require('webpack-merge');
 const common = require('./webpack.common.js');
 const webpack = require('webpack');
 module.exports = merge(common, {
-	entry: {
-		devserver: 'webpack-dev-server/client?http://0.0.0.0:8080/',
-    webpackhot: 'webpack/hot/only-dev-server',
-    reacthot:'react-hot-loader/patch',
-    'front/front': __dirname + "/src/client/index.jsx"
-	},
+	entry: [
+		'webpack-dev-server/client?http://0.0.0.0:8080/',
+    'webpack/hot/only-dev-server',
+    'react-hot-loader/patch',
+    __dirname + "/src/client/index.jsx"
+	],
 	devtool: 'inline-source-map',
 	devServer: {
 		contentBase: __dirname + "/build/",
