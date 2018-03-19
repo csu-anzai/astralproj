@@ -11,4 +11,8 @@ BEGIN
 		  END LOOP;
 		END;
 	END IF;
+	IF NEW.user_connections_count > 0
+		THEN SET NEW.user_online = 1;
+		ELSE SET NEW.user_online = 0;
+	END IF;
 END

@@ -68,6 +68,22 @@ CREATE TABLE `connections` (
   `connection_end` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
+CREATE TRIGGER `connections_after_insert` AFTER INSERT ON `connections` FOR EACH ROW BEGIN
+	IF NEW.user_id IS NOT NULL
+    	THEN UPDATE users SET user_connections_count = (SELECT COUNT(*) FROM connections WHERE user_id = NEW.user_id AND connection_end = 0) WHERE user_id = NEW.user_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `connections_after_update` AFTER UPDATE ON `connections` FOR EACH ROW BEGIN
+	IF NEW.user_id IS NOT NULL
+    	THEN UPDATE users SET user_connections_count = (SELECT COUNT(*) FROM connections WHERE user_id = NEW.user_id AND connection_end = 0) WHERE user_id = NEW.user_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
 CREATE TRIGGER `connections_before_insert` BEFORE INSERT ON `connections` FOR EACH ROW BEGIN
 	SET NEW.connection_date_create = NOW();
     IF NEW.connection_end 
@@ -229,9 +245,10 @@ CREATE TABLE `users` (
   `user_date_update` int(19) DEFAULT NULL,
   `user_creator_id` int(11) DEFAULT NULL,
   `type_id` int(11) DEFAULT NULL,
-  `user_auth` tinyint(4) NOT NULL DEFAULT '0',
-  `user_online` tinyint(4) NOT NULL DEFAULT '0',
-  `user_hash` varchar(32) COLLATE utf8_bin NOT NULL
+  `user_auth` tinyint(1) NOT NULL DEFAULT '0',
+  `user_online` tinyint(1) NOT NULL DEFAULT '0',
+  `user_hash` varchar(32) COLLATE utf8_bin NOT NULL,
+  `user_connections_count` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
@@ -246,6 +263,10 @@ CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
 		      END IF;
 		  END LOOP;
 		END;
+	END IF;
+	IF NEW.user_connections_count > 0
+		THEN SET NEW.user_online = 1;
+		ELSE SET NEW.user_online = 0;
 	END IF;
 END
 $$
@@ -263,6 +284,10 @@ CREATE TRIGGER `users_before_update` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
 		      END IF;
 		  END LOOP;
 		END;
+	END IF;
+	IF NEW.user_connections_count > 0
+		THEN SET NEW.user_online = 1;
+		ELSE SET NEW.user_online = 0;
 	END IF;
 END
 $$
