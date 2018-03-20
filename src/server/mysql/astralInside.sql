@@ -242,13 +242,13 @@ CREATE TABLE `users` (
   `user_email` varchar(512) COLLATE utf8_bin NOT NULL,
   `user_password` varchar(128) COLLATE utf8_bin NOT NULL,
   `user_date_create` varchar(19) COLLATE utf8_bin NOT NULL,
-  `user_date_update` int(19) DEFAULT NULL,
+  `user_date_update` varchar(19) COLLATE utf8_bin DEFAULT NULL,
   `user_creator_id` int(11) DEFAULT NULL,
   `type_id` int(11) DEFAULT NULL,
   `user_auth` tinyint(1) NOT NULL DEFAULT '0',
   `user_online` tinyint(1) NOT NULL DEFAULT '0',
-  `user_hash` varchar(32) COLLATE utf8_bin NOT NULL,
-  `user_connections_count` int(11) NOT NULL
+  `user_hash` varchar(32) COLLATE utf8_bin DEFAULT NULL,
+  `user_connections_count` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
