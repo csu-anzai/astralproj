@@ -3,9 +3,6 @@ import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Header from './header';
 import Menu from './menu';
 export default class Main extends React.Component {
-	componentDidUpdate(){
-		console.log(this.props.routing.locationBeforeTransitions);
-	}
 	render(){
 		return <MuiThemeProvider>
 			<div>
