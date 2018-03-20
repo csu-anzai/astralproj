@@ -3,7 +3,7 @@ module.exports = {
 	output: {
 		filename: "bundle.js",
 		chunkFilename: '[id].[hash].chunk.js',
-		path: __dirname
+		path: __dirname + "/build"
 	},
 	resolve: {
 		extensions: [".js", ".jsx"]

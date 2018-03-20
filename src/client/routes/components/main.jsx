@@ -3,11 +3,21 @@ import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Header from './header';
 import Menu from './menu';
 export default class Main extends React.Component {
+	componentDidUpdate(){
+		console.log(this.props.routing.locationBeforeTransitions);
+	}
 	render(){
 		return <MuiThemeProvider>
 			<div>
-				<Menu/>
-				<Header/>
+				{
+					this.props.routing.locationBeforeTransitions == null ||
+					this.props.routing.locationBeforeTransitions.hasOwnProperty("pathname") &&
+					this.props.routing.locationBeforeTransitions.pathname != "/login" &&
+					<div> 
+						<Menu/>
+						<Header/>
+					</div>
+				}
 				{this.props.childrens}
 			</div>
 		</MuiThemeProvider>

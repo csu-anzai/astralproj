@@ -1,6 +1,6 @@
 const Express = require("express"),
 			Helmet = require("helmet"),
-			parser = require("body-parser");
+			parser = require("body-parser"),
 			err = require("./../err");
 let then = require("./../then");
 module.exports = (env, reducer) => {
