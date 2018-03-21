@@ -4,7 +4,10 @@
     "build": "npm run clean && npm run copy && webpack --config webpack.prod.js --progress && screen -dmS back node src/server/index.js",
     "copy": "cp src/client/static/* build/",
     "clean": "rm -rf build && mkdir build",
-    "start": "npm run clean && npm run copy && screen -dmS front webpack-dev-server --open --progress --config webpack.dev.js && screen -dmS back node src/server/index.js"
+    "start": "npm run clean && npm run copy && screen -dmS front webpack-dev-server --open --progress --config webpack.dev.js && screen -dmS back node src/server/index.js",
+    "startFrontWindows": "npm run clean && npm run copy && webpack-dev-server --open --progress --config webpack.dev.js",
+    "startBackWindows": "node src/server/index.js",
+    "buildWindows": "npm run clean && npm run copy && webpack --config webpack.prod.js --progress"
   },
   "license": "ISC",
   "dependencies": {
