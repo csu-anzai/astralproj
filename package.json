@@ -7,15 +7,9 @@
     "clean": "rm -rf build && mkdir build",
     "cleanWindows": "rd /s /q build",
     "start": "npm run clean && npm run copy && screen -dmS front webpack-dev-server --open --progress --config webpack.dev.js && screen -dmS back node src/server/index.js",
-<<<<<<< HEAD
-    "startFrontWindows": "npm run cleanWindows && npm run copy && webpack-dev-server --open --progress --config webpack.dev.js",
-    "startBackWindows": "node src/server/index.js",
-    "buildWindows": "npm run cleanWindows && npm run copy && webpack --config webpack.prod.js --progress"
-=======
     "startFrontWindows": "npm run cleanWindows & npm run copyWindows && webpack-dev-server --open --progress --config webpack.dev.js",
     "startBackWindows": "node src/server/index.js",
     "buildWindows": "npm run cleanWindows & npm run copyWindows && webpack --config webpack.prod.js --progress"
->>>>>>> db4c30bda238cf6b1c601bd0d40ac0bd6c21eff6
   },
   "license": "ISC",
   "dependencies": {
