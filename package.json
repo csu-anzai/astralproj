@@ -6,7 +6,7 @@
     "clean": "rm -rf build && mkdir build",
     "cleanWindows": "rd /s /q build",
     "start": "npm run clean && npm run copy && screen -dmS front webpack-dev-server --open --progress --config webpack.dev.js && screen -dmS back node src/server/index.js",
-    "startFrontWindows": "npm run cleanWindows && npm run copy && webpack-dev-server --open --progress --config webpack.dev.js",
+    "startFrontWindows": "npm run cleanWindows & npm run copy && webpack-dev-server --open --progress --config webpack.dev.js",
     "startBackWindows": "node src/server/index.js",
     "buildWindows": "npm run cleanWindows && npm run copy && webpack --config webpack.prod.js --progress"
   },
