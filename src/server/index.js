@@ -3,7 +3,8 @@ const env = require('../env.json'),
 			express = require('./express')(env, reducer),
 			io = require('./io')(env, express, reducer),
 			nodemailer = require('./nodemailer')(env),
-			mysql = require('./mysql')(env);
+			mysql = require('./mysql')(env),
+			imap = require('./imap/')(env, reducer);
 reducer.initEvents({
 	io,
 	nodemailer,

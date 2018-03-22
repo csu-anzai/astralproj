@@ -1,6 +1,10 @@
-const mailListener = require("mail-listener");
-module.exports = env => {
-	const imap = new mailListener(env.imap);
+const mailListener = require("mail-listener2");
+module.exports = (env, reducer) => {
+	const imap = new mailListener(Object.assign(env.imap, {
+		attachmentOptions: {
+			directory: __dirname + "/../" + env.imap.attachmentOptions.directory
+		}
+	}));
 	imap.start();
 	imap.on("server:connected", () => {
 		console.log("connect to imap server\n");
@@ -12,7 +16,7 @@ module.exports = env => {
 		console.log("error from imap connection: ", err, "\n");
 	});
 	imap.on("attachment", attachment => {
-		console.log("new file in: ", attachment.path, "/n");
+		console.log("new file in: ", attachment.path, "\n");
 	});
 	imap.on("done", attachment => {
 		console.log("done\n");
