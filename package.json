@@ -18,7 +18,9 @@
     "helmet": "^3.12.0",
     "history": "^4.7.2",
     "immutable": "^3.8.2",
+    "mail-listener2": "^0.3.1",
     "material-ui": "^0.20.0",
+    "mime": "^1.6.0",
     "mysql": "^2.15.0",
     "nodemailer": "^4.6.3",
     "react": "^16.2.0",
@@ -29,8 +31,7 @@
     "redux": "^3.7.2",
     "socket.io": "^2.0.4",
     "socket.io-client": "^2.0.4",
-    "mail-listener2": "^0.3.1",
-    "mime": "^1.6.0"
+    "xlsx": "^0.12.6"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
