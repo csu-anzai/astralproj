@@ -46,7 +46,30 @@ CREATE TABLE `companies` (
   `company_kpp` varchar(9) COLLATE utf8_bin DEFAULT NULL,
   `company_index` varchar(9) COLLATE utf8_bin DEFAULT NULL,
   `company_house` varchar(20) COLLATE utf8_bin DEFAULT NULL,
-  `company_region_type` varchar(50) COLLATE utf8_bin DEFAULT NULL
+  `company_region_type` varchar(50) COLLATE utf8_bin DEFAULT NULL,
+  `company_region_name` varchar(120) COLLATE utf8_bin DEFAULT NULL,
+  `company_area_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_area_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_locality_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_locality_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_street_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_street_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_innfl` varchar(12) COLLATE utf8_bin DEFAULT NULL,
+  `company_person_position_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_person_position_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_name` varchar(120) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_gitfter` varchar(256) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_code` varchar(7) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_house` varchar(20) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_flat` varchar(40) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_region_type` varchar(50) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_region_name` varchar(120) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_area_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_area_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_locality_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_locality_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_street_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_street_name` varchar(60) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
@@ -200,13 +223,89 @@ CREATE TABLE `templates` (
   `template_columns_count` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+INSERT INTO `templates` (`template_id`, `type_id`, `template_columns_count`) VALUES
+(1, 11, 0),
+(2, 12, 0);
+
 CREATE TABLE `template_columns` (
   `template_column_id` int(11) NOT NULL,
   `template_id` int(11) NOT NULL,
   `template_column_letters` varchar(3) COLLATE utf8_bin NOT NULL,
   `template_column_name` varchar(128) COLLATE utf8_bin NOT NULL,
-  `column_id` int(11) DEFAULT NULL
+  `column_id` int(11) DEFAULT NULL,
+  `template_column_duplicate` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+INSERT INTO `template_columns` (`template_column_id`, `template_id`, `template_column_letters`, `template_column_name`, `column_id`, `template_column_duplicate`) VALUES
+(1, 1, 'a', 'OGRNIP', 1, 0),
+(2, 1, 'b', 'DtOGRNIP', 2, 0),
+(3, 1, 'c', 'FamFL', 4, 0),
+(4, 1, 'd', 'NameFL', 3, 0),
+(5, 1, 'e', 'OtchFL', 5, 0),
+(6, 1, 'f', 'Birthday', 6, 0),
+(7, 1, 'g', 'Birthplace', 7, 0),
+(8, 1, 'h', 'INN', 8, 0),
+(9, 1, 'i', 'AdresText', 9, 0),
+(10, 1, 'j', 'NumDok36', 10, 0),
+(11, 1, 'k', 'DtDok37', 11, 0),
+(12, 1, 'l', 'NameOrg', 12, 0),
+(13, 1, 'm', 'KodOrg', 13, 0),
+(14, 1, 'n', 'Telefon', 14, 0),
+(15, 1, 'o', 'EMail', 15, 0),
+(16, 1, 'p', 'КодОКВЭД', 16, 0),
+(17, 1, 'q', 'НаимОКВЭД', 17, 0),
+(18, 2, 'a', 'ОГРН', 1, 0),
+(19, 2, 'b', 'ИНН', 8, 0),
+(22, 2, 'c', 'КПП', 18, 0),
+(23, 2, 'd', 'НаимЮЛПолн', 12, 0),
+(24, 2, 'e', 'Индекс', 19, 0),
+(25, 2, 'f', 'Дом', 20, 0),
+(26, 2, 'g', 'ТипРегион', 21, 0),
+(27, 2, 'h', 'НаимРегион', 22, 0),
+(28, 2, 'i', 'ТипРайон', 23, 0),
+(29, 2, 'j', 'НаимРайон', 24, 0),
+(30, 2, 'k', 'ТипНаселПункт', 25, 0),
+(31, 2, 'l', 'НаимНаселПункт', 26, 0),
+(32, 2, 'm', 'ТипУлица', 27, 0),
+(33, 2, 'n', 'НаимУлица', 28, 0),
+(34, 2, 'o', 'Фамилия', 4, 0),
+(35, 2, 'p', 'Имя', 3, 0),
+(36, 2, 'q', 'Отчество', 5, 0),
+(37, 2, 'r', 'ИННФЛ', 29, 0),
+(38, 2, 's', 'НаимВидДолжн', 30, 0),
+(39, 2, 't', 'НаимДолжн', 31, 0),
+(40, 2, 'u', 'НомТел', 14, 0),
+(41, 2, 'v', 'ДатаРожд', 6, 0),
+(42, 2, 'w', 'МестоРожд', 7, 0),
+(43, 2, 'x', 'НаимДок', 32, 0),
+(44, 2, 'y', 'СерНомДок', 10, 0),
+(45, 2, 'z', 'ДатаДок', 11, 0),
+(46, 2, 'aa', 'ВыдДок', 33, 0),
+(47, 2, 'ab', 'КодВыдДок', 34, 0),
+(48, 2, 'ac', 'Дом133', 35, 0),
+(49, 2, 'ad', 'Кварт', 36, 0),
+(50, 2, 'ae', 'ТипРегион134', 37, 0),
+(51, 2, 'af', 'НаимРегион135', 38, 0),
+(52, 2, 'ag', 'ТипРайон136', 39, 0),
+(53, 2, 'ah', 'НаимРайон137', 40, 0),
+(54, 2, 'ai', 'ТипНаселПункт138', 41, 0),
+(55, 2, 'aj', 'НаимНаселПункт139', 42, 0),
+(56, 2, 'ak', 'ТипУлица140', 43, 0),
+(57, 2, 'al', 'НаимУлица141', 44, 0),
+(58, 2, 'aq', 'КодОКВЭД', 16, 0),
+(59, 2, 'ar', 'НаимОКВЭД', 17, 0),
+(60, 2, 'am', 'СерНомДок158', 10, 1),
+(61, 2, 'an', 'ДатаДок159', 11, 1),
+(62, 2, 'ao', 'ВыдДок160', 33, 1),
+(63, 2, 'ap', 'КодВыдДок161', 34, 1);
+DELIMITER $$
+CREATE TRIGGER `template_column_before_insert` BEFORE INSERT ON `template_columns` FOR EACH ROW BEGIN
+  IF (SELECT COUNT(*) FROM template_columns WHERE column_id = NEW.column_id AND template_id = NEW.template_id) > 0
+      THEN SET NEW.template_column_duplicate = 1;
+    END IF;
+END
+$$
+DELIMITER ;
 CREATE TABLE `template_columns_view` (
 `template_id` int(11)
 ,`template_column_id` int(11)
@@ -218,6 +317,7 @@ CREATE TABLE `template_columns_view` (
 ,`template_column_name` varchar(128)
 ,`type_id` int(11)
 ,`type_name` varchar(128)
+,`template_column_duplicate` tinyint(1)
 );
 
 CREATE TABLE `transactions` (
@@ -332,7 +432,7 @@ $$
 DELIMITER ;
 DROP TABLE IF EXISTS `template_columns_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`template_columns_view`  AS  select `t`.`template_id` AS `template_id`,`tc`.`template_column_id` AS `template_column_id`,`c`.`column_id` AS `column_id`,`c`.`column_name` AS `column_name`,`c`.`column_price` AS `column_price`,`c`.`column_blocked` AS `column_blocked`,`tc`.`template_column_letters` AS `template_column_letters`,`tc`.`template_column_name` AS `template_column_name`,`ts`.`type_id` AS `type_id`,`ts`.`type_name` AS `type_name` from (((`astralinside`.`template_columns` `tc` join `astralinside`.`templates` `t` on((`t`.`template_id` = `tc`.`template_id`))) join `astralinside`.`columns` `c` on((`c`.`column_id` = `tc`.`column_id`))) join `astralinside`.`types` `ts` on((`ts`.`type_id` = `t`.`type_id`))) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`template_columns_view`  AS  select `t`.`template_id` AS `template_id`,`tc`.`template_column_id` AS `template_column_id`,`c`.`column_id` AS `column_id`,`c`.`column_name` AS `column_name`,`c`.`column_price` AS `column_price`,`c`.`column_blocked` AS `column_blocked`,`tc`.`template_column_letters` AS `template_column_letters`,`tc`.`template_column_name` AS `template_column_name`,`ts`.`type_id` AS `type_id`,`ts`.`type_name` AS `type_name`,`tc`.`template_column_duplicate` AS `template_column_duplicate` from (((`astralinside`.`template_columns` `tc` join `astralinside`.`templates` `t` on((`t`.`template_id` = `tc`.`template_id`))) join `astralinside`.`columns` `c` on((`c`.`column_id` = `tc`.`column_id`))) join `astralinside`.`types` `ts` on((`ts`.`type_id` = `t`.`type_id`))) ;
 
 
 ALTER TABLE `columns`
@@ -391,10 +491,10 @@ ALTER TABLE `users`
 
 
 ALTER TABLE `columns`
-  MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 ALTER TABLE `companies`
-  MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1191;
+  MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1562;
 
 ALTER TABLE `connections`
   MODIFY `connection_id` int(11) NOT NULL AUTO_INCREMENT;
@@ -409,7 +509,7 @@ ALTER TABLE `templates`
   MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 ALTER TABLE `template_columns`
-  MODIFY `template_column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `template_column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 ALTER TABLE `transactions`
   MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT;
