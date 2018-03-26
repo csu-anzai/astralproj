@@ -1,12 +1,13 @@
 BEGIN
-	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength INT(11);
+	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount INT(11);
 	DECLARE templateSuccess TINYINT(1);
 	DECLARE TemplateColumnName, columnName VARCHAR(128);
 	DECLARE columnLetters VARCHAR(3);
 	DECLARE columns, columnsKeys, company JSON;
-	SET responce = JSON_ARRAY();
+	SET responce = JSON_OBJECT();
 	SET templateSuccess = 1;
 	SET companiesLength = JSON_LENGTH(companies);
+	SET deleteCount = 0;
 	IF companies IS NOT NULL AND companiesLength > 1
 		THEN BEGIN
 			SET columns = JSON_EXTRACT(companies, "$.columns");
@@ -68,12 +69,13 @@ BEGIN
 					PREPARE newCompaniesQuery FROM @newCompaniesQuery;
 					EXECUTE newCompaniesQuery;
 					DEALLOCATE PREPARE newCompaniesQuery;
-					SET responce = JSON_MERGE(responce, JSON_OBJECT(
-						"type", "print",
-						"data", JSON_OBJECT(
-							"message", "all items save in base"
-						)
-					));
+					SELECT COUNT(*) INTO deleteCount FROM companies a, companies b WHERE a.company_id > b.company_id AND (a.company_ogrn = b.company_ogrn OR a.company_inn = b.company_inn);
+					IF deleteCount > 0
+						THEN DELETE a FROM companies a, companies b WHERE a.company_id > b.company_id AND (a.company_ogrn = b.company_ogrn OR a.company_inn = b.company_inn);
+					END IF;
+					SET responce = JSON_OBJECT(
+						"message", CONCAT("added ", companiesLength - 1 - deleteCount, " companies in the base")
+					);
 				END;
 			END IF;
 		END;

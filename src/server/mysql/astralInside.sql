@@ -24,8 +24,8 @@ CREATE TABLE `companies` (
   `company_date_update` varchar(19) COLLATE utf8_bin DEFAULT NULL,
   `company_discount` int(11) DEFAULT '0',
   `company_discount_percent` tinyint(1) NOT NULL DEFAULT '0',
-  `company_ogrnip` varchar(15) COLLATE utf8_bin DEFAULT NULL,
-  `company_ogrnip_date` varchar(10) COLLATE utf8_bin DEFAULT NULL,
+  `company_ogrn` varchar(15) COLLATE utf8_bin DEFAULT NULL,
+  `company_ogrn_date` varchar(10) COLLATE utf8_bin DEFAULT NULL,
   `company_person_name` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `company_person_surname` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `company_person_patronymic` varchar(128) COLLATE utf8_bin DEFAULT NULL,
@@ -41,17 +41,27 @@ CREATE TABLE `companies` (
   `company_email` varchar(1024) COLLATE utf8_bin DEFAULT NULL,
   `company_okved_code` varchar(8) COLLATE utf8_bin DEFAULT NULL,
   `company_okved_name` varchar(2048) COLLATE utf8_bin DEFAULT NULL,
-  `purchase_id` int(11) DEFAULT NULL
+  `purchase_id` int(11) DEFAULT NULL,
+  `template_id` int(11) DEFAULT NULL,
+  `company_kpp` varchar(9) COLLATE utf8_bin DEFAULT NULL,
+  `company_index` varchar(9) COLLATE utf8_bin DEFAULT NULL,
+  `company_house` varchar(20) COLLATE utf8_bin DEFAULT NULL,
+  `company_region_type` varchar(50) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
-	SET NEW.company_date_create = NOW();
+  DECLARE innLength INT(11);
+  SET NEW.company_date_create = NOW();
+  SET innLength = CHAR_LENGTH(NEW.company_inn);
+  IF innLength = 9 OR innLength = 11
+    THEN SET NEW.company_inn = CONCAT("0", NEW.company_inn);
+  END IF;
 END
 $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH ROW BEGIN
-	SET NEW.company_date_update = NOW();
+  SET NEW.company_date_update = NOW();
 END
 $$
 DELIMITER ;
@@ -69,41 +79,41 @@ CREATE TABLE `connections` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `connections_after_insert` AFTER INSERT ON `connections` FOR EACH ROW BEGIN
-	IF NEW.user_id IS NOT NULL
-    	THEN UPDATE users SET user_connections_count = (SELECT COUNT(*) FROM connections WHERE user_id = NEW.user_id AND connection_end = 0) WHERE user_id = NEW.user_id;
+  IF NEW.user_id IS NOT NULL
+      THEN UPDATE users SET user_connections_count = (SELECT COUNT(*) FROM connections WHERE user_id = NEW.user_id AND connection_end = 0) WHERE user_id = NEW.user_id;
   END IF;
 END
 $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `connections_after_update` AFTER UPDATE ON `connections` FOR EACH ROW BEGIN
-	IF NEW.user_id IS NOT NULL
-    	THEN UPDATE users SET user_connections_count = (SELECT COUNT(*) FROM connections WHERE user_id = NEW.user_id AND connection_end = 0) WHERE user_id = NEW.user_id;
+  IF NEW.user_id IS NOT NULL
+      THEN UPDATE users SET user_connections_count = (SELECT COUNT(*) FROM connections WHERE user_id = NEW.user_id AND connection_end = 0) WHERE user_id = NEW.user_id;
   END IF;
 END
 $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `connections_before_insert` BEFORE INSERT ON `connections` FOR EACH ROW BEGIN
-	SET NEW.connection_date_create = NOW();
+  SET NEW.connection_date_create = NOW();
     IF NEW.connection_end 
-    	THEN SET NEW.connection_date_disconnect = NOW();
+      THEN SET NEW.connection_date_disconnect = NOW();
     END IF;
     hashLoop: LOOP
-    	SET NEW.connection_hash = getHash(32);
-    	IF (SELECT COUNT(*) FROM connections WHERE connection_hash = NEW.connection_hash) > 0
-        	THEN ITERATE hashLoop;
+      SET NEW.connection_hash = getHash(32);
+      IF (SELECT COUNT(*) FROM connections WHERE connection_hash = NEW.connection_hash) > 0
+          THEN ITERATE hashLoop;
             ELSE LEAVE hashLoop;
         END IF;
-   	END LOOP;
+    END LOOP;
 END
 $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `connections_before_update` BEFORE UPDATE ON `connections` FOR EACH ROW BEGIN
-	SET NEW.connection_date_update = NOW();
+  SET NEW.connection_date_update = NOW();
     IF NEW.connection_end
-    	THEN SET NEW.connection_date_disconnect = NOW();
+      THEN SET NEW.connection_date_disconnect = NOW();
     END IF;
 END
 $$
@@ -119,7 +129,7 @@ CREATE TABLE `files` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `files_before_insert` BEFORE INSERT ON `files` FOR EACH ROW BEGIN
-	SET NEW.file_date_create = NOW();
+  SET NEW.file_date_create = NOW();
 END
 $$
 DELIMITER ;
@@ -173,16 +183,42 @@ CREATE TABLE `purchases` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `purchases_before_insert` BEFORE INSERT ON `purchases` FOR EACH ROW BEGIN
-	SET NEW.purchase_date_create = NOW();
+  SET NEW.purchase_date_create = NOW();
 END
 $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `purchases_before_update` BEFORE UPDATE ON `purchases` FOR EACH ROW BEGIN
-	SET NEW.purchase_date_update = NOW();
+  SET NEW.purchase_date_update = NOW();
 END
 $$
 DELIMITER ;
+
+CREATE TABLE `templates` (
+  `template_id` int(11) NOT NULL,
+  `type_id` int(11) DEFAULT NULL,
+  `template_columns_count` int(11) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `template_columns` (
+  `template_column_id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `template_column_letters` varchar(3) COLLATE utf8_bin NOT NULL,
+  `template_column_name` varchar(128) COLLATE utf8_bin NOT NULL,
+  `column_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+CREATE TABLE `template_columns_view` (
+`template_id` int(11)
+,`template_column_id` int(11)
+,`column_id` int(11)
+,`column_name` varchar(128)
+,`column_price` int(11)
+,`column_blocked` tinyint(1)
+,`template_column_letters` varchar(3)
+,`template_column_name` varchar(128)
+,`type_id` int(11)
+,`type_name` varchar(128)
+);
 
 CREATE TABLE `transactions` (
   `transaction_id` int(11) NOT NULL,
@@ -196,10 +232,10 @@ CREATE TABLE `transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `transactions_before_insert` BEFORE INSERT ON `transactions` FOR EACH ROW BEGIN
-	SET NEW.transaction_date_create = NOW();
+  SET NEW.transaction_date_create = NOW();
     IF NEW.transaction_end
-    	THEN BEGIN 
-        	SET NEW.transaction_date_end = NOW();
+      THEN BEGIN 
+          SET NEW.transaction_date_end = NOW();
             UPDATE purchases SET purchase_date_buy = NOW() WHERE transaction_id = NEW.transaction_id;
         END;
     END IF;
@@ -208,10 +244,10 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `transactions_before_update` BEFORE UPDATE ON `transactions` FOR EACH ROW BEGIN
-	SET NEW.transaction_date_update = NOW();
+  SET NEW.transaction_date_update = NOW();
     IF NEW.transaction_end
-    	THEN BEGIN 
-        	SET NEW.transaction_date_end = NOW();
+      THEN BEGIN 
+          SET NEW.transaction_date_end = NOW();
             UPDATE purchases SET purchase_date_buy = NOW() WHERE transaction_id = NEW.transaction_id;
         END;
     END IF;
@@ -234,7 +270,9 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (1, 'root'),
 (8, 'sale'),
 (2, 'user'),
-(3, 'ws');
+(3, 'ws'),
+(11, 'ИП'),
+(12, 'ООО');
 
 CREATE TABLE `users` (
   `user_id` int(11) NOT NULL,
@@ -252,59 +290,61 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
-	SET NEW.user_date_create = NOW();
-	IF NEW.user_auth
-		THEN BEGIN
-			hashLoop: LOOP
-		  	SET NEW.user_hash = getHash(32);
-		      IF (SELECT COUNT(*) FROM users WHERE user_hash = NEW.user_hash) > 0
-		      	THEN ITERATE hashLoop;
-		          ELSE LEAVE hashLoop;
-		      END IF;
-		  END LOOP;
-		END;
-	END IF;
-	IF NEW.user_connections_count > 0
-		THEN SET NEW.user_online = 1;
-		ELSE SET NEW.user_online = 0;
-	END IF;
+  SET NEW.user_date_create = NOW();
+  IF NEW.user_auth
+    THEN BEGIN
+      hashLoop: LOOP
+        SET NEW.user_hash = getHash(32);
+          IF (SELECT COUNT(*) FROM users WHERE user_hash = NEW.user_hash) > 0
+            THEN ITERATE hashLoop;
+              ELSE LEAVE hashLoop;
+          END IF;
+      END LOOP;
+    END;
+  END IF;
+  IF NEW.user_connections_count > 0
+    THEN SET NEW.user_online = 1;
+    ELSE SET NEW.user_online = 0;
+  END IF;
 END
 $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `users_before_update` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
-	SET NEW.user_date_update = NOW();
-	IF NEW.user_auth
-		THEN BEGIN
-			hashLoop: LOOP
-		  	SET NEW.user_hash = getHash(32);
-		      IF (SELECT COUNT(*) FROM users WHERE user_hash = NEW.user_hash) > 0
-		      	THEN ITERATE hashLoop;
-		          ELSE LEAVE hashLoop;
-		      END IF;
-		  END LOOP;
-		END;
-	END IF;
-	IF NEW.user_connections_count > 0
-		THEN SET NEW.user_online = 1;
-		ELSE SET NEW.user_online = 0;
-	END IF;
+  SET NEW.user_date_update = NOW();
+  IF NEW.user_auth
+    THEN BEGIN
+      hashLoop: LOOP
+        SET NEW.user_hash = getHash(32);
+          IF (SELECT COUNT(*) FROM users WHERE user_hash = NEW.user_hash) > 0
+            THEN ITERATE hashLoop;
+              ELSE LEAVE hashLoop;
+          END IF;
+      END LOOP;
+    END;
+  END IF;
+  IF NEW.user_connections_count > 0
+    THEN SET NEW.user_online = 1;
+    ELSE SET NEW.user_online = 0;
+  END IF;
 END
 $$
 DELIMITER ;
+DROP TABLE IF EXISTS `template_columns_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`template_columns_view`  AS  select `t`.`template_id` AS `template_id`,`tc`.`template_column_id` AS `template_column_id`,`c`.`column_id` AS `column_id`,`c`.`column_name` AS `column_name`,`c`.`column_price` AS `column_price`,`c`.`column_blocked` AS `column_blocked`,`tc`.`template_column_letters` AS `template_column_letters`,`tc`.`template_column_name` AS `template_column_name`,`ts`.`type_id` AS `type_id`,`ts`.`type_name` AS `type_name` from (((`astralinside`.`template_columns` `tc` join `astralinside`.`templates` `t` on((`t`.`template_id` = `tc`.`template_id`))) join `astralinside`.`columns` `c` on((`c`.`column_id` = `tc`.`column_id`))) join `astralinside`.`types` `ts` on((`ts`.`type_id` = `t`.`type_id`))) ;
 
 
 ALTER TABLE `columns`
+  ADD PRIMARY KEY (`column_id`),
   ADD UNIQUE KEY `column_name` (`column_name`);
 
 ALTER TABLE `companies`
   ADD PRIMARY KEY (`company_id`),
-  ADD UNIQUE KEY `company_ogrnip` (`company_ogrnip`),
-  ADD UNIQUE KEY `company_inn` (`company_inn`),
-  ADD UNIQUE KEY `company_doc_number` (`company_doc_number`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `type_id` (`type_id`),
-  ADD KEY `purchase_id` (`purchase_id`);
+  ADD KEY `purchase_id` (`purchase_id`),
+  ADD KEY `template_id` (`template_id`);
 
 ALTER TABLE `connections`
   ADD PRIMARY KEY (`connection_id`),
@@ -324,6 +364,15 @@ ALTER TABLE `purchases`
   ADD KEY `user_id` (`user_id`),
   ADD KEY `transaction_id` (`transaction_id`);
 
+ALTER TABLE `templates`
+  ADD PRIMARY KEY (`template_id`),
+  ADD KEY `type_id` (`type_id`);
+
+ALTER TABLE `template_columns`
+  ADD PRIMARY KEY (`template_column_id`),
+  ADD KEY `template_id` (`template_id`),
+  ADD KEY `column_id` (`column_id`);
+
 ALTER TABLE `transactions`
   ADD PRIMARY KEY (`transaction_id`),
   ADD KEY `type_id` (`type_id`),
@@ -341,8 +390,11 @@ ALTER TABLE `users`
   ADD KEY `type_id` (`type_id`);
 
 
+ALTER TABLE `columns`
+  MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
 ALTER TABLE `companies`
-  MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1191;
 
 ALTER TABLE `connections`
   MODIFY `connection_id` int(11) NOT NULL AUTO_INCREMENT;
@@ -353,20 +405,27 @@ ALTER TABLE `files`
 ALTER TABLE `purchases`
   MODIFY `purchase_id` int(11) NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `templates`
+  MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+ALTER TABLE `template_columns`
+  MODIFY `template_column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
 ALTER TABLE `transactions`
   MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `types`
-  MODIFY `type_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `type_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 
 ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `companies_ibfk_3` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`purchase_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `companies_ibfk_3` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`purchase_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `companies_ibfk_4` FOREIGN KEY (`template_id`) REFERENCES `templates` (`template_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `connections`
   ADD CONSTRAINT `connections_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -380,6 +439,13 @@ ALTER TABLE `files`
 ALTER TABLE `purchases`
   ADD CONSTRAINT `purchases_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `purchases_ibfk_2` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`transaction_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `templates`
+  ADD CONSTRAINT `templates_ibfk_1` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `template_columns`
+  ADD CONSTRAINT `template_columns_ibfk_1` FOREIGN KEY (`template_id`) REFERENCES `templates` (`template_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `template_columns_ibfk_2` FOREIGN KEY (`column_id`) REFERENCES `columns` (`column_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `transactions`
   ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
