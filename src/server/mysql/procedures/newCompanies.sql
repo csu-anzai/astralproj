@@ -1,9 +1,9 @@
 BEGIN
 	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount INT(11);
-	DECLARE templateSuccess TINYINT(1);
+	DECLARE templateSuccess, duplicate TINYINT(1);
 	DECLARE TemplateColumnName, columnName VARCHAR(128);
 	DECLARE columnLetters VARCHAR(3);
-	DECLARE columns, columnsKeys, company JSON;
+	DECLARE columns, columnsKeys, company, columnKeysObj JSON;
 	SET responce = JSON_OBJECT();
 	SET templateSuccess = 1;
 	SET companiesLength = JSON_LENGTH(companies);
@@ -39,8 +39,14 @@ BEGIN
 							THEN LEAVE columnsQueryLoop;
 						END IF;
 						SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator, "]")));
-						SELECT column_name INTO columnName FROM template_columns_view WHERE template_id = templateID AND template_column_letters = columnLetters;
-						SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator > 0, ",", ""), columnName);
+						SELECT column_name, template_column_duplicate INTO columnName, duplicate FROM template_columns_view WHERE template_id = templateID AND template_column_letters = columnLetters;
+						IF duplicate = 0
+							THEN SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator > 0, ",", ""), columnName);
+						END IF;
+						SET columnsKeys = JSON_SET(columnsKeys, CONCAT("$[", iterator, "]"), JSON_OBJECT(
+							"key", JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator, "]")),
+							"dup", duplicate
+						));
 						SET iterator = iterator + 1;
 						ITERATE columnsQueryLoop;
 					END LOOP;
@@ -57,8 +63,14 @@ BEGIN
 							IF iterator2 >= columnsKeysCount
 								THEN LEAVE colsQueryLoop;
 							END IF;
-							SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator2, "]")));
-							SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator2 > 0, ",", ""), IF(JSON_EXTRACT(company, CONCAT("$.", columnLetters)) IS NULL, "NULL", JSON_EXTRACT(company, CONCAT("$.", columnLetters))));
+							SET columnKeysObj = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator2, "]")));
+							SET duplicate = JSON_EXTRACT(columnKeysObj, "$.dup");
+							IF duplicate = 0
+								THEN BEGIN 
+									SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnKeysObj, "$.key"));
+									SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator2 > 0, ",", ""), IF(JSON_EXTRACT(company, CONCAT("$.", columnLetters)) IS NULL, "NULL", JSON_EXTRACT(company, CONCAT("$.", columnLetters))));
+								END;
+							END IF;
 							SET iterator2 = iterator2 + 1;
 							ITERATE colsQueryLoop;
 						END LOOP;
