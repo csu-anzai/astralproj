@@ -3378,7 +3378,9 @@ CREATE TABLE `companies` (
   `company_doc_locality_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_street_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_street_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
-  `city_id` int(11) DEFAULT NULL
+  `city_id` int(11) DEFAULT NULL,
+  `region_id` int(11) DEFAULT NULL,
+  `company_tinkoff` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
@@ -3387,6 +3389,11 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
   SET innLength = CHAR_LENGTH(NEW.company_inn);
   IF innLength = 9 OR innLength = 11
     THEN SET NEW.company_inn = CONCAT("0", NEW.company_inn);
+  END IF;
+  SET NEW.region_id = (SELECT region_id FROM codes WHERE code_value = SUBSTRING(NEW.company_inn, 1, 2));
+  SET NEW.city_id = (SELECT city_id FROM fns_codes WHERE fns_code_value = SUBSTRING(NEW.company_inn, 1, 4));
+  IF (SELECT COUNT(*) FROM bank_cities WHERE bank_id = 1 AND city_id = NEW.city_id) > 0
+    THEN SET NEW.company_tinkoff = 1;
   END IF;
 END
 $$
@@ -4882,7 +4889,8 @@ ALTER TABLE `companies`
   ADD KEY `type_id` (`type_id`),
   ADD KEY `purchase_id` (`purchase_id`),
   ADD KEY `template_id` (`template_id`),
-  ADD KEY `city_id` (`city_id`);
+  ADD KEY `city_id` (`city_id`),
+  ADD KEY `region_id` (`region_id`);
 
 ALTER TABLE `connections`
   ADD PRIMARY KEY (`connection_id`),
@@ -5011,7 +5019,9 @@ ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_3` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`purchase_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `companies_ibfk_4` FOREIGN KEY (`template_id`) REFERENCES `templates` (`template_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `companies_ibfk_4` FOREIGN KEY (`template_id`) REFERENCES `templates` (`template_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `companies_ibfk_5` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `companies_ibfk_6` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `connections`
   ADD CONSTRAINT `connections_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
