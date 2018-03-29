@@ -2548,6 +2548,73 @@ INSERT INTO `bank_cities_time_priority` (`bank_city_time_priority_id`, `bank_id`
 (2489, 1, 1, 358, 155),
 (2490, 1, 1, 359, 156),
 (2491, 1, 1, 360, 157);
+CREATE TABLE `bank_cities_time_priority_companies_view` (
+`time_id` int(11)
+,`time_value` varchar(5)
+,`priority` int(11)
+,`bank_id` int(11)
+,`company_id` int(11)
+,`user_id` int(11)
+,`company_date_create` varchar(19)
+,`type_id` int(11)
+,`company_date_update` varchar(19)
+,`company_discount` int(11)
+,`company_discount_percent` tinyint(1)
+,`company_ogrn` varchar(15)
+,`company_ogrn_date` varchar(10)
+,`company_person_name` varchar(128)
+,`company_person_surname` varchar(128)
+,`company_person_patronymic` varchar(128)
+,`company_person_birthday` varchar(10)
+,`company_person_birthplace` varchar(1024)
+,`company_inn` varchar(12)
+,`company_address` varchar(1024)
+,`company_doc_number` varchar(12)
+,`company_doc_date` varchar(10)
+,`company_organization_name` varchar(1024)
+,`company_organization_code` varchar(6)
+,`company_phone` varchar(20)
+,`company_email` varchar(1024)
+,`company_okved_code` varchar(8)
+,`company_okved_name` varchar(2048)
+,`purchase_id` int(11)
+,`template_id` int(11)
+,`company_kpp` varchar(9)
+,`company_index` varchar(9)
+,`company_house` varchar(20)
+,`company_region_type` varchar(50)
+,`company_region_name` varchar(120)
+,`company_area_type` varchar(60)
+,`company_area_name` varchar(60)
+,`company_locality_type` varchar(60)
+,`company_locality_name` varchar(60)
+,`company_street_type` varchar(60)
+,`company_street_name` varchar(60)
+,`company_innfl` varchar(12)
+,`company_person_position_type` varchar(60)
+,`company_person_position_name` varchar(60)
+,`company_doc_name` varchar(120)
+,`company_doc_gitfter` varchar(256)
+,`company_doc_code` varchar(7)
+,`company_doc_house` varchar(20)
+,`company_doc_flat` varchar(40)
+,`company_doc_region_type` varchar(50)
+,`company_doc_region_name` varchar(120)
+,`company_doc_area_type` varchar(60)
+,`company_doc_area_name` varchar(60)
+,`company_doc_locality_type` varchar(60)
+,`company_doc_locality_name` varchar(60)
+,`company_doc_street_type` varchar(60)
+,`company_doc_street_name` varchar(60)
+,`city_id` int(11)
+,`region_id` int(11)
+,`company_tinkoff` tinyint(1)
+);
+CREATE TABLE `bank_times_view` (
+`time_id` int(11)
+,`time_value` varchar(5)
+,`bank_id` int(11)
+);
 
 CREATE TABLE `cities` (
   `city_id` int(11) NOT NULL,
@@ -4852,9 +4919,28 @@ CREATE TRIGGER `users_before_update` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+CREATE TABLE `users_connections_view` (
+`connection_id` int(11)
+,`connection_hash` varchar(32)
+,`connection_end` tinyint(1)
+,`user_id` int(11)
+,`type_id` int(11)
+,`type_name` varchar(128)
+,`user_auth` tinyint(1)
+,`user_online` tinyint(1)
+);
+DROP TABLE IF EXISTS `bank_cities_time_priority_companies_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_cities_time_priority_companies_view`  AS  select `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`priority` AS `priority`,`b`.`bank_id` AS `bank_id`,`c`.`company_id` AS `company_id`,`c`.`user_id` AS `user_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`type_id` AS `type_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_discount` AS `company_discount`,`c`.`company_discount_percent` AS `company_discount_percent`,`c`.`company_ogrn` AS `company_ogrn`,`c`.`company_ogrn_date` AS `company_ogrn_date`,`c`.`company_person_name` AS `company_person_name`,`c`.`company_person_surname` AS `company_person_surname`,`c`.`company_person_patronymic` AS `company_person_patronymic`,`c`.`company_person_birthday` AS `company_person_birthday`,`c`.`company_person_birthplace` AS `company_person_birthplace`,`c`.`company_inn` AS `company_inn`,`c`.`company_address` AS `company_address`,`c`.`company_doc_number` AS `company_doc_number`,`c`.`company_doc_date` AS `company_doc_date`,`c`.`company_organization_name` AS `company_organization_name`,`c`.`company_organization_code` AS `company_organization_code`,`c`.`company_phone` AS `company_phone`,`c`.`company_email` AS `company_email`,`c`.`company_okved_code` AS `company_okved_code`,`c`.`company_okved_name` AS `company_okved_name`,`c`.`purchase_id` AS `purchase_id`,`c`.`template_id` AS `template_id`,`c`.`company_kpp` AS `company_kpp`,`c`.`company_index` AS `company_index`,`c`.`company_house` AS `company_house`,`c`.`company_region_type` AS `company_region_type`,`c`.`company_region_name` AS `company_region_name`,`c`.`company_area_type` AS `company_area_type`,`c`.`company_area_name` AS `company_area_name`,`c`.`company_locality_type` AS `company_locality_type`,`c`.`company_locality_name` AS `company_locality_name`,`c`.`company_street_type` AS `company_street_type`,`c`.`company_street_name` AS `company_street_name`,`c`.`company_innfl` AS `company_innfl`,`c`.`company_person_position_type` AS `company_person_position_type`,`c`.`company_person_position_name` AS `company_person_position_name`,`c`.`company_doc_name` AS `company_doc_name`,`c`.`company_doc_gitfter` AS `company_doc_gitfter`,`c`.`company_doc_code` AS `company_doc_code`,`c`.`company_doc_house` AS `company_doc_house`,`c`.`company_doc_flat` AS `company_doc_flat`,`c`.`company_doc_region_type` AS `company_doc_region_type`,`c`.`company_doc_region_name` AS `company_doc_region_name`,`c`.`company_doc_area_type` AS `company_doc_area_type`,`c`.`company_doc_area_name` AS `company_doc_area_name`,`c`.`company_doc_locality_type` AS `company_doc_locality_type`,`c`.`company_doc_locality_name` AS `company_doc_locality_name`,`c`.`company_doc_street_type` AS `company_doc_street_type`,`c`.`company_doc_street_name` AS `company_doc_street_name`,`c`.`city_id` AS `city_id`,`c`.`region_id` AS `region_id`,`c`.`company_tinkoff` AS `company_tinkoff` from ((`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`companies` `c` on(((`c`.`city_id` = `b`.`city_id`) and (`c`.`company_tinkoff` = 1) and isnull(`c`.`user_id`)))) join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by `b`.`time_id`,`b`.`priority` ;
+DROP TABLE IF EXISTS `bank_times_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
 DROP TABLE IF EXISTS `template_columns_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`template_columns_view`  AS  select `t`.`template_id` AS `template_id`,`tc`.`template_column_id` AS `template_column_id`,`c`.`column_id` AS `column_id`,`c`.`column_name` AS `column_name`,`c`.`column_price` AS `column_price`,`c`.`column_blocked` AS `column_blocked`,`tc`.`template_column_letters` AS `template_column_letters`,`tc`.`template_column_name` AS `template_column_name`,`ts`.`type_id` AS `type_id`,`ts`.`type_name` AS `type_name`,`tc`.`template_column_duplicate` AS `template_column_duplicate` from (((`astralinside`.`template_columns` `tc` join `astralinside`.`templates` `t` on((`t`.`template_id` = `tc`.`template_id`))) join `astralinside`.`columns` `c` on((`c`.`column_id` = `tc`.`column_id`))) join `astralinside`.`types` `ts` on((`ts`.`type_id` = `t`.`type_id`))) ;
+DROP TABLE IF EXISTS `users_connections_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online` from ((`astralinside`.`connections` `c` left join `astralinside`.`users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `astralinside`.`types` `t` on((`t`.`type_id` = `u`.`type_id`))) ;
 
 
 ALTER TABLE `banks`
@@ -4949,58 +5035,58 @@ ALTER TABLE `users`
 
 
 ALTER TABLE `banks`
-  MODIFY `bank_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bank_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 ALTER TABLE `bank_cities`
-  MODIFY `bank_city_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bank_city_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=256;
 
 ALTER TABLE `bank_cities_time_priority`
-  MODIFY `bank_city_time_priority_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bank_city_time_priority_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2492;
 
 ALTER TABLE `cities`
-  MODIFY `city_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `city_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=577;
 
 ALTER TABLE `codes`
-  MODIFY `code_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `code_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=133;
 
 ALTER TABLE `columns`
-  MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 ALTER TABLE `companies`
-  MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1278;
 
 ALTER TABLE `connections`
-  MODIFY `connection_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `connection_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 ALTER TABLE `files`
   MODIFY `file_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `fns_codes`
-  MODIFY `fns_code_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `fns_code_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=985;
 
 ALTER TABLE `purchases`
   MODIFY `purchase_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `regions`
-  MODIFY `region_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `region_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 ALTER TABLE `templates`
-  MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 ALTER TABLE `template_columns`
-  MODIFY `template_column_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `template_column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 ALTER TABLE `times`
-  MODIFY `time_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `time_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 ALTER TABLE `transactions`
   MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `types`
-  MODIFY `type_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `type_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 
 ALTER TABLE `bank_cities`
@@ -5031,6 +5117,10 @@ ALTER TABLE `files`
   ADD CONSTRAINT `files_ibfk_1` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `files_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `files_ibfk_3` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`purchase_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `fns_codes`
+  ADD CONSTRAINT `fns_codes_ibfk_1` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fns_codes_ibfk_2` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `purchases`
   ADD CONSTRAINT `purchases_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
