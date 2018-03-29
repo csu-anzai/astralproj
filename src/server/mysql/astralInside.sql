@@ -4853,12 +4853,14 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (7, 'deposit'),
 (10, 'free'),
 (4, 'get'),
+(14, 'invalidate'),
 (5, 'post'),
 (6, 'purchase'),
 (9, 'reservation'),
 (1, 'root'),
 (8, 'sale'),
 (2, 'user'),
+(13, 'validate'),
 (3, 'ws'),
 (11, 'ИП'),
 (12, 'ООО');
@@ -4923,6 +4925,7 @@ CREATE TABLE `users_connections_view` (
 `connection_id` int(11)
 ,`connection_hash` varchar(32)
 ,`connection_end` tinyint(1)
+,`connection_api_id` varchar(128)
 ,`user_id` int(11)
 ,`type_id` int(11)
 ,`type_name` varchar(128)
@@ -4940,7 +4943,7 @@ DROP TABLE IF EXISTS `template_columns_view`;
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`template_columns_view`  AS  select `t`.`template_id` AS `template_id`,`tc`.`template_column_id` AS `template_column_id`,`c`.`column_id` AS `column_id`,`c`.`column_name` AS `column_name`,`c`.`column_price` AS `column_price`,`c`.`column_blocked` AS `column_blocked`,`tc`.`template_column_letters` AS `template_column_letters`,`tc`.`template_column_name` AS `template_column_name`,`ts`.`type_id` AS `type_id`,`ts`.`type_name` AS `type_name`,`tc`.`template_column_duplicate` AS `template_column_duplicate` from (((`astralinside`.`template_columns` `tc` join `astralinside`.`templates` `t` on((`t`.`template_id` = `tc`.`template_id`))) join `astralinside`.`columns` `c` on((`c`.`column_id` = `tc`.`column_id`))) join `astralinside`.`types` `ts` on((`ts`.`type_id` = `t`.`type_id`))) ;
 DROP TABLE IF EXISTS `users_connections_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online` from ((`astralinside`.`connections` `c` left join `astralinside`.`users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `astralinside`.`types` `t` on((`t`.`type_id` = `u`.`type_id`))) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`c`.`connection_api_id` AS `connection_api_id`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online` from ((`astralinside`.`connections` `c` left join `astralinside`.`users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `astralinside`.`types` `t` on((`t`.`type_id` = `u`.`type_id`))) ;
 
 
 ALTER TABLE `banks`
