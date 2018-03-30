@@ -11,7 +11,11 @@ export default (store = Map(), action) => {
 		case "mergeDeep": return store.mergeDeep(fromJS(action.data));
 		case "updateArray":			
 			let arr = store.get(action.data.name);
-			let index = arr.indexOf(fromJS(action.data.search));
+			let index = arr.findIndex(item => {
+				item = item.toJS();
+				let keys = Object.keys(action.data.search);
+				return item[keys[0]] && item[keys[0]] == action.data.search[keys[0]];
+			});
 			if (index != -1) {
 				arr = arr.set(index, arr.get(index).merge(fromJS(action.data.values)));
 				store = store.set(action.data.name, arr);

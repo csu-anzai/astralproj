@@ -6,7 +6,7 @@ BEGIN
     SET responce = JSON_ARRAY();
 	SELECT connection_id, userID, connection_end, connection_api_id INTO connectionID, connectionUserID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     SELECT user_id, user_auth INTO userID, userAuth FROM users WHERE user_hash = userHash;
-    IF userID IS NULL OR connectionID IS NULL OR userAuth = 0 OR (connectionUserID IS NOT NULL AND connectionUserID != userID) OR connectionEnd = 1
+    IF connectionID IS NULL OR userAuth = 0 OR connectionEnd = 1 OR userID IS NULL
     	THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
         	"type", "sendToSocket",
             "data", JSON_OBJECT(
@@ -15,15 +15,14 @@ BEGIN
                 	"type", "merge",
                     "data", JSON_OBJECT(
                         "loginMessage", "Требуется ручная авторизация",
-                        "auth", 0
+                        "auth", 0,
+                        "try", 1
                     )
                 ))
             )
       	));
         ELSE BEGIN
-            IF connectionUserID != userID
-                THEN UPDATE connections SET user_id = userID WHERE connection_id = connectionID;
-            END IF;
+            UPDATE connections SET user_id = userID WHERE connection_id = connectionID;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
             	"type", "sendToSocket",
                 "data", JSON_OBJECT(

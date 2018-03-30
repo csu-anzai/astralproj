@@ -4,6 +4,7 @@ import TextField from 'material-ui/TextField';
 import FlatButton from 'material-ui/FlatButton';
 import CircularProgress from 'material-ui/CircularProgress';
 import { fromJS } from 'immutable';
+import { push } from 'react-router';
 const paperStyle = {
 	position: "absolute",
 	top: "0",
@@ -98,7 +99,7 @@ export default class Login extends React.Component {
 		});
 	}
 	render(){
-		if(localStorage.hasOwnProperty("app") && !this.props.state.auth){
+		if(localStorage.hasOwnProperty("app") && !this.props.state.auth && !this.props.state.try){
 			let app = JSON.parse(localStorage.getItem("app"));
 			if (app.hasOwnProperty("userHash") && app.hasOwnProperty("connectionHash")) {
 				this.props.dispatch({

@@ -25,9 +25,15 @@ const Store = createStore(combineReducers({
 }), applyMiddleware(middleware, socketMiddleware(socket)));
 socket.on("message", data => {
 	for(let i = 0; i < data.length; i++) {
-		Store.dispatch(data[i]);
+		if(data[i].type != "redirect"){
+			Store.dispatch(data[i]);
+		} else {
+			Store.dispatch(push(data[i].data.page));
+		}
 	}
 });
+const hash = window.location.hash.split("#").join("");
+localStorage.setItem("hash", hash);
 const historySync = syncHistoryWithStore(history, Store);
 window.addEventListener("DOMContentLoaded", () => {
 	render(
