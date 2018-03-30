@@ -10,3 +10,10 @@ reducer.initEvents({
 	nodemailer,
 	mysql
 });
+reducer.dispatch({
+	type: "query",
+	data: {
+		query: "disconnectAll",
+		values: []
+	}
+});

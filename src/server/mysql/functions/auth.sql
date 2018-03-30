@@ -19,7 +19,7 @@ BEGIN
                         "socketID", connectionApiID,
                         "data", JSON_ARRAY(
                             JSON_OBJECT(
-                                "type", "set",
+                                "type", "merge",
                                 "data", JSON_OBJECT(
                                     "loginMessage", "Авторизация прошла успешно",
                                     "auth", 1
@@ -43,7 +43,7 @@ BEGIN
                     "socketID", connectionApiID,
                     "data", JSON_ARRAY(
                         JSON_OBJECT(
-                        	"type", "set",
+                        	"type", "merge",
                             "data", JSON_OBJECT(
                                 "loginMessage", "Не верный email или пароль",
                                 "auth", 0
