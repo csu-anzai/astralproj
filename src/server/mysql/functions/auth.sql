@@ -10,8 +10,8 @@ BEGIN
     IF userID IS NOT NULL AND connectionID IS NOT NULL AND connectionEnd = 0
         THEN BEGIN 
             UPDATE users SET user_auth = 1 WHERE user_id = userID;
-            SELECT user_hash INTO userHash FROM users WHERE user_id = userID;
             UPDATE connections SET user_id = userID WHERE connectionID = connectionID;
+            SELECT user_hash INTO userHash FROM users WHERE user_id = userID;
             SET responce = JSON_MERGE(responce, 
                 JSON_OBJECT(
                     "type", "sendToSocket",
