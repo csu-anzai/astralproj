@@ -7,12 +7,27 @@ import { Provider } from 'react-redux';
 import { Router } from 'react-router';
 import Reducer from './reducer';
 import Main from './routes';
+import io from 'socket.io-client';
+import env from './../env.json';
 const history = createHashHistory();
 const middleware = routerMiddleware(history);
+const socket = io(`${env.ws.location}:${env.ws.port}`);
+const socketMiddleware = socket => store => next => action => {
+	if (action.socket) {
+		delete(action.socket);
+		socket.send(action);
+	}
+	return next(action);
+}
 const Store = createStore(combineReducers({
 	app: Reducer,
 	routing: routerReducer
-}), applyMiddleware(middleware));
+}), applyMiddleware(middleware, socketMiddleware(socket)));
+socket.on("message", data => {
+	for(let i = 0; i < data.length; i++) {
+		Store.dispatch(data[i]);
+	}
+});
 const historySync = syncHistoryWithStore(history, Store);
 window.addEventListener("DOMContentLoaded", () => {
 	render(

@@ -12,7 +12,7 @@ BEGIN
             "data", JSON_OBJECT(
                 "socketID", connectionApiID,
                 "data", JSON_ARRAY(JSON_OBJECT(
-                	"type", "set",
+                	"type", "merge",
                     "data", JSON_OBJECT(
                         "loginMessage", "Требуется ручная авторизация",
                         "auth", 0
@@ -30,7 +30,7 @@ BEGIN
                     "socketID", connectionApiID,
                     "data", JSON_ARRAY(
                         JSON_OBJECT(
-                        	"type", "set",
+                        	"type", "merge",
                             "data", JSON_OBJECT(
                                 "loginMessage", "Авторизация прошла успешно",
                                 "auth", 1

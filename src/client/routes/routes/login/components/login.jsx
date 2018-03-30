@@ -3,6 +3,7 @@ import Paper from 'material-ui/Paper';
 import TextField from 'material-ui/TextField';
 import FlatButton from 'material-ui/FlatButton';
 import CircularProgress from 'material-ui/CircularProgress';
+import { fromJS } from 'immutable';
 const paperStyle = {
 	position: "absolute",
 	top: "0",
@@ -62,6 +63,11 @@ const progressMessageStyle = {
 	height: "1em",
 	lineHeight: "130px"
 };
+const messageStyle = {
+  textAlign: "center",
+  fontSize: "14px",
+  color: "#f38d85"
+}
 export default class Login extends React.Component {
 	constructor(props){
 		super(props);
@@ -78,20 +84,46 @@ export default class Login extends React.Component {
 		});
 	}
 	send(){
-		this.setState({
-			progress: true
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "auth",
+				values: [
+					this.props.state.connectionHash,
+					this.state.email,
+					this.state.password
+				]
+			}
 		});
 	}
 	render(){
+		if(localStorage.hasOwnProperty("app") && !this.props.state.auth){
+			let app = JSON.parse(localStorage.getItem("app"));
+			if (app.hasOwnProperty("userHash") && app.hasOwnProperty("connectionHash")) {
+				this.props.dispatch({
+					type: "query",
+					socket: true,
+					data: {
+						query: "autoAuth",
+						values: [
+							app.userHash,
+							this.props.state.connectionHash
+						]
+					}
+				});
+			}
+		}
 		return this.state.progress &&
 			<div>
 				<div style = { progressStyle }> 
 					<CircularProgress size={80} thickness={5}/>
 				</div>
-				<div style = {progressMessageStyle}>{this.state.message}</div>
+				<div style = {progressMessageStyle}>{this.props.state.loginMessage || this.state.message}</div>
 			</div> || 
 			<Paper style={paperStyle} zDepth={2}>
 			<h2 style={ hStyle }>Вход</h2>
+			<div style={ messageStyle }>{this.props.state.loginMessage}</div>
 			<TextField 
 				floatingLabelText = "Email"
 				fullWidth = { true }

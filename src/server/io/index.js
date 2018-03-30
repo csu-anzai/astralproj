@@ -13,9 +13,22 @@ module.exports = (env, express, reducer) => {
 	} else {
 		server = require("http").createServer(express);
 	};
+	server.listen(env.ws.port);
 	const sockets = io(server);
-	sockets.on("message", action => {
-		reducer.dispatch(action).then(then).catch(err);
+	sockets.on("connection", connection => {
+		reducer.dispatch({
+			type: "query",
+			data: {
+				query: "newConnection",
+				values: [
+					3,
+					connection.id
+				]
+			}
+		}).then(then).catch(err);
+		connection.on("message", action => {
+			reducer.dispatch(action).then(then).catch(err);
+		});
 	});
 	return sockets;
 }
