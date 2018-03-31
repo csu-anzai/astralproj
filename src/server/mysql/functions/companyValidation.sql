@@ -22,7 +22,7 @@ BEGIN
 								"search", JSON_OBJECT(
 									"companyID", companyID
 								), 
-								"values", JSON_ARRAY(
+								"values", JSON_OBJECT(
 									"typeID", typeID
 								)
 							)
