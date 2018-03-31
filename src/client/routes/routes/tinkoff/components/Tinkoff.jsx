@@ -44,7 +44,18 @@ export default class Tinkoff extends React.Component {
 		});
 	}
 	upload(){
-		console.log(this.props.state.companies.filter(item => item.typeID == 13).map(i => i.companyID));
+		let uploadCompanies = this.props.state.companies.filter(item => item.typeID == 13).map(i => i.companyID);
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "sendToApi",
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify(uploadCompanies)
+				]
+			}
+		});
 	}
 	valid(company_id, valid){
 		this.props.dispatch({
@@ -104,7 +115,7 @@ export default class Tinkoff extends React.Component {
 		                /> ||
 		                <RaisedButton 
 		                	label = "Утвердить список интересных компаний"
-		                	backgroundColor="#a4c639"
+		                	backgroundColor="#FF5722"
 		                	labelColor = "#fff"
 		                	onClick = {()=>{this.upload.call(this)}}
 		                />
