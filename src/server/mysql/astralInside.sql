@@ -3464,6 +3464,7 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
   IF (SELECT COUNT(*) FROM bank_cities WHERE bank_id = 1 AND city_id = NEW.city_id) > 0
     THEN SET NEW.company_tinkoff = 1;
   END IF;
+  SET NEW.company_phone = REPLACE(CONCAT("+", REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(NEW.company_phone, "(", ""), ")",""), " ", ""), "-", ""), "—", ""), "+", "")), "+8", "+7");
 END
 $$
 DELIMITER ;
@@ -4852,6 +4853,9 @@ CREATE TABLE `types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 INSERT INTO `types` (`type_id`, `type_name`) VALUES
+(17, 'api_error'),
+(15, 'api_process'),
+(16, 'api_success'),
 (7, 'deposit'),
 (10, 'free'),
 (4, 'get'),
