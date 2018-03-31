@@ -23,6 +23,7 @@ BEGIN
       	));
         ELSE BEGIN
             UPDATE connections SET user_id = userID WHERE connection_id = connectionID;
+            SELECT user_hash INTO userHash FROM users WHERE user_id = userID;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
             	"type", "sendToSocket",
                 "data", JSON_OBJECT(
