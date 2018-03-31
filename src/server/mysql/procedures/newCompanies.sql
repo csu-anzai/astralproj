@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount INT(11);
+	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount, deleteCount2 INT(11);
 	DECLARE templateSuccess, duplicate TINYINT(1);
 	DECLARE TemplateColumnName, columnName VARCHAR(128);
 	DECLARE columnLetters VARCHAR(3);
@@ -85,8 +85,12 @@ BEGIN
 					IF deleteCount > 0
 						THEN DELETE a FROM companies a, companies b WHERE a.company_id > b.company_id AND (a.company_ogrn = b.company_ogrn OR a.company_inn = b.company_inn);
 					END IF;
+					SELECT COUNT(*) INTO deleteCount2 FROM companies WHERE (company_phone IS NULL OR company_inn IS NULL) AND company_tinkoff = 1;
+					IF deleteCount2 > 0
+						THEN DELETE FROM companies WHERE company_phone IS NULL OR company_inn IS NULL;
+					END IF;
 					SET responce = JSON_OBJECT(
-						"message", CONCAT("added ", companiesLength - 1 - deleteCount, " companies in the base")
+						"message", CONCAT("added ", companiesLength - 1 - deleteCount + deleteCount2, " companies in the base")
 					);
 				END;
 			END IF;

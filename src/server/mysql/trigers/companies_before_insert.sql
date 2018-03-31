@@ -10,4 +10,5 @@ BEGIN
 	IF (SELECT COUNT(*) FROM bank_cities WHERE bank_id = 1 AND city_id = NEW.city_id) > 0
 		THEN SET NEW.company_tinkoff = 1;
 	END IF;
+	SET NEW.company_phone = REPLACE(CONCAT("+", REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(NEW.company_phone, "(", ""), ")",""), " ", ""), "-", ""), "—", ""), "+", "")), "+8", "+7");
 END
