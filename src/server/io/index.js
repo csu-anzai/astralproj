@@ -29,6 +29,18 @@ module.exports = (env, express, reducer) => {
 		connection.on("message", action => {
 			reducer.dispatch(action).then(then).catch(err);
 		});
+		connection.on("disconnect", action => {
+			reducer.dispatch({
+				type: "query",
+				data: {
+					query: "disconnectConnection",
+					values: [
+						connection.id,
+						"NULL"
+					]
+				}
+			}).then(then).catch(err);
+		});
 	});
 	return sockets;
 }

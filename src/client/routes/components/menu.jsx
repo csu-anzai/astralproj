@@ -1,7 +1,7 @@
 import React from 'react';
 import Drawer from 'material-ui/Drawer';
 import {List, ListItem, makeSelectable} from 'material-ui/List';
-import Monitization from 'material-ui/svg-icons/editor/monetization-on';
+import Home from 'material-ui/svg-icons/action/home';
 import { connect } from 'react-redux';
 let SelectableList = makeSelectable(List);
 function wrapState(ComposedComponent) {
@@ -35,12 +35,12 @@ class Menu extends React.Component {
 			onRequestChange = { this.props.dispatch.bind(this, {type: "changeMenuState"}) }
 		>
 			<SelectableList
-				defaultValue = {this.props.state.page}
+				defaultValue = {this.props.state.page || 1}
 				onChange = {this.props.dispatch}
 			>
 				<ListItem 
-					primaryText = "Покупка" 
-					leftIcon = { <Monitization/> }
+					primaryText = "Компании" 
+					leftIcon = { <Home/> }
 					value = {1}
 				/>
 			</SelectableList>

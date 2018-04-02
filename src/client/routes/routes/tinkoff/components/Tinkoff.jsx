@@ -1,5 +1,4 @@
 import React from 'react';
-import { Redirect } from 'react-router';
 import {BottomNavigation, BottomNavigationItem} from 'material-ui/BottomNavigation';
 import Restore from 'material-ui/svg-icons/action/restore';
 import Favorite from 'material-ui/svg-icons/action/favorite';
@@ -8,7 +7,6 @@ import Check from 'material-ui/svg-icons/navigation/check';
 import DeleteForever from 'material-ui/svg-icons/action/delete-forever';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
-import Badge from 'material-ui/Badge';
 import {
   Table,
   TableBody,
