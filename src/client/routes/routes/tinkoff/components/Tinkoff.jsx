@@ -38,7 +38,7 @@ export default class Tinkoff extends React.Component {
 				query: "getBankCompanies",
 				values: [
 					this.props.state.connectionHash,
-					25
+					10
 				]
 			}
 		});
@@ -71,6 +71,9 @@ export default class Tinkoff extends React.Component {
 			}
 		});
 	}
+	componentDidMount(){
+		document.querySelector("#app > div > div:nth-child(2) > div > div:nth-child(2) > div").style.overflow = "auto";
+	}
 	render(){
 		return <div>
 			<Paper zDepth={1}>
@@ -92,10 +95,11 @@ export default class Tinkoff extends React.Component {
           />
 				</BottomNavigation>
 				<Table
-          fixedHeader={true}
+          fixedHeader={false}
           fixedFooter={false}
           selectable={false}
           multiSelectable={false}
+          style = {{tableLayout: "auto"}}
         >
 	          <TableHeader
 	            displaySelectAll={false}
@@ -103,7 +107,7 @@ export default class Tinkoff extends React.Component {
 	            enableSelectAll={false}
 	          >
 	            <TableRow>
-	              <TableHeaderColumn colSpan="6" style={{textAlign: 'right'}}>
+	              <TableHeaderColumn colSpan="8" style={{textAlign: 'right'}}>
 	              	{
 	              		(!this.props.state.companies || 
 	              		this.props.state.companies.filter(company => company.typeID == 13).length == 0) &&
@@ -128,6 +132,8 @@ export default class Tinkoff extends React.Component {
 	              <TableHeaderColumn>ИНН</TableHeaderColumn>
 	              <TableHeaderColumn>Регион</TableHeaderColumn>
 	              <TableHeaderColumn>Город</TableHeaderColumn>
+	              <TableHeaderColumn>Ф.И.О</TableHeaderColumn>
+	              <TableHeaderColumn>Название компании</TableHeaderColumn>
               	<TableHeaderColumn>Действия</TableHeaderColumn>
 	            </TableRow>
 	          </TableHeader>
@@ -146,6 +152,8 @@ export default class Tinkoff extends React.Component {
 		                <TableRowColumn>{company.companyInn}</TableRowColumn>
 		                <TableRowColumn>{company.regionName}</TableRowColumn>
 		                <TableRowColumn>{company.cityName}</TableRowColumn>
+		                <TableRowColumn title={company.companyOrganizationName} style={{whiteSpace: "normal"}}>{company.companyOrganizationName}</TableRowColumn>
+		                <TableRowColumn title={`${company.companyPersonName} ${company.companyPersonSurname} ${company.companyPersonPatronymic}`} style={{whiteSpace: "normal"}}>{`${company.companyPersonName} ${company.companyPersonSurname} ${company.companyPersonPatronymic}`}</TableRowColumn>
 		                { 
 		                	<TableRowColumn>
 		                		{
@@ -171,7 +179,7 @@ export default class Tinkoff extends React.Component {
 	          		)) || 
 	          		<TableRow>
 	          			<TableRowColumn 
-	          				colSpan = "6"
+	          				colSpan = "8"
 	          				style = {{
 	          					textAlign: "center"
 	          				}}
