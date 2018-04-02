@@ -7,7 +7,7 @@ module.exports = modules => (resolve, reject, data) => {
 		const columns = data.columns;
 		delete(data.columns);
 		const integers = Math.floor(keysLength/part);
-		remainder = keysLength % 500;
+		remainder = keysLength % part;
 		if (integers == 0) {
 			data.columns = columns;
 			queries.push(data);
