@@ -5,7 +5,7 @@ import Menu from './menu';
 import { Route, Switch, Redirect } from "react-router";
 import { push } from "react-router-redux";
 import Login from './../routes/login';
-import ForgotPassword from './../routes/ForgotPassword';
+import ForgotPassword from './../routes/forgotPassword';
 export default class Main extends React.Component {
 	constructor(props){
 		super(props);
