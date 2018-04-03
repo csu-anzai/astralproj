@@ -8,7 +8,8 @@ const env = require('../env.json'),
 reducer.initEvents({
 	io,
 	nodemailer,
-	mysql
+	mysql,
+	reducer
 });
 reducer.dispatch({
 	type: "query",

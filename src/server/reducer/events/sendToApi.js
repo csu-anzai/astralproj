@@ -3,7 +3,7 @@ module.exports = modules => (resolve, reject, data) => {
 	for(let i = 0; i < data.companies.length; i++){
 		let company = data.companies[i];
 		let body = {
-			securityKey: "e033e878c973539ce57904035c4124dd7725347612",
+			securityKey: "e033e878c973539ce57904035c4124dd",
 			partnerId: "5-89EH1KOQ",
 			agentId: "5-89IFZIE6",
 			source: "Федеральные партнеры",
@@ -23,9 +23,18 @@ module.exports = modules => (resolve, reject, data) => {
 		};
 		request(options, (err, res, body) => {
 			if(err){
-				console.log(err);
+				reject(err);
 			} else {
-				console.log(body);
+				modules.reducer.dispatch({
+					type: "query",
+					data: {
+						query: "setApiResponce",
+						values: [
+							company.companyID,
+							body.success ? 1 : 0
+						]
+					}
+				}).then(resolve).catch(reject);
 			}
 		});
 	}

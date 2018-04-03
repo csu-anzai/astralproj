@@ -2,9 +2,10 @@ import React from 'react';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Header from './header';
 import Menu from './menu';
-import { Route } from "react-router";
+import { Route, Switch, Redirect } from "react-router";
 import { push } from "react-router-redux";
-import Login from './../routes/login/';
+import Login from './../routes/login';
+import ForgotPassword from './../routes/ForgotPassword';
 export default class Main extends React.Component {
 	constructor(props){
 		super(props);
@@ -16,14 +17,18 @@ export default class Main extends React.Component {
 		return <MuiThemeProvider>
 			<div>
 				{
-					(this.props.state.auth && this.state.hash != "/login") &&
+					(this.props.state.auth && (this.state.hash != "/login" || this.state.hash != "/forgotPassword")) &&
 					<div> 
 						<Menu/>
 						<Header/>
-					</div>
+					</div> || ""
 				}
 				{
-					this.props.state.auth ? this.props.childrens : <Login />
+					this.props.state.auth ? this.props.childrens : <Switch>
+						<Route path = "/login" component = {Login}/>
+						<Route path = "/forgotPassword" component = {ForgotPassword}/>
+						<Redirect to = "/login" />
+					</Switch>
 				}
 			</div>
 		</MuiThemeProvider>

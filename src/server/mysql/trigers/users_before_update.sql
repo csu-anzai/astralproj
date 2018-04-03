@@ -1,6 +1,6 @@
 BEGIN
 	SET NEW.user_date_update = NOW();
-	IF NEW.user_auth
+	IF NEW.user_auth = 1 AND OLD.user_auth = 0
 		THEN BEGIN
 			hashLoop: LOOP
 		  	SET NEW.user_hash = getHash(32);

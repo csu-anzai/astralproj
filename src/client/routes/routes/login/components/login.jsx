@@ -4,7 +4,7 @@ import TextField from 'material-ui/TextField';
 import FlatButton from 'material-ui/FlatButton';
 import CircularProgress from 'material-ui/CircularProgress';
 import { fromJS } from 'immutable';
-import { push } from 'react-router';
+import { push } from 'react-router-redux';
 const paperStyle = {
 	position: "absolute",
 	top: "0",
@@ -115,13 +115,13 @@ export default class Login extends React.Component {
 				});
 			}
 		}
-		return this.state.progress &&
+		return this.state.progress ?
 			<div>
 				<div style = { progressStyle }> 
 					<CircularProgress size={80} thickness={5}/>
 				</div>
 				<div style = {progressMessageStyle}>{this.props.state.loginMessage || this.state.message}</div>
-			</div> || 
+			</div> : 
 			<Paper style={paperStyle} zDepth={2}>
 			<h2 style={ hStyle }>Вход</h2>
 			<div style={ messageStyle }>{this.props.state.loginMessage}</div>
@@ -152,7 +152,9 @@ export default class Login extends React.Component {
 				}
 			/>
 			<div style = { forgotPasswordContainerStyle }>
-				<span style = { forgotPasswordStyle }>
+				<span style = { forgotPasswordStyle } onClick = {(() => {
+					this.props.dispatch(push("/forgotPassword"))
+				}).bind(this)}>
 					Востановление пароля
 				</span>
 			</div>
