@@ -8,6 +8,8 @@ let then = (reducer, data) => {
 			let obj = arr[i];
 			reducer.dispatch(obj).then(then.bind(this, reducer)).catch(err);
 		}
+	} else {
+		console.log(data);
 	}
 }
 module.exports = then;

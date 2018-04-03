@@ -23,9 +23,18 @@ module.exports = modules => (resolve, reject, data) => {
 		};
 		request(options, (err, res, body) => {
 			if(err){
-				console.log(err);
+				reject(err);
 			} else {
-				console.log(body);
+				modules.reducer.dispatch({
+					type: "query",
+					data: {
+						query: "setApiResponce",
+						values: [
+							company.companyID,
+							body.success ? 1 : 0
+						]
+					}
+				}).then(resolve).catch(reject);
 			}
 		});
 	}

@@ -27,6 +27,7 @@ BEGIN
 						THEN BEGIN 
 							SET validCompaniesIDArray = JSON_MERGE(validCompaniesIDArray, CONCAT(companyID));
 							SET validCompaniesArray = JSON_MERGE(validCompaniesArray, JSON_OBJECT(
+								"companyID", companyID,
 								"companyPersonName", companyPersonName,
 								"companyPersonSurname", companyPersonSurname,
 								"companyPersonPatronymic", companyPersonPatronymic,

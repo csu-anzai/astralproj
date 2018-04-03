@@ -54,7 +54,7 @@ class Header extends React.Component {
         open={this.state.open}
         onRequestClose={this.dialog.bind(this, false)}
       >
-      	Вы уверены, что хотите выйти? А?
+      	Вы уверены, что хотите выйти?
       </Dialog>
 			<AppBar
 		    title="AstralInsider"

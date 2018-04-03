@@ -23,7 +23,9 @@ BEGIN
 					"data", JSON_ARRAY(
 						JSON_OBJECT(
 							"type", "merge",
-							"loginMessage", "Сообщение направлено на почту"
+							"data", JSON_OBJECT(
+								"loginMessage", CONCAT("Сообщение направлено на почту: ", userEmail) 
+							)
 						)
 					)
 				)
@@ -36,7 +38,9 @@ BEGIN
 				"data", JSON_ARRAY(
 					JSON_OBJECT(
 						"type", "merge",
-						"loginMessage", CONCAT("Пользователь с таким email не существует: ", userEmail)
+						"data", JSON_OBJECT(
+							"loginMessage", CONCAT("Пользователь с таким email не существует: ", userEmail)
+						)
 					)
 				)
 			)
