@@ -5,6 +5,7 @@ import Favorite from 'material-ui/svg-icons/action/favorite';
 import HighlightOff from 'material-ui/svg-icons/action/highlight-off';
 import Check from 'material-ui/svg-icons/navigation/check';
 import DeleteForever from 'material-ui/svg-icons/action/delete-forever';
+import CheckCircle from 'material-ui/svg-icons/action/check-circle';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
 import {
@@ -20,7 +21,8 @@ export default class Tinkoff extends React.Component {
 	constructor(props){
 		super(props);
 		this.state = {
-			selectedIndex: 0
+			selectedIndex: 0,
+			limit: 10
 		};
 	}
 	select(index){
@@ -37,7 +39,7 @@ export default class Tinkoff extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					1,
-					10
+					this.state.limit
 				]
 			}
 		});
@@ -75,7 +77,7 @@ export default class Tinkoff extends React.Component {
 	}
 	render(){
 		return <div>
-			<Paper zDepth={1}>
+			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
 					<BottomNavigationItem
             label={"В РАБОТЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 10 || i.typeID == 9).length || 0)+")"}
@@ -91,6 +93,11 @@ export default class Tinkoff extends React.Component {
             label={"НЕ ИНТЕРЕСНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 14).length || 0)+")"}
             icon={<HighlightOff/>}
             onClick={() => this.select(2)}
+          />
+          <BottomNavigationItem
+            label={"УТВЕРЖДЕНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 15 || i.typeID == 16 || i.typeID == 17).length || 0)+")"}
+            icon={<CheckCircle/>}
+            onClick={() => this.select(3)}
           />
 				</BottomNavigation>
 				<Table
@@ -108,19 +115,23 @@ export default class Tinkoff extends React.Component {
 	            <TableRow>
 	              <TableHeaderColumn colSpan="8" style={{textAlign: 'right'}}>
 	              	{
-	              		(!this.props.state.companies || 
-	              		this.props.state.companies.filter(company => company.typeID == 13).length == 0) &&
+	              		this.state.selectedIndex == 0 &&
 		                <RaisedButton 
 		                	label = "Обновить список"
 		                	backgroundColor="#a4c639"
 		                	labelColor = "#fff"
 		                	onClick = {()=>{this.refresh.call(this)}}
-		                /> ||
+		                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 9 || i.typeID == 10).length >= this.state.limit) ? true : false}
+		                />
+		              }
+		              {
+		              	this.state.selectedIndex == 1 &&
 		                <RaisedButton 
 		                	label = "Утвердить список интересных компаний"
 		                	backgroundColor="#FF5722"
 		                	labelColor = "#fff"
 		                	onClick = {()=>{this.upload.call(this)}}
+		                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 13).length > 0) ? false : true}
 		                />
 	              	}
 	              </TableHeaderColumn>
@@ -131,9 +142,9 @@ export default class Tinkoff extends React.Component {
 	              <TableHeaderColumn>ИНН</TableHeaderColumn>
 	              <TableHeaderColumn>Регион</TableHeaderColumn>
 	              <TableHeaderColumn>Город</TableHeaderColumn>
-	              <TableHeaderColumn>Ф.И.О</TableHeaderColumn>
 	              <TableHeaderColumn>Название компании</TableHeaderColumn>
-              	<TableHeaderColumn>Действия</TableHeaderColumn>
+	              <TableHeaderColumn>Ф.И.О</TableHeaderColumn>
+              	<TableHeaderColumn>{this.state.selectedIndex != 3 ? "Действия" : "Статус обработки"}</TableHeaderColumn>
 	            </TableRow>
 	          </TableHeader>
 	          <TableBody
@@ -144,15 +155,20 @@ export default class Tinkoff extends React.Component {
 	          >
 	          	{
 	          		this.props.state.companies && this.props.state.companies.length > 0 && this.props.state.companies.map((company, key) => (
-		              ((this.state.selectedIndex == 1 && company.typeID == 13) || (this.state.selectedIndex == 2 && company.typeID == 14) || (this.state.selectedIndex == 0 && (company.typeID == 10 || company.typeID == 9))) &&
+		              (
+		              	(this.state.selectedIndex == 0 && (company.typeID == 10 || company.typeID == 9)) || 
+		              	(this.state.selectedIndex == 1 && company.typeID == 13) || 
+		              	(this.state.selectedIndex == 2 && company.typeID == 14) || 
+		              	(this.state.selectedIndex == 3 && (company.typeID == 15 || company.typeID == 16 || company.typeID == 17))
+		              ) &&
 		              <TableRow key = {key}>
-		                <TableRowColumn>{company.companyPhone}</TableRowColumn>
+		                <TableRowColumn>{company.companyPhone || "–"}</TableRowColumn>
 		                <TableRowColumn>{company.templateID == 1 ? "ИП" : "ООО"}</TableRowColumn>
-		                <TableRowColumn>{company.companyInn}</TableRowColumn>
-		                <TableRowColumn>{company.regionName}</TableRowColumn>
-		                <TableRowColumn>{company.cityName}</TableRowColumn>
-		                <TableRowColumn title={company.companyOrganizationName} style={{whiteSpace: "normal"}}>{company.companyOrganizationName}</TableRowColumn>
-		                <TableRowColumn title={`${company.companyPersonName} ${company.companyPersonSurname} ${company.companyPersonPatronymic}`} style={{whiteSpace: "normal"}}>{`${company.companyPersonName} ${company.companyPersonSurname} ${company.companyPersonPatronymic}`}</TableRowColumn>
+		                <TableRowColumn>{company.companyInn || "–"}</TableRowColumn>
+		                <TableRowColumn>{company.regionName || "–"}</TableRowColumn>
+		                <TableRowColumn>{company.cityName || "–"}</TableRowColumn>
+		                <TableRowColumn title={company.companyOrganizationName} style={{whiteSpace: "normal"}}>{company.companyOrganizationName || "–"}</TableRowColumn>
+		                <TableRowColumn title={`${company.companyPersonName || ""} ${company.companyPersonSurname || ""} ${company.companyPersonPatronymic || ""}`} style={{whiteSpace: "normal"}}>{`${company.companyPersonName} ${company.companyPersonSurname} ${company.companyPersonPatronymic}`}</TableRowColumn>
 		                { 
 		                	<TableRowColumn>
 		                		{
@@ -171,6 +187,12 @@ export default class Tinkoff extends React.Component {
 				                		style = {{ marginLeft: "5px" }}
 				                		onClick = {this.valid.bind(this, company.companyID, 0)}
 				                	/>
+		                		}
+		                		{
+		                			this.state.selectedIndex == 3 &&
+		                			company.typeID == 15 ? "В процессе" :
+		                			company.typeID == 16 ? "Успешно" :
+		                			company.typeID == 17 && "Ошибка"
 		                		}
 			                </TableRowColumn>
 		                }
