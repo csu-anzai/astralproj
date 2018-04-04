@@ -2552,7 +2552,6 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 `time_id` int(11)
 ,`time_value` varchar(5)
 ,`priority` int(11)
-,`bank_id` int(11)
 ,`region_name` varchar(60)
 ,`city_name` varchar(60)
 ,`company_id` int(11)
@@ -2596,7 +2595,7 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 ,`company_person_position_type` varchar(60)
 ,`company_person_position_name` varchar(60)
 ,`company_doc_name` varchar(120)
-,`company_doc_gitfter` varchar(256)
+,`company_doc_gifter` varchar(256)
 ,`company_doc_code` varchar(7)
 ,`company_doc_house` varchar(20)
 ,`company_doc_flat` varchar(40)
@@ -2610,7 +2609,8 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 ,`company_doc_street_name` varchar(60)
 ,`city_id` int(11)
 ,`region_id` int(11)
-,`company_tinkoff` tinyint(1)
+,`bank_id` int(11)
+,`company_json` json
 );
 CREATE TABLE `bank_times_view` (
 `time_id` int(11)
@@ -3435,7 +3435,7 @@ CREATE TABLE `companies` (
   `company_person_position_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
   `company_person_position_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_name` varchar(120) COLLATE utf8_bin DEFAULT NULL,
-  `company_doc_gitfter` varchar(256) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_gifter` varchar(256) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_code` varchar(7) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_house` varchar(20) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_flat` varchar(40) COLLATE utf8_bin DEFAULT NULL,
@@ -3449,7 +3449,7 @@ CREATE TABLE `companies` (
   `company_doc_street_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
   `city_id` int(11) DEFAULT NULL,
   `region_id` int(11) DEFAULT NULL,
-  `company_tinkoff` tinyint(1) NOT NULL DEFAULT '0'
+  `bank_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
@@ -3461,9 +3461,7 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
   END IF;
   SET NEW.region_id = (SELECT region_id FROM codes WHERE code_value = SUBSTRING(NEW.company_inn, 1, 2));
   SET NEW.city_id = (SELECT city_id FROM fns_codes WHERE fns_code_value = SUBSTRING(NEW.company_inn, 1, 4));
-  IF (SELECT COUNT(*) FROM bank_cities WHERE bank_id = 1 AND city_id = NEW.city_id) > 0
-    THEN SET NEW.company_tinkoff = 1;
-  END IF;
+  SET NEW.bank_id = (SELECT bank_id FROM bank_cities WHERE city_id = NEW.city_id LIMIT 1);
   SET NEW.company_phone = REPLACE(CONCAT("+", REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(NEW.company_phone, "(", ""), ")",""), " ", ""), "-", ""), "—", ""), "+", "")), "+8", "+7");
 END
 $$
@@ -4943,7 +4941,7 @@ CREATE TABLE `users_connections_view` (
 );
 DROP TABLE IF EXISTS `bank_cities_time_priority_companies_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_cities_time_priority_companies_view`  AS  select `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`priority` AS `priority`,`b`.`bank_id` AS `bank_id`,`r`.`region_name` AS `region_name`,`ci`.`city_name` AS `city_name`,`c`.`company_id` AS `company_id`,`c`.`user_id` AS `user_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`type_id` AS `type_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_discount` AS `company_discount`,`c`.`company_discount_percent` AS `company_discount_percent`,`c`.`company_ogrn` AS `company_ogrn`,`c`.`company_ogrn_date` AS `company_ogrn_date`,`c`.`company_person_name` AS `company_person_name`,`c`.`company_person_surname` AS `company_person_surname`,`c`.`company_person_patronymic` AS `company_person_patronymic`,`c`.`company_person_birthday` AS `company_person_birthday`,`c`.`company_person_birthplace` AS `company_person_birthplace`,`c`.`company_inn` AS `company_inn`,`c`.`company_address` AS `company_address`,`c`.`company_doc_number` AS `company_doc_number`,`c`.`company_doc_date` AS `company_doc_date`,`c`.`company_organization_name` AS `company_organization_name`,`c`.`company_organization_code` AS `company_organization_code`,`c`.`company_phone` AS `company_phone`,`c`.`company_email` AS `company_email`,`c`.`company_okved_code` AS `company_okved_code`,`c`.`company_okved_name` AS `company_okved_name`,`c`.`purchase_id` AS `purchase_id`,`c`.`template_id` AS `template_id`,`c`.`company_kpp` AS `company_kpp`,`c`.`company_index` AS `company_index`,`c`.`company_house` AS `company_house`,`c`.`company_region_type` AS `company_region_type`,`c`.`company_region_name` AS `company_region_name`,`c`.`company_area_type` AS `company_area_type`,`c`.`company_area_name` AS `company_area_name`,`c`.`company_locality_type` AS `company_locality_type`,`c`.`company_locality_name` AS `company_locality_name`,`c`.`company_street_type` AS `company_street_type`,`c`.`company_street_name` AS `company_street_name`,`c`.`company_innfl` AS `company_innfl`,`c`.`company_person_position_type` AS `company_person_position_type`,`c`.`company_person_position_name` AS `company_person_position_name`,`c`.`company_doc_name` AS `company_doc_name`,`c`.`company_doc_gitfter` AS `company_doc_gitfter`,`c`.`company_doc_code` AS `company_doc_code`,`c`.`company_doc_house` AS `company_doc_house`,`c`.`company_doc_flat` AS `company_doc_flat`,`c`.`company_doc_region_type` AS `company_doc_region_type`,`c`.`company_doc_region_name` AS `company_doc_region_name`,`c`.`company_doc_area_type` AS `company_doc_area_type`,`c`.`company_doc_area_name` AS `company_doc_area_name`,`c`.`company_doc_locality_type` AS `company_doc_locality_type`,`c`.`company_doc_locality_name` AS `company_doc_locality_name`,`c`.`company_doc_street_type` AS `company_doc_street_type`,`c`.`company_doc_street_name` AS `company_doc_street_name`,`c`.`city_id` AS `city_id`,`c`.`region_id` AS `region_id`,`c`.`company_tinkoff` AS `company_tinkoff` from ((((`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`companies` `c` on(((`c`.`city_id` = `b`.`city_id`) and (`c`.`company_tinkoff` = 1) and isnull(`c`.`user_id`)))) join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) join `astralinside`.`cities` `ci` on((`ci`.`city_id` = `b`.`city_id`))) join `astralinside`.`regions` `r` on((`r`.`region_id` = `c`.`region_id`))) order by `b`.`time_id`,`b`.`priority` ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_cities_time_priority_companies_view`  AS  select `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`priority` AS `priority`,`r`.`region_name` AS `region_name`,`ci`.`city_name` AS `city_name`,`c`.`company_id` AS `company_id`,`c`.`user_id` AS `user_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`type_id` AS `type_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_discount` AS `company_discount`,`c`.`company_discount_percent` AS `company_discount_percent`,`c`.`company_ogrn` AS `company_ogrn`,`c`.`company_ogrn_date` AS `company_ogrn_date`,`c`.`company_person_name` AS `company_person_name`,`c`.`company_person_surname` AS `company_person_surname`,`c`.`company_person_patronymic` AS `company_person_patronymic`,`c`.`company_person_birthday` AS `company_person_birthday`,`c`.`company_person_birthplace` AS `company_person_birthplace`,`c`.`company_inn` AS `company_inn`,`c`.`company_address` AS `company_address`,`c`.`company_doc_number` AS `company_doc_number`,`c`.`company_doc_date` AS `company_doc_date`,`c`.`company_organization_name` AS `company_organization_name`,`c`.`company_organization_code` AS `company_organization_code`,`c`.`company_phone` AS `company_phone`,`c`.`company_email` AS `company_email`,`c`.`company_okved_code` AS `company_okved_code`,`c`.`company_okved_name` AS `company_okved_name`,`c`.`purchase_id` AS `purchase_id`,`c`.`template_id` AS `template_id`,`c`.`company_kpp` AS `company_kpp`,`c`.`company_index` AS `company_index`,`c`.`company_house` AS `company_house`,`c`.`company_region_type` AS `company_region_type`,`c`.`company_region_name` AS `company_region_name`,`c`.`company_area_type` AS `company_area_type`,`c`.`company_area_name` AS `company_area_name`,`c`.`company_locality_type` AS `company_locality_type`,`c`.`company_locality_name` AS `company_locality_name`,`c`.`company_street_type` AS `company_street_type`,`c`.`company_street_name` AS `company_street_name`,`c`.`company_innfl` AS `company_innfl`,`c`.`company_person_position_type` AS `company_person_position_type`,`c`.`company_person_position_name` AS `company_person_position_name`,`c`.`company_doc_name` AS `company_doc_name`,`c`.`company_doc_gifter` AS `company_doc_gifter`,`c`.`company_doc_code` AS `company_doc_code`,`c`.`company_doc_house` AS `company_doc_house`,`c`.`company_doc_flat` AS `company_doc_flat`,`c`.`company_doc_region_type` AS `company_doc_region_type`,`c`.`company_doc_region_name` AS `company_doc_region_name`,`c`.`company_doc_area_type` AS `company_doc_area_type`,`c`.`company_doc_area_name` AS `company_doc_area_name`,`c`.`company_doc_locality_type` AS `company_doc_locality_type`,`c`.`company_doc_locality_name` AS `company_doc_locality_name`,`c`.`company_doc_street_type` AS `company_doc_street_type`,`c`.`company_doc_street_name` AS `company_doc_street_name`,`c`.`city_id` AS `city_id`,`c`.`region_id` AS `region_id`,`c`.`bank_id` AS `bank_id`,json_object('cityName',`ci`.`city_name`,'regionName',`r`.`region_name`,'typeID',`c`.`type_id`,'companyID',`c`.`company_id`,'templateID',`c`.`template_id`,'cityID',`c`.`city_id`,'regionID',`c`.`region_id`,'companyDateCreate',`c`.`company_date_create`,'companyDateUpdate',`c`.`company_date_update`,'companyOgrn',`c`.`company_ogrn`,'companyOgrnDate',`c`.`company_ogrn_date`,'companyPersonBirthday',`c`.`company_person_birthday`,'companyDocDate',`c`.`company_doc_date`,'companyPersonName',`c`.`company_person_name`,'companyPersonSurname',`c`.`company_person_name`,'companyPersonPatronymic',`c`.`company_person_patronymic`,'companyPersonBirthplace',`c`.`company_person_birthplace`,'companyAddress',`c`.`company_address`,'companyOrganizationName',`c`.`company_organization_name`,'companyEmail',`c`.`company_email`,'companyInn',`c`.`company_inn`,'companyDocNumber',`c`.`company_doc_number`,'companyInnfl',`c`.`company_innfl`,'companyOrganizationCode',`c`.`company_organization_code`,'companyPhone',`c`.`company_phone`,'companyHouse',`c`.`company_house`,'companyDocHouse',`c`.`company_doc_house`,'companyOkvedCode',`c`.`company_okved_code`,'companyOkvedName',`c`.`company_okved_name`,'companyKpp',`c`.`company_kpp`,'companyIndex',`c`.`company_index`,'companyRegionType',`c`.`company_region_type`,'companyDocRegionType',`c`.`company_doc_region_type`,'companyRegionName',`c`.`company_region_name`,'companyDocName',`c`.`company_doc_name`,'companyDocRegionName',`c`.`company_doc_region_name`,'companyAreaType',`c`.`company_area_type`,'companyAreaName',`c`.`company_area_name`,'companyLocalityType',`c`.`company_locality_type`,'companyLocalityName',`c`.`company_locality_name`,'companyStreetType',`c`.`company_street_type`,'companyStreetName',`c`.`company_street_name`,'companyPersonPositionType',`c`.`company_person_position_type`,'companyPersonPositionName',`c`.`company_person_position_name`,'companyDocAreaType',`c`.`company_doc_area_type`,'companyDocAreaName',`c`.`company_doc_area_name`,'companyDocLocalityType',`c`.`company_doc_locality_type`,'companyDocLocalityName',`c`.`company_doc_locality_name`,'companyDocStreetType',`c`.`company_doc_street_type`,'companyDocStreetName',`c`.`company_doc_street_name`,'companyDocGifter',`c`.`company_doc_gifter`,'companyDocCode',`c`.`company_doc_code`,'companyDocFlat',`c`.`company_doc_flat`) AS `company_json` from ((((`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`companies` `c` on(((`c`.`city_id` = `b`.`city_id`) and (`c`.`bank_id` = `b`.`bank_id`)))) join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) join `astralinside`.`cities` `ci` on((`ci`.`city_id` = `b`.`city_id`))) join `astralinside`.`regions` `r` on((`r`.`region_id` = `c`.`region_id`))) order by `b`.`time_id`,`b`.`priority` ;
 DROP TABLE IF EXISTS `bank_times_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
@@ -4988,7 +4986,8 @@ ALTER TABLE `companies`
   ADD KEY `purchase_id` (`purchase_id`),
   ADD KEY `template_id` (`template_id`),
   ADD KEY `city_id` (`city_id`),
-  ADD KEY `region_id` (`region_id`);
+  ADD KEY `region_id` (`region_id`),
+  ADD KEY `bank_id` (`bank_id`);
 
 ALTER TABLE `connections`
   ADD PRIMARY KEY (`connection_id`),
@@ -5119,7 +5118,8 @@ ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_3` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`purchase_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_4` FOREIGN KEY (`template_id`) REFERENCES `templates` (`template_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_5` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `companies_ibfk_6` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `companies_ibfk_6` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `companies_ibfk_7` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `connections`
   ADD CONSTRAINT `connections_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
