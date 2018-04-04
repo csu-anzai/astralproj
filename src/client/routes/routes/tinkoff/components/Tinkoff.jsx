@@ -36,6 +36,7 @@ export default class Tinkoff extends React.Component {
 				query: "getBankCompanies",
 				values: [
 					this.props.state.connectionHash,
+					1,
 					10
 				]
 			}
