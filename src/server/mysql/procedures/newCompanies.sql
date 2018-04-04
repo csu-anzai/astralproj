@@ -85,9 +85,9 @@ BEGIN
 					IF deleteCount > 0
 						THEN DELETE a FROM companies a, companies b WHERE a.company_id > b.company_id AND (a.company_ogrn = b.company_ogrn OR a.company_inn = b.company_inn);
 					END IF;
-					SELECT COUNT(*) INTO deleteCount2 FROM companies WHERE (company_phone IS NULL OR company_inn IS NULL) AND company_tinkoff = 1;
+					SELECT COUNT(*) INTO deleteCount2 FROM companies WHERE (company_phone IS NULL OR company_inn IS NULL) AND bank_id IS NOT NULL;
 					IF deleteCount2 > 0
-						THEN DELETE FROM companies WHERE company_phone IS NULL OR company_inn IS NULL;
+						THEN DELETE FROM companies WHERE (company_phone IS NULL OR company_inn IS NULL) AND bank_id IS NOT NULL;
 					END IF;
 					SET responce = JSON_OBJECT(
 						"message", CONCAT("added ", companiesLength - 1 - deleteCount + deleteCount2, " companies in the base")
