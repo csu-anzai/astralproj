@@ -39,20 +39,14 @@ BEGIN
 					ITERATE userCompaniesLoop;
 				END LOOP;
 			CLOSE userCompaniesCursor;
-			SET responce = JSON_MERGE(responce, JSON_OBJECT(
-				"type", "sendToSocket",
+			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+				"type", "merge",
 				"data", JSON_OBJECT(
-					"socketID", connectionApiID,
-					"data", JSON_ARRAY(JSON_OBJECT(
-						"type", "merge",
-						"data", JSON_OBJECT(
-							"companies", companiesArray,
-							"messageType", IF(companiesLength > 0, "success", "error"),
-							"message", IF(companiesLength > 0, CONCAT("Загружено компаний: ", companiesLength), CONCAT("Не удалось найти ни одной компании на данное время: ", HOUR(NOW()), ":", MINUTE(NOW())))
-						)
-					))
+					"companies", companiesArray,
+					"messageType", IF(companiesLength > 0, "success", "error"),
+					"message", IF(companiesLength > 0, CONCAT("Загружено компаний: ", companiesLength), CONCAT("Не удалось найти ни одной компании на данное время: ", HOUR(NOW()), ":", MINUTE(NOW())))
 				)
-			));
+			))));
 		END;
 		ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToSocket",

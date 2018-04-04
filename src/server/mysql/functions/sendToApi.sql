@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE companyID, typeID INT(11);
+	DECLARE companyID, typeID, userID, iterator, validCompaniesLength INT(11);
 	DECLARE done, connectionValid TINYINT(1);
 	DECLARE connectionApiID, companyPersonName, companyPersonSurname, companyPersonPatronymic VARCHAR(128);
 	DECLARE companyPhone VARCHAR(20);
@@ -11,7 +11,7 @@ BEGIN
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET responce = JSON_ARRAY();
 	SET connectionValid = checkConnection(connectionHash);
-	SELECT connection_api_id INTO connectionApiID FROM connections WHERE connection_hash = connectionHash;
+	SELECT connection_api_id, user_id INTO connectionApiID, userID FROM users_connections_view WHERE connection_hash = connectionHash;
 	IF connectionValid 
 		THEN BEGIN
 			SET done = 0;
@@ -50,24 +50,34 @@ BEGIN
 							"data", JSON_OBJECT(
 								"companies", validCompaniesArray
 							)
-						),
-						JSON_OBJECT(
-							"type", "sendToSocket",
-							"data", JSON_OBJECT(
-								"socketID", connectionApiID,
-								"data", JSON_ARRAY(
-									JSON_OBJECT(
-										"type", "deleteFromArray",
-										"data", JSON_OBJECT(
-											"name", "companies",
-											"searchParam", "companyID",
-											"searchValues", validCompaniesIDArray
-										)
-									)
-								)
-							)
 						)
 					);
+					SET validCompaniesLength = JSON_LENGTH(validCompaniesArray);
+					IF validCompaniesLength > 0
+						THEN BEGIN
+							SET iterator = 0;
+							validCompaniesLoop: LOOP
+								IF iterator >= validCompaniesLength
+									THEN LEAVE validCompaniesLoop;
+								END IF;
+								SET companyID = JSON_UNQUOTE(JSON_EXTRACT(validCompaniesArray, CONCAT("$[", iterator, "].companyID")));
+								SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+									"type", "updateArray",
+									"data", JSON_OBJECT(
+										"name", "companies",
+										"search", JSON_OBJECT(
+											"companyID", companyID
+										),
+										"values", JSON_OBJECT(
+											"typeID", 15
+										)
+									)
+								))));
+								SET iterator = iterator + 1;
+								ITERATE validCompaniesLoop;
+							END LOOP;
+						END;
+					END IF;
 				END;
 			END IF;
 		END;

@@ -9,6 +9,12 @@ export default (store = Map(), action) => {
 		case "set": return fromJS(action.data);
 		case "merge": return store.merge(fromJS(action.data));
 		case "mergeDeep": return store.mergeDeep(fromJS(action.data));
+		case "push": {
+			let arr = store.get(action.data.name);
+			arr = arr.push(action.data.value);
+			store = store.set(action.data.name, arr);
+			return store;
+		}
 		case "updateArray": {			
 			let arr = store.get(action.data.name);
 			let index = arr.findIndex(item => {
