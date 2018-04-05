@@ -5,7 +5,7 @@ BEGIN
     DECLARE connectionEnd TINYINT(1);
     DECLARE responce JSON;
     SET responce = JSON_ARRAY();
-    SELECT user_id INTO userID FROM users WHERE user_email = email AND user_password = pass;
+    SELECT user_id INTO userID FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
     SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     IF userID IS NOT NULL AND connectionID IS NOT NULL AND connectionEnd = 0
         THEN BEGIN 
