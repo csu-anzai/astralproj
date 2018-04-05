@@ -9,7 +9,8 @@ reducer.initEvents({
 	io,
 	nodemailer,
 	mysql,
-	reducer
+	reducer,
+	env
 });
 reducer.dispatch({
 	type: "query",
