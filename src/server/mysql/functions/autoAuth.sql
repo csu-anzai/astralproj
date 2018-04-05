@@ -1,8 +1,8 @@
 BEGIN
-	DECLARE connectionID, userID, connectionUserID INT(11);
+	DECLARE connectionID, userID, connectionUserID, activeCompaniesLength INT(11);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userAuth, connectionEnd TINYINT(1);
-    DECLARE responce JSON;
+    DECLARE responce, activeCompanies JSON;
     SET responce = JSON_ARRAY();
 	SELECT connection_id, userID, connection_end, connection_api_id INTO connectionID, connectionUserID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     SELECT user_id, user_auth INTO userID, userAuth FROM users WHERE user_hash = userHash;
@@ -45,6 +45,23 @@ BEGIN
                     )
                 )
             ));
+            SET activeCompanies = getActiveBankUserCompanies(userID);
+            SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+            IF activeCompaniesLength > 0
+                THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                    "type", "sendToSocket",
+                    "data", JSON_OBJECT(
+                        "socketID", connectionApiID,
+                        "data", JSON_ARRAY(JSON_OBJECT(
+                            "type", "merge",
+                            "data", JSON_OBJECT(
+                                "companies", activeCompanies,
+                                "message", CONCAT("Загружено компаний: ", activeCompaniesLength)
+                            )
+                        ))
+                    )
+                ));
+            END IF;
         END;
     END IF;
     RETURN responce;
