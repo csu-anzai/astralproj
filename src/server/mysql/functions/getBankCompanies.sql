@@ -44,7 +44,7 @@ BEGIN
 				"data", JSON_OBJECT(
 					"companies", companiesArray,
 					"messageType", IF(companiesLength > 0, "success", "error"),
-					"message", IF(companiesLength > 0, CONCAT("Загружено компаний: ", companiesLength), CONCAT("Не удалось найти ни одной компании на данное время: ", HOUR(NOW()), ":", MINUTE(NOW())))
+					"message", IF(companiesLength > 0, CONCAT("Загружено компаний для сортировки: ", companiesLength), CONCAT("Не удалось найти ни одной компании для сортировки на данное время"))
 				)
 			))));
 		END;

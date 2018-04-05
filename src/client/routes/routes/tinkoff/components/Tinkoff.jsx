@@ -113,27 +113,41 @@ export default class Tinkoff extends React.Component {
 	            enableSelectAll={false}
 	          >
 	            <TableRow>
-	              <TableHeaderColumn colSpan="8" style={{textAlign: 'right'}}>
-	              	{
-	              		this.state.selectedIndex == 0 &&
-		                <RaisedButton 
-		                	label = "Обновить список"
-		                	backgroundColor="#a4c639"
-		                	labelColor = "#fff"
-		                	onClick = {()=>{this.refresh.call(this)}}
-		                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 9 || i.typeID == 10).length >= this.state.limit) ? true : false}
-		                />
-		              }
-		              {
-		              	this.state.selectedIndex == 1 &&
-		                <RaisedButton 
-		                	label = "Утвердить список интересных компаний"
-		                	backgroundColor="#FF5722"
-		                	labelColor = "#fff"
-		                	onClick = {()=>{this.upload.call(this)}}
-		                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 13).length > 0) ? false : true}
-		                />
-	              	}
+	              <TableHeaderColumn colSpan="8">
+	              	<div>
+		              	<span style = {{
+		              		display: "inline-block",
+		              		height: "36px",
+		              		lineHeight: "36px",
+		              		fontWeight: "bold",
+		              		fontSize: "14px",
+		              		color: this.props.state.messageType == "success" ? "#789a0a" : this.props.state.messageType == "error" ? "#ff4081" : "inherit"
+		              	}}>
+		              		{ this.props.state.message }
+		              	</span>
+		              	<div style = {{float: "right"}}>
+			              	{
+			              		this.state.selectedIndex == 0 &&
+				                <RaisedButton 
+				                	label = "Обновить список"
+				                	backgroundColor="#a4c639"
+				                	labelColor = "#fff"
+				                	onClick = {()=>{this.refresh.call(this)}}
+				                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 9 || i.typeID == 10).length >= this.state.limit) ? true : false}
+				                />
+				              }
+				              {
+				              	this.state.selectedIndex == 1 &&
+				                <RaisedButton 
+				                	label = "Утвердить список интересных компаний"
+				                	backgroundColor="#FF5722"
+				                	labelColor = "#fff"
+				                	onClick = {()=>{this.upload.call(this)}}
+				                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 13).length > 0) ? false : true}
+				                />
+			              	}
+		              	</div>
+	              	</div>
 	              </TableHeaderColumn>
 	            </TableRow>
 	            <TableRow>
@@ -190,9 +204,15 @@ export default class Tinkoff extends React.Component {
 		                		}
 		                		{
 		                			this.state.selectedIndex == 3 &&
-		                			company.typeID == 15 ? "В процессе" :
-		                			company.typeID == 16 ? "Успешно" :
-		                			company.typeID == 17 && "Ошибка"
+		                			<span style = {{
+		                				color: company.typeID == 15 ? "inherit" : company.typeID == 16 ? "green" : company.typeID == 17 && "red"
+		                			}}>
+		                				{
+				                			company.typeID == 15 ? "В процессе" :
+				                			company.typeID == 16 ? "Успешно" :
+				                			company.typeID == 17 && "Ошибка"
+		                				}
+		                			</span>
 		                		}
 			                </TableRowColumn>
 		                }
