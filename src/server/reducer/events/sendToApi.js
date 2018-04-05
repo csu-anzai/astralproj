@@ -3,9 +3,9 @@ module.exports = modules => (resolve, reject, data) => {
 	for(let i = 0; i < data.companies.length; i++){
 		let company = data.companies[i];
 		let body = {
-			securityKey: "e033e878c973539ce57904035c4124dd",
-			partnerId: "5-89EH1KOQ",
-			agentId: "5-89IFZIE6",
+			securityKey: modules.env.tinkoff.securityKey,
+			partnerId: modules.env.tinkoff.partnerId,
+			agentId: modules.env.tinkoff.agentId,
 			source: "Федеральные партнеры",
 			subsource: "API",
 			firstName: company.companyPersonName,
@@ -19,7 +19,7 @@ module.exports = modules => (resolve, reject, data) => {
 			method: 'post',
 			body: body,
 			json: true,
-			url: "https://origination.tinkoff.ru/api/v1/public/partner/createApplication"
+			url: modules.env.tinkoff.url
 		};
 		request(options, (err, res, body) => {
 			if(err){
