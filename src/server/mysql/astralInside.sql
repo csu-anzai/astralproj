@@ -470,6 +470,9 @@ CREATE TRIGGER `users_before_update` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
     THEN SET NEW.user_online = 1;
     ELSE SET NEW.user_online = 0;
   END IF;
+  IF (NEW.user_auth = 0 AND OLD.user_auth = 1) OR (NEW.user_online = 0 AND OLD.user_online = 1)
+    THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = NEW.user_id AND type_id = 9;
+  END IF;
 END
 $$
 DELIMITER ;
