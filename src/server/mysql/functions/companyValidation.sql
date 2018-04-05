@@ -10,18 +10,26 @@ BEGIN
 		THEN BEGIN
 			SET typeID = IF(companyValidation, 13, 14);
 			UPDATE companies SET type_id = typeID WHERE company_id = companyID AND user_id = userID;
-			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-				"type", "updateArray",
-				"data", JSON_OBJECT(
-					"name", "companies",
-					"search", JSON_OBJECT(
-						"companyID", companyID
-					), 
-					"values", JSON_OBJECT(
-						"typeID", typeID
+			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
+				JSON_OBJECT(
+					"type", "updateArray",
+					"data", JSON_OBJECT(
+						"name", "companies",
+						"search", JSON_OBJECT(
+							"companyID", companyID
+						), 
+						"values", JSON_OBJECT(
+							"typeID", typeID
+						)
+					)
+				),
+				JSON_OBJECT(
+					"type", "merge",
+					"data", JSON_OBJECT(
+						"message", ""
 					)
 				)
-			))));
+			)));
 		END;
 		ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToSocket",
