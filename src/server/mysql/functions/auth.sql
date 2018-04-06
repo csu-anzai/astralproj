@@ -1,12 +1,12 @@
 BEGIN
 	DECLARE userHash VARCHAR(32);
     DECLARE connectionApiID VARCHAR(128);
-    DECLARE userID, connectionID, activeCompaniesLength INT(11);
+    DECLARE userID, connectionID, activeCompaniesLength, typeID INT(11);
     DECLARE connectionEnd TINYINT(1);
     DECLARE responce, activeCompanies JSON;
     SET responce = JSON_ARRAY();
     SET activeCompanies = JSON_ARRAY();
-    SELECT user_id INTO userID FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
+    SELECT user_id, type_id INTO userID, typeID FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
     SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     IF userID IS NOT NULL AND connectionID IS NOT NULL AND connectionEnd = 0
         THEN BEGIN 
@@ -23,7 +23,8 @@ BEGIN
                                 "type", "merge",
                                 "data", JSON_OBJECT(
                                     "loginMessage", "Авторизация прошла успешно",
-                                    "auth", 1
+                                    "auth", 1,
+                                    "userType", typeID
                                 )
                             ),
                             JSON_OBJECT(
