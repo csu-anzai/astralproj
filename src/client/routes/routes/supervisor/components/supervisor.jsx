@@ -1,20 +1,51 @@
 import React from 'react';
-import { Line } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 export default class Supervisor extends React.Component {
 	constructor(props){
 		super(props);
 		this.state = {
-			types: ["allTypes", "apiError", "apiProcess", "apiSuccess", "validate", "invalidate"],
 			typesNames: ["Все", "Ошибка при обработке", "Обработка в процессе", "Успешная обработка", "Интересные", "Не интересные"],
-			typeToView: 0
+			typeToView: this.props.state.statistic && this.props.state.statistic.typeToView || 0,
+			period: this.props.state.statistic && this.props.state.statistic.period || 3,
+			colors: [
+				["rgb(75,192,192)", "rgba(75,192,192,0.4)"],
+				["rgb(173,162,249)", "rgba(173,162,249,0.4)"],
+				["rgb(160,226,150)", "rgba(160,226,150,0.4)"]
+			]
 		}
 		this.changeTypeToView = this.changeTypeToView.bind(this);
+		this.changePeriod = this.changePeriod.bind(this);
 	}
 	changeTypeToView(event, key, payload) {
-		this.setState({
-			typeToView: key
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						typeToView: key
+					})
+				]
+			}
+		})
+	}
+	changePeriod(event, key, payload) {
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						period: key
+					})
+				]
+			}
 		})
 	}
 	render(){
@@ -26,11 +57,8 @@ export default class Supervisor extends React.Component {
 				<h2 style = {{textAlign: "center", fontFamily: "Roboto"}}>Количество компаний за период</h2>
 				<SelectField
           floatingLabelText="Тип компаний"
-          value={this.state.typeToView}
+          value={this.props.state.statistic && this.props.state.statistic.typeToView != undefined ? this.props.state.statistic.typeToView : this.state.typeToView}
           onChange={this.changeTypeToView}
-          style = {{
-          	margin: "0 auto"
-          }}
         >
         	{
         		this.state.typesNames.map((type, key) => (
@@ -38,73 +66,39 @@ export default class Supervisor extends React.Component {
         		))
         	}
         </SelectField>
+        <SelectField
+          floatingLabelText="Период"
+          value={this.props.state.statistic && this.props.state.statistic.period != undefined ? this.props.state.statistic.period : this.state.period}
+          onChange={this.changePeriod}
+        >
+        	<MenuItem value = {0} primaryText = "Неделя" />
+        	<MenuItem value = {1} primaryText = "Месяц" />
+        	<MenuItem value = {2} primaryText = "Год" />
+        	<MenuItem value = {3} primaryText = "Все время" />
+        </SelectField>
 				<Line xAxisID = "Дата" yAxisID = "Количество компаний" data = {{
-					labels: this.props.state.statistic && this.props.state.statistic[this.state.types[this.state.typeToView]].labels || [],
-				  datasets: [
-				    {
-				      label: "ООО",
-				      fill: false,
-				      lineTension: 0.1,
-				      backgroundColor: 'rgba(75,192,192,0.4)',
-				      borderColor: 'rgba(75,192,192,1)',
-				      borderCapStyle: 'butt',
-				      borderDash: [],
-				      borderDashOffset: 0.0,
-				      borderJoinStyle: 'miter',
-				      pointBorderColor: 'rgba(75,192,192,1)',
-				      pointBackgroundColor: '#fff',
-				      pointBorderWidth: 1,
-				      pointHoverRadius: 10,
-				      pointHoverBackgroundColor: 'rgba(75,192,192,1)',
-				      pointHoverBorderColor: 'rgba(220,220,220,1)',
-				      pointHoverBorderWidth: 2,
-				      pointRadius: 5,
-				      pointHitRadius: 10,
-				      data: this.props.state.statistic && this.props.state.statistic[this.state.types[this.state.typeToView]].ooo || []
-				    },
-				    {
-				      label: "ИП",
-				      fill: false,
-				      lineTension: 0.1,
-				      backgroundColor: 'rgba(173,162,249,0.4)',
-				      borderColor: 'rgb(173,162,249)',
-				      borderCapStyle: 'butt',
-				      borderDash: [],
-				      borderDashOffset: 0.0,
-				      borderJoinStyle: 'miter',
-				      pointBorderColor: 'rgb(173,162,249)',
-				      pointBackgroundColor: '#fff',
-				      pointBorderWidth: 1,
-				      pointHoverRadius: 10,
-				      pointHoverBackgroundColor: 'rgb(173,162,249)',
-				      pointHoverBorderColor: 'rgba(220,220,220,1)',
-				      pointHoverBorderWidth: 2,
-				      pointRadius: 5,
-				      pointHitRadius: 10,
-				      data: this.props.state.statistic && this.props.state.statistic[this.state.types[this.state.typeToView]].ip || []
-				    },
-				    {
-				      label: "ВСЕ",
-				      fill: false,
-				      lineTension: 0.1,
-				      backgroundColor: 'rgba(160,226,150,0.4)',
-				      borderColor: 'rgb(160,226,150)',
-				      borderCapStyle: 'butt',
-				      borderDash: [],
-				      borderDashOffset: 0.0,
-				      borderJoinStyle: 'miter',
-				      pointBorderColor: 'rgb(160,226,150)',
-				      pointBackgroundColor: '#fff',
-				      pointBorderWidth: 1,
-				      pointHoverRadius: 10,
-				      pointHoverBackgroundColor: 'rgb(160,226,150)',
-				      pointHoverBorderColor: 'rgba(220,220,220,1)',
-				      pointHoverBorderWidth: 2,
-				      pointRadius: 5,
-				      pointHitRadius: 10,
-				      data: this.props.state.statistic && this.props.state.statistic[this.state.types[this.state.typeToView]].all || []
-				    }
-				  ]
+					labels: this.props.state.statistic && this.props.state.statistic.labels || [],
+				  datasets: this.props.state.statistic && this.props.state.statistic.templates.map((template, key) => ({
+				  	label: template.name || "Компании",
+			      fill: false,
+			      lineTension: 0.1,
+			      backgroundColor: this.state.colors[key][1],
+			      borderColor: this.state.colors[key][0],
+			      borderCapStyle: 'butt',
+			      borderDash: [],
+			      borderDashOffset: 0.0,
+			      borderJoinStyle: 'miter',
+			      pointBorderColor: this.state.colors[key][0],
+			      pointBackgroundColor: '#fff',
+			      pointBorderWidth: 1,
+			      pointHoverRadius: 10,
+			      pointHoverBackgroundColor: this.state.colors[key][0],
+			      pointHoverBorderColor: 'rgba(220,220,220,1)',
+			      pointHoverBorderWidth: 2,
+			      pointRadius: 5,
+			      pointHitRadius: 10,
+			      data: template.items || []
+				  }))
 				}}/>
 			</div>
 		</div>

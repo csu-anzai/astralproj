@@ -2,7 +2,7 @@ BEGIN
 	DECLARE connectionID, userID, activeCompaniesLength, typeID INT(11);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userAuth, connectionEnd TINYINT(1);
-    DECLARE responce, activeCompanies, statistic JSON;
+    DECLARE responce, activeCompanies JSON;
     SET responce = JSON_ARRAY();
 	SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     SELECT user_id, user_auth, type_id INTO userID, userAuth, typeID FROM users WHERE user_hash = userHash;
@@ -69,17 +69,13 @@ BEGIN
             END IF; 
             IF typeID = 1 OR typeID = 19
                 THEN BEGIN
-                    SET statistic = getBankStatistic(1, SUBDATE(NOW(), INTERVAL 1 WEEK), NOW());
                     SET responce = JSON_MERGE(responce, JSON_OBJECT(
-                        "type", "sendToSocket",
+                        "type", "procedure",
                         "data", JSON_OBJECT(
-                            "socketID", connectionApiID,
-                            "data", JSON_ARRAY(JSON_OBJECT(
-                                "type", "merge",
-                                "data", JSON_OBJECT(
-                                    "statistic", statistic
-                                )
-                            ))
+                            "query", "getBankStatistic",
+                            "values", JSON_ARRAY(
+                                CONCAT(connectionHash)
+                            )
                         )
                     ));
                 END;
