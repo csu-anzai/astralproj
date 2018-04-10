@@ -1,11 +1,11 @@
 BEGIN
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
-	DECLARE userID, connectionID INT(11);
+	DECLARE userID, connectionID, bankID INT(11);
 	DECLARE responce JSON;
 	SET responce = JSON_ARRAY();
 	SET connectionValid = checkConnection(connectionHash);
-	SELECT user_id, connection_api_id, connection_id INTO userID, connectionApiID, connectionID FROM users_connections_view WHERE connection_hash = connectionHash;
+	SELECT user_id, connection_api_id, connection_id, bank_id INTO userID, connectionApiID, connectionID, bankID FROM users_connections_view WHERE connection_hash = connectionHash;
 	IF connectionValid
 		THEN BEGIN
 			UPDATE connections SET user_id = NULL WHERE connection_id = connectionID;
@@ -24,6 +24,15 @@ BEGIN
 								"connectionHash", connectionHash
 							)
 						))
+					)
+				),
+				JSON_OBJECT(
+					"type", "procedure",
+					"data", JSON_OBJECT(
+						"query", "refreshBankSupervisors",
+						"values", JSON_ARRAY(
+							bankID
+						)
 					)
 				)
 			);
