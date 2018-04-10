@@ -2,17 +2,14 @@ import React from 'react';
 import Drawer from 'material-ui/Drawer';
 import {List, ListItem, makeSelectable} from 'material-ui/List';
 import Home from 'material-ui/svg-icons/action/home';
+import DonutSmall from 'material-ui/svg-icons/action/donut-small';
+import { push } from 'react-router-redux';
 import { connect } from 'react-redux';
 let SelectableList = makeSelectable(List);
 function wrapState(ComposedComponent) {
   return class SelectableList extends React.Component {
     handleRequestChange(event, index){
-      this.props.onChange({
-      	type: "changePage",
-      	data: {
-      		page: index
-      	}
-      });
+      this.props.onChange(index);
     };
     render() {
       return (
@@ -28,6 +25,10 @@ function wrapState(ComposedComponent) {
 }
 SelectableList = wrapState(SelectableList);
 class Menu extends React.Component {
+  changePage(page){
+    this.props.dispatch(push(page));
+    this.props.dispatch({type: "changeMenuState"});
+  }
 	render(){
 		return <Drawer 
 			open = { this.props.state.menuSwitch || false }
@@ -35,18 +36,30 @@ class Menu extends React.Component {
 			onRequestChange = { this.props.dispatch.bind(this, {type: "changeMenuState"}) }
 		>
 			<SelectableList
-				defaultValue = {this.props.state.page || 1}
-				onChange = {this.props.dispatch}
+				defaultValue = {this.props.routing.location && this.props.routing.location.pathname}
+        onChange = {this.changePage.bind(this)}
 			>
-				<ListItem 
-					primaryText = "Компании" 
-					leftIcon = { <Home/> }
-					value = {1}
-				/>
+        {
+          (this.props.state.userType == 1 || this.props.state.userType == 18) &&
+          <ListItem 
+            primaryText = "Компании" 
+            leftIcon = { <Home/> }
+            value = "/tinkoff"
+          />
+        }
+        {
+          (this.props.state.userType == 1 || this.props.state.userType == 19) &&
+          <ListItem 
+            primaryText = "Статистика" 
+            leftIcon = { <DonutSmall/> }
+            value = "/supervisor"
+          />
+        }
 			</SelectableList>
 		</Drawer>
 	}
 }
 export default connect(state => ({
-	state: state.app.toJS()
+	state: state.app.toJS(),
+  routing: state.routing
 }))(Menu);

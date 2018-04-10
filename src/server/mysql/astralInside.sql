@@ -241,9 +241,12 @@ DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `connections_before_update` BEFORE UPDATE ON `connections` FOR EACH ROW BEGIN
   SET NEW.connection_date_update = NOW();
-    IF NEW.connection_end
-      THEN SET NEW.connection_date_disconnect = NOW();
-    END IF;
+  IF NEW.connection_end
+    THEN SET NEW.connection_date_disconnect = NOW();
+  END IF;
+  IF NEW.user_id IS NOT NULL
+    THEN INSERT INTO states (connection_id, user_id) VALUES (NEW.connection_id, NEW.user_id);
+  END IF;
 END
 $$
 DELIMITER ;
@@ -336,11 +339,95 @@ CREATE TABLE `regions` (
   `region_name` varchar(60) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+CREATE TABLE `states` (
+  `state_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `connection_id` int(11) NOT NULL,
+  `state_json` json NOT NULL,
+  `state_date_create` varchar(19) COLLATE utf8_bin NOT NULL,
+  `state_date_update` varchar(19) COLLATE utf8_bin DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+DELIMITER $$
+CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGIN
+  DECLARE typeID INT(11);
+  SET NEW.state_date_create = NOW();
+  SELECT type_id INTO typeID FROM users WHERE user_id = NEW.user_id;
+  IF typeID = 1 OR typeID = 19
+    THEN BEGIN 
+      SET NEW.state_json = JSON_OBJECT(
+        "statistic", JSON_OBJECT(
+          "dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)),
+          "dateEnd", DATE(NOW()),
+          "typeToView", 3,
+          "period", 0,
+          "types", JSON_ARRAY(
+            16
+          ),
+          "user", 0
+        )
+      );
+    END;
+    ELSE SET NEW.state_json = JSON_OBJECT();
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGIN
+  DECLARE typeToView, period, bankID INT(11);
+  DECLARE firstDate VARCHAR(19);
+  DECLARE types JSON;
+  SELECT bank_id INTO bankID FROM users WHERE user_id = NEW.user_id;
+  SET NEW.state_date_update = NOW();
+  SET typeToView = JSON_EXTRACT(NEW.state_json, "$.statistic.typeToView");
+  SET period = JSON_EXTRACT(NEW.state_json, "$.statistic.period");
+  CASE typeToView
+    WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13, 14, 15, 16, 17));
+    WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(17));
+    WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(15));
+    WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(16));
+    WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13));
+    WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(14));
+    WHEN 6 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9));
+    ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13, 14, 15, 16, 17));
+  END CASE;
+  SET types = JSON_EXTRACT(NEW.state_json, "$.statistic.types");
+  CASE period
+    WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.statistic.dateEnd", DATE(NOW()));
+    WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.statistic.dateEnd", DATE(NOW()));
+    WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.statistic.dateEnd", DATE(NOW()));
+    WHEN 3 THEN BEGIN 
+      SELECT company_date_update INTO firstDate FROM companies WHERE JSON_CONTAINS(types, JSON_ARRAY(type_id)) AND bank_id = bankID ORDER BY company_date_update LIMIT 1;
+      IF firstDate IS NULL
+        THEN SET firstDate = DATE(NOW());
+      END IF;
+      SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(firstDate), "$.statistic.dateEnd", DATE(NOW()));
+    END;
+    WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(NOW()), "$.statistic.dateEnd", DATE(NOW()));
+    WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.statistic.dateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
+    ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.statistic.dateEnd", DATE(NOW()));
+  END CASE;
+END
+$$
+DELIMITER ;
+CREATE TABLE `statistic_view` (
+`bank_id` int(11)
+,`date` date
+,`time` time(6)
+,`type_id` int(11)
+);
+
 CREATE TABLE `templates` (
   `template_id` int(11) NOT NULL,
   `type_id` int(11) DEFAULT NULL,
   `template_columns_count` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+CREATE TABLE `templates_view` (
+`template_id` int(11)
+,`type_id` int(11)
+,`template_columns_count` int(11)
+,`type_name` varchar(128)
+);
 
 CREATE TABLE `template_columns` (
   `template_column_id` int(11) NOT NULL,
@@ -429,7 +516,8 @@ CREATE TABLE `users` (
   `user_auth` tinyint(1) NOT NULL DEFAULT '0',
   `user_online` tinyint(1) NOT NULL DEFAULT '0',
   `user_hash` varchar(32) COLLATE utf8_bin DEFAULT NULL,
-  `user_connections_count` int(11) NOT NULL DEFAULT '0'
+  `user_connections_count` int(11) NOT NULL DEFAULT '0',
+  `bank_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
@@ -489,6 +577,7 @@ CREATE TABLE `users_connections_view` (
 ,`user_auth` tinyint(1)
 ,`user_online` tinyint(1)
 ,`user_email` varchar(512)
+,`bank_id` int(11)
 );
 DROP TABLE IF EXISTS `bank_cities_time_priority_companies_view`;
 
@@ -496,12 +585,18 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `bank_times_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
+DROP TABLE IF EXISTS `statistic_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`statistic_view`  AS  select `astralinside`.`companies`.`bank_id` AS `bank_id`,cast(`astralinside`.`companies`.`company_date_update` as date) AS `date`,cast(`astralinside`.`companies`.`company_date_update` as time(6)) AS `time`,`astralinside`.`companies`.`type_id` AS `type_id` from `astralinside`.`companies` group by `astralinside`.`companies`.`bank_id`,`date`,`time`,`astralinside`.`companies`.`type_id` order by `astralinside`.`companies`.`bank_id`,`date`,`time`,`astralinside`.`companies`.`type_id` ;
+DROP TABLE IF EXISTS `templates_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`templates_view`  AS  select `tm`.`template_id` AS `template_id`,`tm`.`type_id` AS `type_id`,`tm`.`template_columns_count` AS `template_columns_count`,`tp`.`type_name` AS `type_name` from (`astralinside`.`templates` `tm` join `astralinside`.`types` `tp` on((`tp`.`type_id` = `tm`.`type_id`))) ;
 DROP TABLE IF EXISTS `template_columns_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`template_columns_view`  AS  select `t`.`template_id` AS `template_id`,`tc`.`template_column_id` AS `template_column_id`,`c`.`column_id` AS `column_id`,`c`.`column_name` AS `column_name`,`c`.`column_price` AS `column_price`,`c`.`column_blocked` AS `column_blocked`,`tc`.`template_column_letters` AS `template_column_letters`,`tc`.`template_column_name` AS `template_column_name`,`ts`.`type_id` AS `type_id`,`ts`.`type_name` AS `type_name`,`tc`.`template_column_duplicate` AS `template_column_duplicate` from (((`astralinside`.`template_columns` `tc` join `astralinside`.`templates` `t` on((`t`.`template_id` = `tc`.`template_id`))) join `astralinside`.`columns` `c` on((`c`.`column_id` = `tc`.`column_id`))) join `astralinside`.`types` `ts` on((`ts`.`type_id` = `t`.`type_id`))) ;
 DROP TABLE IF EXISTS `users_connections_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`c`.`connection_api_id` AS `connection_api_id`,`c`.`type_id` AS `connection_type_id`,`tt`.`type_name` AS `connection_type_name`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online`,`u`.`user_email` AS `user_email` from (((`astralinside`.`connections` `c` left join `astralinside`.`users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `astralinside`.`types` `t` on((`t`.`type_id` = `u`.`type_id`))) left join `astralinside`.`types` `tt` on((`tt`.`type_id` = `c`.`type_id`))) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`c`.`connection_api_id` AS `connection_api_id`,`c`.`type_id` AS `connection_type_id`,`tt`.`type_name` AS `connection_type_name`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online`,`u`.`user_email` AS `user_email`,`u`.`bank_id` AS `bank_id` from (((`astralinside`.`connections` `c` left join `astralinside`.`users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `astralinside`.`types` `t` on((`t`.`type_id` = `u`.`type_id`))) left join `astralinside`.`types` `tt` on((`tt`.`type_id` = `c`.`type_id`))) ;
 
 
 ALTER TABLE `banks`
@@ -567,6 +662,11 @@ ALTER TABLE `regions`
   ADD PRIMARY KEY (`region_id`),
   ADD UNIQUE KEY `region_name` (`region_name`);
 
+ALTER TABLE `states`
+  ADD PRIMARY KEY (`state_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `connection_id` (`connection_id`);
+
 ALTER TABLE `templates`
   ADD PRIMARY KEY (`template_id`),
   ADD KEY `type_id` (`type_id`);
@@ -593,7 +693,8 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `user_email` (`user_email`),
   ADD UNIQUE KEY `user_hash` (`user_hash`),
   ADD KEY `user_creator_id` (`user_creator_id`),
-  ADD KEY `type_id` (`type_id`);
+  ADD KEY `type_id` (`type_id`),
+  ADD KEY `bank_id` (`bank_id`);
 
 
 ALTER TABLE `banks`
@@ -631,6 +732,9 @@ ALTER TABLE `purchases`
 
 ALTER TABLE `regions`
   MODIFY `region_id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `states`
+  MODIFY `state_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `templates`
   MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT;
@@ -689,6 +793,10 @@ ALTER TABLE `purchases`
   ADD CONSTRAINT `purchases_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `purchases_ibfk_2` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`transaction_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+ALTER TABLE `states`
+  ADD CONSTRAINT `states_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `states_ibfk_2` FOREIGN KEY (`connection_id`) REFERENCES `connections` (`connection_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
 ALTER TABLE `templates`
   ADD CONSTRAINT `templates_ibfk_1` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -702,7 +810,8 @@ ALTER TABLE `transactions`
 
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`user_creator_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `users_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `users_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `users_ibfk_3` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

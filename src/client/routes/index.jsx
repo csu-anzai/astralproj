@@ -6,5 +6,5 @@ const MainObjectConnection = connect(state => ({
 	state: state.app.toJS(),
 	routing: state.routing
 }))(Main);
-const MainObject = <MainObjectConnection childrens = {Childrens}/>;
+const MainObject = <MainObjectConnection childrens = {<Childrens/>}/>;
 export default MainObject;

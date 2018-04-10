@@ -8,6 +8,7 @@ import DeleteForever from 'material-ui/svg-icons/action/delete-forever';
 import CheckCircle from 'material-ui/svg-icons/action/check-circle';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
+import { Redirect } from 'react-router';
 import {
   Table,
   TableBody,
@@ -22,7 +23,8 @@ export default class Tinkoff extends React.Component {
 		super(props);
 		this.state = {
 			selectedIndex: 0,
-			limit: 10
+			limit: 10,
+			hash: localStorage.getItem("hash")
 		};
 	}
 	select(index){
@@ -73,10 +75,12 @@ export default class Tinkoff extends React.Component {
 		});
 	}
 	componentDidMount(){
-		document.querySelector("#app > div > div:nth-child(2) > div > div:nth-child(2) > div").style.overflow = "auto";
+		let component = document.querySelector("#app > div > div:nth-child(2) > div > div:nth-child(2) > div");
+		component && (component.style.overflow = "auto");
 	}
 	render(){
-		return <div>
+		localStorage.removeItem("hash");
+		return (this.state.hash == "/" || this.state.hash == "/tinkoff" || !this.state.hash) && <div>
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
 					<BottomNavigationItem
@@ -232,6 +236,7 @@ export default class Tinkoff extends React.Component {
 	          </TableBody>
           </Table>
 			</Paper>
-		</div>
+		</div> ||
+		<Redirect to = {this.state.hash} />
 	}
 }
