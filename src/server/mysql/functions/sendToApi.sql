@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE companyID, typeID, userID, iterator, validCompaniesLength INT(11);
+	DECLARE companyID, typeID, userID, iterator, validCompaniesLength, bankID INT(11);
 	DECLARE done, connectionValid TINYINT(1);
 	DECLARE connectionApiID, companyPersonName, companyPersonSurname, companyPersonPatronymic VARCHAR(128);
 	DECLARE companyPhone VARCHAR(20);
@@ -11,7 +11,7 @@ BEGIN
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET responce = JSON_ARRAY();
 	SET connectionValid = checkConnection(connectionHash);
-	SELECT connection_api_id, user_id INTO connectionApiID, userID FROM users_connections_view WHERE connection_hash = connectionHash;
+	SELECT connection_api_id, user_id, bank_id INTO connectionApiID, userID, bankID FROM users_connections_view WHERE connection_hash = connectionHash;
 	IF connectionValid 
 		THEN BEGIN
 			SET done = 0;
@@ -49,6 +49,15 @@ BEGIN
 							"type", "sendToApi",
 							"data", JSON_OBJECT(
 								"companies", validCompaniesArray
+							)
+						),
+						JSON_OBJECT(
+							"type", "procedure",
+							"data", JSON_OBJECT(
+								"query", "refreshBankSupervisors",
+								"values", JSON_ARRAY(
+									bankID
+								)
 							)
 						)
 					);

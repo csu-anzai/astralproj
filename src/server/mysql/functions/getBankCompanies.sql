@@ -47,6 +47,15 @@ BEGIN
 					"message", IF(companiesLength > 0, CONCAT("Загружено компаний для сортировки: ", companiesLength), CONCAT("Не удалось найти ни одной компании для сортировки на данное время"))
 				)
 			))));
+			SET responce = JSON_MERGE(responce, JSON_OBJECT(
+				"type", "procedure",
+				"data", JSON_OBJECT(
+					"query", "refreshBankSupervisors",
+					"values", JSON_ARRAY(
+						bankID
+					)
+				)
+			));
 		END;
 		ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToSocket",

@@ -2,33 +2,32 @@ import React from 'react';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import Header from './header';
 import Menu from './menu';
-import { Route, Switch, Redirect } from "react-router";
-import { push } from "react-router-redux";
-import Login from './../routes/login';
-import ForgotPassword from './../routes/forgotPassword';
+import { push } from 'react-router-redux';
 export default class Main extends React.Component {
 	constructor(props){
 		super(props);
 		this.state = {
-			hash: window.location.hash.split("#").join("")
+			hash: localStorage.getItem("hash")
+		}
+	}
+	componentDidMount(){
+		if (this.props.state.auth && this.state.hash){
+			this.props.dispatch(push(this.state.hash));
+			localStorage.removeItem("hash");
 		}
 	}
 	render(){	
 		return <MuiThemeProvider>
 			<div>
 				{
-					(this.props.state.auth && (this.state.hash != "/login" || this.state.hash != "/forgotPassword")) &&
+					this.props.state.auth &&
 					<div> 
 						<Menu/>
 						<Header/>
 					</div> || ""
 				}
 				{
-					this.props.state.auth ? this.props.childrens : <Switch>
-						<Route path = "/login" component = {Login}/>
-						<Route path = "/forgotPassword" component = {ForgotPassword}/>
-						<Redirect to = "/login" />
-					</Switch>
+					this.props.childrens
 				}
 			</div>
 		</MuiThemeProvider>
