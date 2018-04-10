@@ -6,13 +6,14 @@ BEGIN
 		THEN BEGIN 
 			SET NEW.state_json = JSON_OBJECT(
 				"statistic", JSON_OBJECT(
-					"startDate", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)),
-					"endDate", DATE(NOW()),
+					"dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)),
+					"dateEnd", DATE(NOW()),
 					"typeToView", 3,
 					"period", 0,
 					"types", JSON_ARRAY(
 						16
-					)
+					),
+					"user", 0
 				)
 			);
 		END;

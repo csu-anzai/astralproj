@@ -2,13 +2,23 @@ import React from 'react';
 import { Line, Doughnut } from 'react-chartjs-2';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
+const partStyle = {
+	maxWidth: "800px",
+	margin: "0 auto"
+};
+const headerStyle = {
+	textAlign: "center", 
+	fontFamily: "Roboto, sans-serif", 
+	fontWeight: "normal"
+};
 export default class Supervisor extends React.Component {
 	constructor(props){
 		super(props);
 		this.state = {
-			typesNames: ["Все", "Ошибка при обработке", "Обработка в процессе", "Успешная обработка", "Интересные", "Не интересные"],
+			typesNames: ["Все", "Ошибка при обработке", "Обработка в процессе", "Успешная обработка", "Интересные", "Не интересные", "В работе"],
 			typeToView: this.props.state.statistic && this.props.state.statistic.typeToView || 0,
 			period: this.props.state.statistic && this.props.state.statistic.period || 3,
+			user: this.props.state.statistic && this.props.state.statistic.user || 0,
 			colors: [
 				["rgb(75,192,192)", "rgba(75,192,192,0.4)"],
 				["rgb(173,162,249)", "rgba(173,162,249,0.4)"],
@@ -17,6 +27,7 @@ export default class Supervisor extends React.Component {
 		}
 		this.changeTypeToView = this.changeTypeToView.bind(this);
 		this.changePeriod = this.changePeriod.bind(this);
+		this.changeUser = this.changeUser.bind(this);
 	}
 	changeTypeToView(event, key, payload) {
 		this.props.dispatch({
@@ -27,7 +38,7 @@ export default class Supervisor extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						typeToView: key
+						typeToView: payload
 					})
 				]
 			}
@@ -42,7 +53,22 @@ export default class Supervisor extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						period: key
+						period: payload
+					})
+				]
+			}
+		})
+	}
+	changeUser(event, key, payload) {
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						user: payload
 					})
 				]
 			}
@@ -50,11 +76,8 @@ export default class Supervisor extends React.Component {
 	}
 	render(){
 		return <div>
-			<div style = {{
-				maxWidth: "800px",
-				margin: "0 auto"
-			}}>
-				<h2 style = {{textAlign: "center", fontFamily: "Roboto"}}>Количество компаний за период</h2>
+			<div style = {partStyle}>
+				<h2 style = {headerStyle}>Количество обработанных компаний за период</h2>
 				<SelectField
           floatingLabelText="Тип компаний"
           value={this.props.state.statistic && this.props.state.statistic.typeToView != undefined ? this.props.state.statistic.typeToView : this.state.typeToView}
@@ -71,11 +94,39 @@ export default class Supervisor extends React.Component {
           value={this.props.state.statistic && this.props.state.statistic.period != undefined ? this.props.state.statistic.period : this.state.period}
           onChange={this.changePeriod}
         >
-        	<MenuItem value = {0} primaryText = "Неделя" />
-        	<MenuItem value = {1} primaryText = "Месяц" />
-        	<MenuItem value = {2} primaryText = "Год" />
         	<MenuItem value = {3} primaryText = "Все время" />
+        	<MenuItem value = {2} primaryText = "Год" />
+        	<MenuItem value = {1} primaryText = "Месяц" />
+        	<MenuItem value = {0} primaryText = "Неделя" />
+        	<MenuItem value = {5} primaryText = "Вчера" />
+        	<MenuItem value = {4} primaryText = "Сегодня" />
         </SelectField>
+        <SelectField
+          floatingLabelText="Сотрудники"
+          value={this.props.state.statistic && this.props.state.statistic.user != undefined ? this.props.state.statistic.user : this.state.user}
+          onChange={this.changeUser}
+        >
+        	<MenuItem value = {0} primaryText = "Все сотрудники"/>
+        	{
+        		this.props.state.statistic && this.props.state.statistic.users.map((user, key) => (
+        			<MenuItem value = {user.userID} key = {key} primaryText = {user.userName}/>
+        		))
+        	}
+        </SelectField>
+        <div style = {{
+        	display: "inline-block",
+        	marginLeft: "10px",
+        	verticalAlign: "top",
+        	marginTop: "42px",
+        	fontFamily: "Roboto, sans-serif"
+        }}>
+        	{
+        		this.props.state.statistic && 
+        		(this.props.state.statistic.dateStart == this.props.state.statistic.dateEnd ? 
+        			this.props.state.statistic.dateStart :
+        			`${this.props.state.statistic.dateStart} – ${this.props.state.statistic.dateEnd}`)
+        	}
+        </div>
 				<Line xAxisID = "Дата" yAxisID = "Количество компаний" data = {{
 					labels: this.props.state.statistic && this.props.state.statistic.labels || [],
 				  datasets: this.props.state.statistic && this.props.state.statistic.templates.map((template, key) => ({
@@ -99,6 +150,20 @@ export default class Supervisor extends React.Component {
 			      pointHitRadius: 10,
 			      data: template.items || []
 				  }))
+				}}/>
+			</div>
+			<div style = {partStyle}>
+				<h2 style = {headerStyle}>
+					Количество необработанных компаний в базе
+				</h2>
+				<Doughnut data = {{
+					datasets: [
+						{
+							backgroundColor: ["#90CAF9", "#81C784", "#FFD54F"],
+			        data: this.props.state.statistic && this.props.state.statistic.templates.map(template => template.freeItems) || []
+			    	}
+			    ],
+			    labels: this.props.state.statistic && this.props.state.statistic.templates.map(template => template.name) || []
 				}}/>
 			</div>
 		</div>
