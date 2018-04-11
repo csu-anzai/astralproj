@@ -5,14 +5,13 @@ BEGIN
 	DECLARE typeName, searchResult, connectionApiID VARCHAR(128);
 	DECLARE done, connectionValid TINYINT(1);
 	DECLARE periodName VARCHAR(24);
-	DECLARE labels, templates, templateItems, types, users, test JSON;
+	DECLARE labels, templates, templateItems, types, users JSON;
 	DECLARE companiesCursor CURSOR FOR SELECT * FROM custom_statistic_view;
 	DECLARE templatesCursor CURSOR FOR SELECT template_id, type_name FROM templates_view;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET connectionValid = checkConnection(connectionHash);
 	SELECT connection_api_id, user_id, connection_id INTO connectionApiID, userID, connectionID FROM users_connections_view WHERE connection_hash = connectionHash;
 	SET responce = JSON_ARRAY();
-	SET test = JSON_OBJECT();
 	IF connectionValid 
 		THEN BEGIN
 			SELECT bank_id INTO bankID FROM users WHERE user_id = userID;
@@ -124,8 +123,7 @@ BEGIN
 									"dateStart", date(dateStart),
 									"dateEnd", date(dateEnd),
 									"user", user,
-									"users", getUsers(bankID),
-									"test", test
+									"users", getUsers(bankID)
 								)
 							)
 						)
