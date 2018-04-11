@@ -90,7 +90,7 @@ BEGIN
 						THEN DELETE FROM companies WHERE (company_phone IS NULL OR company_inn IS NULL) AND bank_id IS NOT NULL;
 					END IF;
 					SET responce = JSON_OBJECT(
-						"message", CONCAT("added ", companiesLength - 1 - deleteCount + deleteCount2, " companies in the base")
+						"message", CONCAT("added ", companiesLength - 1 - (deleteCount + deleteCount2), " companies in the base")
 					);
 				END;
 			END IF;

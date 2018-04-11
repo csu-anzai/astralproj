@@ -1,7 +1,7 @@
 module.exports = modules => (resolve, reject, data) => {
 	let		queries = [],
 				remainder = 0;
-	const part = 500,
+	const part = modules.env.parser.part,
 				keysLength = Object.keys(data).length - 1;
 	if (keysLength > 0){
 		const columns = data.columns;
@@ -46,9 +46,11 @@ module.exports = modules => (resolve, reject, data) => {
 				},
 				(err, responce) => {
 					if (responce) {
-						responce = JSON.parse(responce[2][0].a);
+						responce[2] && responce[2][0] && responce[2][0].a &&
+						(responce = JSON.parse(responce[2][0].a));
 					}
-					err ? console.log(err) : console.log(`part ${i}: ${responce.message}`);
+					err && console.log(err);
+					err ? console.log(err) : responce.message && console.log(`part ${i}: ${responce.message}`);
 				}
 			);
 		}
