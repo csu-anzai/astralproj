@@ -57,12 +57,20 @@ BEGIN
 					IF done
 						THEN LEAVE templatesLoop;
 					END IF;
+					SET searchResult = JSON_SEARCH(templates, "one", typeName, NULL, "$[*].name");
 					SELECT COUNT(*) INTO templateFreeItemsCount FROM companies WHERE type_id = 10 AND template_id = templateID AND bank_id = bankID;
-					SET templates = JSON_MERGE(templates, JSON_OBJECT(
-						"name", typeName,
-						"freeItems", templateFreeItemsCount,
-						"items", JSON_ARRAY()
-					));
+					IF searchResult IS NULL
+						THEN SET templates = JSON_MERGE(templates, JSON_OBJECT(
+							"name", typeName,
+							"freeItems", templateFreeItemsCount,
+							"items", JSON_ARRAY()
+						));
+						ELSE BEGIN
+							SET searchResult = REPLACE(searchResult, ".name", ".freeItems");
+							SET templateFreeItemsCount = templateFreeItemsCount + JSON_UNQUOTE(JSON_EXTRACT(templates, searchResult));
+							SET templates = JSON_SET(templates, searchResult, templateFreeItemsCount);
+						END;
+					END IF;
 					ITERATE templatesLoop;
 				END LOOP;
 			CLOSE templatesCursor;
@@ -86,9 +94,6 @@ BEGIN
 							IF periodName = "date"
 								THEN SELECT COUNT(*) INTO templateItemsCount FROM companies WHERE DATE(company_date_update) = DATE(period) AND JSON_CONTAINS(types, JSON_ARRAY(type_id)) > 0 AND template_id = templateID AND bank_id = bankID AND IF(user > 0, user_id = user, 1);
 								ELSE SELECT COUNT(*) INTO templateItemsCount FROM companies WHERE HOUR(company_date_update) = HOUR(period) AND DATE(company_date_update) BETWEEN DATE(dateStart) AND DATE(dateEnd) AND JSON_CONTAINS(types, JSON_ARRAY(type_id)) > 0 AND template_id = templateID AND bank_id = bankID AND IF(user > 0, user_id = user, 1);
-							END IF;
-							IF period = "17:00" AND templateID = 2
-								THEN SET test = JSON_OBJECT("p", period, "c", templateItemsCount, "pn", periodName);
 							END IF;
 							SET searchResult = JSON_UNQUOTE(JSON_SEARCH(templates, "one", typeName, NULL, "$[*].name"));
 							SET searchResult = REPLACE(searchResult, ".name", ".items");

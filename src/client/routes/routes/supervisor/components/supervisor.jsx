@@ -137,7 +137,7 @@ export default class Supervisor extends React.Component {
         			`${this.props.state.statistic.dateStart} – ${this.props.state.statistic.dateEnd}`)
         	}
         </div>
-				<Line xAxisID = "Дата" yAxisID = "Количество компаний" data = {{
+				<Line data = {{
 					labels: this.props.state.statistic && this.props.state.statistic.labels || [],
 				  datasets: this.props.state.statistic && this.props.state.statistic.templates.map((template, key) => ({
 				  	label: template.name || "Компании",
