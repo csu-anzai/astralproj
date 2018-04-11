@@ -4,7 +4,7 @@ BEGIN
 	DECLARE dateStart, dateEnd VARCHAR(19);
 	DECLARE typeName, searchResult, connectionApiID VARCHAR(128);
 	DECLARE done, connectionValid TINYINT(1);
-	DECLARE periodName VARCHAR(35);
+	DECLARE periodName VARCHAR(24);
 	DECLARE labels, templates, templateItems, types, users JSON;
 	DECLARE companiesCursor CURSOR FOR SELECT * FROM custom_statistic_view;
 	DECLARE templatesCursor CURSOR FOR SELECT template_id, type_name FROM templates_view;
@@ -31,19 +31,19 @@ BEGIN
 				user
 			FROM states WHERE connection_id = connectionID AND user_id = userID LIMIT 1;
 			IF date(dateStart) = date(dateEnd)
-				THEN SET periodName = "CONCAT(HOUR(time),':',MINUTE(time))";
+				THEN SET periodName = "CONCAT(HOUR(time),':00')";
 				ELSE BEGIN
 					SELECT COUNT(DISTINCT date) INTO statisticCount FROM statistic_view WHERE bank_id = bankID AND date BETWEEN DATE(dateStart) AND DATE(dateEnd) AND JSON_CONTAINS(types, JSON_ARRAY(type_id)) > 0;
 					IF statisticCount <= 1
 						THEN BEGIN
-							SET periodName = "CONCAT(HOUR(time),':',MINUTE(time))";
+							SET periodName = "CONCAT(HOUR(time),':00')";
 							SELECT DISTINCT DATE(date), DATE(date) INTO dateStart, dateEnd FROM statistic_view WHERE bank_id = bankID AND date BETWEEN DATE(dateStart) AND DATE(dateEnd) AND JSON_CONTAINS(types, JSON_ARRAY(type_id)) > 0;
 						END;
 						ELSE SET periodName = "date";
 					END IF;
 				END;
 			END IF;
-			SET @mysqlText = CONCAT("CREATE VIEW custom_statistic_view AS SELECT ", periodName," FROM statistic_view WHERE bank_id = ", bankID, " AND date BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "') AND JSON_CONTAINS('", types,"', JSON_ARRAY(type_id)) > 0 GROUP BY ", periodName);
+			SET @mysqlText = CONCAT("CREATE VIEW custom_statistic_view AS SELECT ", periodName," period FROM statistic_view WHERE bank_id = ", bankID, " AND date BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "') AND JSON_CONTAINS('", types,"', JSON_ARRAY(type_id)) > 0 GROUP BY period");
 			SET labels = JSON_ARRAY();
 			SET templates = JSON_ARRAY();
 			PREPARE mysqlPrepare FROM @mysqlText;
@@ -56,12 +56,20 @@ BEGIN
 					IF done
 						THEN LEAVE templatesLoop;
 					END IF;
+					SET searchResult = JSON_SEARCH(templates, "one", typeName, NULL, "$[*].name");
 					SELECT COUNT(*) INTO templateFreeItemsCount FROM companies WHERE type_id = 10 AND template_id = templateID AND bank_id = bankID;
-					SET templates = JSON_MERGE(templates, JSON_OBJECT(
-						"name", typeName,
-						"freeItems", templateFreeItemsCount,
-						"items", JSON_ARRAY()
-					));
+					IF searchResult IS NULL
+						THEN SET templates = JSON_MERGE(templates, JSON_OBJECT(
+							"name", typeName,
+							"freeItems", templateFreeItemsCount,
+							"items", JSON_ARRAY()
+						));
+						ELSE BEGIN
+							SET searchResult = REPLACE(searchResult, ".name", ".freeItems");
+							SET templateFreeItemsCount = templateFreeItemsCount + JSON_UNQUOTE(JSON_EXTRACT(templates, searchResult));
+							SET templates = JSON_SET(templates, searchResult, templateFreeItemsCount);
+						END;
+					END IF;
 					ITERATE templatesLoop;
 				END LOOP;
 			CLOSE templatesCursor;
@@ -72,7 +80,10 @@ BEGIN
 					IF done 
 						THEN LEAVE companiesLoop;
 					END IF;
-					SET labels = JSON_MERGE(labels, JSON_ARRAY(REPLACE(period, ".000000", "")));
+					IF periodName != "date"
+						THEN SET labels = JSON_MERGE(labels, JSON_ARRAY(CONCAT(HOUR(period), " - ", HOUR(period) + 1)));
+						ELSE SET labels = JSON_MERGE(labels, JSON_ARRAY(period));
+					END IF;
 					OPEN templatesCursor;
 						templatesLoop: LOOP
 							FETCH templatesCursor INTO templateID, typeName;
@@ -81,21 +92,13 @@ BEGIN
 							END IF;
 							IF periodName = "date"
 								THEN SELECT COUNT(*) INTO templateItemsCount FROM companies WHERE DATE(company_date_update) = DATE(period) AND JSON_CONTAINS(types, JSON_ARRAY(type_id)) > 0 AND template_id = templateID AND bank_id = bankID AND IF(user > 0, user_id = user, 1);
-								ELSE SELECT COUNT(*) INTO templateItemsCount FROM companies WHERE HOUR(company_date_update) = HOUR(period) AND MINUTE(company_date_update) = MINUTE(period) AND JSON_CONTAINS(types, JSON_ARRAY(type_id)) > 0 AND template_id = templateID AND bank_id = bankID AND IF(user > 0, user_id = user, 1);
+								ELSE SELECT COUNT(*) INTO templateItemsCount FROM companies WHERE HOUR(company_date_update) = HOUR(period) AND DATE(company_date_update) BETWEEN DATE(dateStart) AND DATE(dateEnd) AND JSON_CONTAINS(types, JSON_ARRAY(type_id)) > 0 AND template_id = templateID AND bank_id = bankID AND IF(user > 0, user_id = user, 1);
 							END IF;
 							SET searchResult = JSON_UNQUOTE(JSON_SEARCH(templates, "one", typeName, NULL, "$[*].name"));
 							SET searchResult = REPLACE(searchResult, ".name", ".items");
-							IF searchResult IS NULL
-								THEN SET templates = JSON_MERGE(templates, JSON_OBJECT(
-									"name", typeName,
-									"items", JSON_ARRAY(templateItemsCount)
-								));
-								ELSE BEGIN
-									SET templateItems = JSON_EXTRACT(templates, searchResult);
-									SET templateItems = JSON_MERGE(templateItems, JSON_ARRAY(templateItemsCount));
-									SET templates = JSON_SET(templates, searchResult, templateItems);
-								END;
-							END IF;
+							SET templateItems = JSON_EXTRACT(templates, searchResult);
+							SET templateItems = JSON_MERGE(templateItems, JSON_ARRAY(templateItemsCount));
+							SET templates = JSON_SET(templates, searchResult, templateItems);
 							ITERATE templatesLoop;
 						END LOOP;
 					CLOSE templatesCursor;
@@ -103,7 +106,7 @@ BEGIN
 					ITERATE companiesLoop;
 				END LOOP;
 			CLOSE companiesCursor;
-			DROP VIEW custom_statistic_view;
+			DROP VIEW IF EXISTS custom_statistic_view;
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "sendToSocket",
 				"data", JSON_OBJECT(
