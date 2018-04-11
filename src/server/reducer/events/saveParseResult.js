@@ -49,7 +49,6 @@ module.exports = modules => (resolve, reject, data) => {
 						responce[2] && responce[2][0] && responce[2][0].a &&
 						(responce = JSON.parse(responce[2][0].a));
 					}
-					err && console.log(err);
 					err ? console.log(err) : responce.message && console.log(`part ${i}: ${responce.message}`);
 				}
 			);

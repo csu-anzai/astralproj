@@ -1,12 +1,14 @@
 BEGIN
-	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount, deleteCount2 INT(11);
+	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount, deleteCount2, errorLength INT(11);
 	DECLARE templateSuccess, duplicate TINYINT(1);
 	DECLARE TemplateColumnName, columnName VARCHAR(128);
+	DECLARE message TEXT;
 	DECLARE columnLetters VARCHAR(3);
-	DECLARE columns, columnsKeys, company, columnKeysObj JSON;
+	DECLARE columns, columnsKeys, company, columnKeysObj, errorColumns, errorObj JSON;
 	SET responce = JSON_OBJECT();
 	SET templateSuccess = 1;
 	SET companiesLength = JSON_LENGTH(companies);
+	SET errorColumns = JSON_ARRAY();
 	SET deleteCount = 0;
 	IF companies IS NOT NULL AND companiesLength > 1
 		THEN BEGIN
@@ -14,9 +16,9 @@ BEGIN
 			SET columnsKeys = JSON_KEYS(columns);
 			SET columnsKeysCount = JSON_LENGTH(columnsKeys);
 			SET iterator = 0;
-			culumnsLoop: LOOP
+			columnsLoop: LOOP
 				IF iterator >= columnsKeysCount OR templateSuccess = 0
-					THEN LEAVE culumnsLoop;
+					THEN LEAVE columnsLoop;
 				END IF;
 				SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator, "]")));
 				SET TemplateColumnName = JSON_UNQUOTE(JSON_EXTRACT(columns, CONCAT("$.", columnLetters)));
@@ -25,10 +27,16 @@ BEGIN
 					THEN SET oldTemplateID = templateID;
 				END IF;
 				IF templateID IS NULL OR templateID != oldTemplateID
-					THEN SET templateSuccess = 0;
+					THEN BEGIN 
+						SET templateSuccess = 0;
+						SET errorColumns = JSON_MERGE(errorColumns, JSON_OBJECT(
+							"name", TemplateColumnName,
+							"letters", columnLetters
+						));
+					END;
 				END IF;
 				SET iterator = iterator + 1;
-				ITERATE culumnsLoop;
+				ITERATE columnsLoop;
 			END LOOP;
 			IF templateSuccess AND templateID IS NOT NULL
 				THEN BEGIN
@@ -91,6 +99,23 @@ BEGIN
 					END IF;
 					SET responce = JSON_OBJECT(
 						"message", CONCAT("added ", companiesLength - 1 - (deleteCount + deleteCount2), " companies in the base")
+					);
+				END;
+				ELSE BEGIN
+					SET message = "error in template for column: ";
+					SET errorLength = JSON_LENGTH(errorColumns);
+					SET iterator = 0;
+					errorLoop: LOOP
+						IF iterator >= errorLength
+							THEN LEAVE errorLoop;
+						END IF;
+						SET errorObj = JSON_EXTRACT(errorColumns, CONCAT("$[", iterator, "]"));
+						SET message = CONCAT(message, "'", JSON_UNQUOTE(JSON_EXTRACT(errorObj, "$.name")), " - ", JSON_UNQUOTE(JSON_EXTRACT(errorObj, "$.letters")), "' ");
+						SET iterator = iterator + 1;
+						ITERATE errorLoop;
+					END LOOP;
+					SET responce = JSON_OBJECT(
+						"message", message
 					);
 				END;
 			END IF;
