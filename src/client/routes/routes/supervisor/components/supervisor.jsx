@@ -2,6 +2,7 @@ import React from 'react';
 import { Line, Doughnut } from 'react-chartjs-2';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
+import Divider from 'material-ui/Divider';
 const partStyle = {
 	maxWidth: "800px",
 	margin: "0 auto"
@@ -15,7 +16,6 @@ export default class Supervisor extends React.Component {
 	constructor(props){
 		super(props);
 		this.state = {
-			typesNames: ["Все", "Ошибка при обработке", "Обработка в процессе", "Успешная обработка", "Интересные", "Не интересные", "В работе"],
 			typeToView: this.props.state.statistic && this.props.state.statistic.typeToView || 0,
 			period: this.props.state.statistic && this.props.state.statistic.period || 3,
 			user: this.props.state.statistic && this.props.state.statistic.user || 0,
@@ -83,11 +83,19 @@ export default class Supervisor extends React.Component {
           value={this.props.state.statistic && this.props.state.statistic.typeToView != undefined ? this.props.state.statistic.typeToView : this.state.typeToView}
           onChange={this.changeTypeToView}
         >
-        	{
-        		this.state.typesNames.map((type, key) => (
-        			<MenuItem value = {key} key = {key} primaryText = {type} />
-        		))
-        	}
+        	<MenuItem value = {0} primaryText = "Все" />
+        	<Divider/>
+        	<MenuItem value = {7} primaryText = "Утвержденные все" />
+        	<MenuItem value = {1} primaryText = "Утвержденные с ошибкой" />
+        	<MenuItem value = {2} primaryText = "Утвержденные в обработке" />
+        	<MenuItem value = {3} primaryText = "Утвержденные успешные" />
+        	<Divider/>
+        	<MenuItem value = {9} primaryText = "Обработанные все" />
+        	<MenuItem value = {4} primaryText = "Обработанные интересные" />
+        	<MenuItem value = {5} primaryText = "Обработанные не интересные" />
+        	<MenuItem value = {8} primaryText = "Обработанные не утвержденные" />
+        	<Divider/>
+        	<MenuItem value = {6} primaryText = "Необработанные в работе" />
         </SelectField>
         <SelectField
           floatingLabelText="Период"
@@ -114,12 +122,14 @@ export default class Supervisor extends React.Component {
         	}
         </SelectField>
         <div style = {{
-        	display: "inline-block",
-        	marginLeft: "10px",
-        	verticalAlign: "top",
-        	marginTop: "42px",
+        	margin: "10px 0",
+        	textAlign: "center",
         	fontFamily: "Roboto, sans-serif"
         }}>
+        	{
+        		this.props.state.statistic && this.props.state.statistic.templates.map(template => template.items.length > 0 ? template.items.reduce((before, after) => before + after) : 0).reduce((before, after) => before + after)
+        	}
+        	{" компаний за период: "}
         	{
         		this.props.state.statistic && 
         		(this.props.state.statistic.dateStart == this.props.state.statistic.dateEnd ? 
@@ -156,7 +166,7 @@ export default class Supervisor extends React.Component {
 				<h2 style = {headerStyle}>
 					Количество необработанных компаний в базе
 				</h2>
-				<Doughnut data = {{
+				<Doughnut options = {{}} data = {{
 					datasets: [
 						{
 							backgroundColor: ["#90CAF9", "#81C784", "#FFD54F"],
