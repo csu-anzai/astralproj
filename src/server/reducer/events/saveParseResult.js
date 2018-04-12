@@ -47,11 +47,12 @@ module.exports = modules => (resolve, reject, data) => {
 				(err, responce) => {
 					if (i >= queries.length) {
 						err ?
-							reject(err) :
+							reject(err.sqlMessage) :
 							resolve(responce);
+
 					} else {
 						err ?
-							modules.err(err) :
+							modules.err(err.sqlMessage) :
 							modules.then(responce);
 					}
 				}
