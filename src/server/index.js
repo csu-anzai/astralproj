@@ -4,13 +4,18 @@ const env = require('../env.json'),
 			io = require('./io')(env, express, reducer),
 			nodemailer = require('./nodemailer')(env),
 			mysql = require('./mysql')(env),
-			imap = require('./imap')(env, reducer);
+			imap = require('./imap')(env, reducer),
+			err = require('./err');
+let 	then = require('./then');
+then = then.bind(this, reducer);
 reducer.initEvents({
 	io,
 	nodemailer,
 	mysql,
 	reducer,
-	env
+	env,
+	then,
+	err
 });
 reducer.dispatch({
 	type: "query",

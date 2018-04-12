@@ -1,11 +1,11 @@
 BEGIN
-	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount, deleteCount2, errorLength INT(11);
+	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount, deleteCount2, deleteCount3, errorLength, banksCount, bankID INT(11);
 	DECLARE templateSuccess, duplicate TINYINT(1);
 	DECLARE TemplateColumnName, columnName VARCHAR(128);
 	DECLARE message TEXT;
 	DECLARE columnLetters VARCHAR(3);
-	DECLARE columns, columnsKeys, company, columnKeysObj, errorColumns, errorObj JSON;
-	SET responce = JSON_OBJECT();
+	DECLARE columns, columnsKeys, company, columnKeysObj, errorColumns, errorObj, refreshResponce JSON;
+	SET responce = JSON_ARRAY();
 	SET templateSuccess = 1;
 	SET companiesLength = JSON_LENGTH(companies);
 	SET errorColumns = JSON_ARRAY();
@@ -97,9 +97,34 @@ BEGIN
 					IF deleteCount2 > 0
 						THEN DELETE FROM companies WHERE (company_phone IS NULL OR company_inn IS NULL) AND bank_id IS NOT NULL;
 					END IF;
-					SET responce = JSON_OBJECT(
-						"message", CONCAT("added ", companiesLength - 1 - (deleteCount + deleteCount2), " companies in the base")
+					SELECT COUNT(*) INTO deleteCount3 FROM companies WHERE company_inn IS NULL AND bank_id IS NULL;
+					IF deleteCount3 > 0
+						THEN DELETE FROM companies WHERE company_inn IS NULL AND bank_id IS NULL;
+					END IF;
+					SET companiesLength = companiesLength - 1 - (deleteCount + deleteCount2 + deleteCount3);
+					SET responce = JSON_MERGE(responce,
+						JSON_OBJECT(
+							"type", "print",
+							"data", JSON_OBJECT(
+								"message", CONCAT("added ", companiesLength, " companies in the base")
+							)
+						)
 					);
+					SELECT COUNT(DISTINCT bank_id) INTO banksCount FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT companiesLength) companies WHERE bank_id IS NOT NULL;
+					SET iterator = 0;
+					banksLoop: LOOP
+						IF iterator >= banksCount
+							THEN LEAVE banksLoop;
+						END IF;
+						SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT companiesLength) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
+						SET refreshResponce = JSON_ARRAY();
+						CALL refreshBankSupervisors(bankID, refreshResponce);
+						IF JSON_LENGTH(refreshResponce) > 0 
+							THEN SET responce = JSON_MERGE(responce, refreshResponce);
+						END IF;
+						SET iterator = iterator + 1;
+						ITERATE banksLoop;
+					END LOOP;
 				END;
 				ELSE BEGIN
 					SET message = "error in template for column: ";
@@ -114,9 +139,12 @@ BEGIN
 						SET iterator = iterator + 1;
 						ITERATE errorLoop;
 					END LOOP;
-					SET responce = JSON_OBJECT(
-						"message", message
-					);
+					SET responce = JSON_MERGE(responce, JSON_OBJECT(
+						"type", "print",
+						"data", JSON_OBJECT(
+							"message", message
+						)
+					));
 				END;
 			END IF;
 		END;

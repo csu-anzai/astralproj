@@ -45,11 +45,15 @@ module.exports = modules => (resolve, reject, data) => {
 					]
 				},
 				(err, responce) => {
-					if (responce) {
-						responce[2] && responce[2][0] && responce[2][0].a &&
-						(responce = JSON.parse(responce[2][0].a));
+					if (i >= queries.length) {
+						err ?
+							reject(err) :
+							resolve(responce);
+					} else {
+						err ?
+							modules.err(err) :
+							modules.then(responce);
 					}
-					err ? console.log(err) : responce.message && console.log(`part ${i}: ${responce.message}`);
 				}
 			);
 		}
