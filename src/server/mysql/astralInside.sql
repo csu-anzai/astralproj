@@ -49,11 +49,11 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 ,`company_person_birthplace` varchar(1024)
 ,`company_inn` varchar(12)
 ,`company_address` varchar(1024)
-,`company_doc_number` varchar(12)
+,`company_doc_number` varchar(120)
 ,`company_doc_date` varchar(10)
 ,`company_organization_name` varchar(1024)
-,`company_organization_code` varchar(6)
-,`company_phone` varchar(20)
+,`company_organization_code` varchar(20)
+,`company_phone` varchar(120)
 ,`company_email` varchar(1024)
 ,`company_okved_code` varchar(8)
 ,`company_okved_name` varchar(2048)
@@ -76,7 +76,7 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 ,`company_doc_name` varchar(120)
 ,`company_doc_gifter` varchar(256)
 ,`company_doc_code` varchar(7)
-,`company_doc_house` varchar(20)
+,`company_doc_house` varchar(128)
 ,`company_doc_flat` varchar(40)
 ,`company_doc_region_type` varchar(50)
 ,`company_doc_region_name` varchar(120)
@@ -132,11 +132,11 @@ CREATE TABLE `companies` (
   `company_person_birthplace` varchar(1024) COLLATE utf8_bin DEFAULT NULL,
   `company_inn` varchar(12) COLLATE utf8_bin DEFAULT NULL,
   `company_address` varchar(1024) COLLATE utf8_bin DEFAULT NULL,
-  `company_doc_number` varchar(12) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_number` varchar(120) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_date` varchar(10) COLLATE utf8_bin DEFAULT NULL,
   `company_organization_name` varchar(1024) COLLATE utf8_bin DEFAULT NULL,
-  `company_organization_code` varchar(6) COLLATE utf8_bin DEFAULT NULL,
-  `company_phone` varchar(20) COLLATE utf8_bin DEFAULT NULL,
+  `company_organization_code` varchar(20) COLLATE utf8_bin DEFAULT NULL,
+  `company_phone` varchar(120) COLLATE utf8_bin DEFAULT NULL,
   `company_email` varchar(1024) COLLATE utf8_bin DEFAULT NULL,
   `company_okved_code` varchar(8) COLLATE utf8_bin DEFAULT NULL,
   `company_okved_name` varchar(2048) COLLATE utf8_bin DEFAULT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE `companies` (
   `company_doc_name` varchar(120) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_gifter` varchar(256) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_code` varchar(7) COLLATE utf8_bin DEFAULT NULL,
-  `company_doc_house` varchar(20) COLLATE utf8_bin DEFAULT NULL,
+  `company_doc_house` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_flat` varchar(40) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_region_type` varchar(50) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_region_name` varchar(120) COLLATE utf8_bin DEFAULT NULL,
@@ -171,7 +171,10 @@ CREATE TABLE `companies` (
   `company_doc_street_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
   `city_id` int(11) DEFAULT NULL,
   `region_id` int(11) DEFAULT NULL,
-  `bank_id` int(11) DEFAULT NULL
+  `bank_id` int(11) DEFAULT NULL,
+  `company_date_registration` varchar(10) COLLATE utf8_bin DEFAULT NULL,
+  `company_person_sex` int(1) DEFAULT NULL,
+  `company_ip_type` varchar(1024) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
