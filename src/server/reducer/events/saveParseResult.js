@@ -49,7 +49,6 @@ module.exports = modules => (resolve, reject, data) => {
 						err ?
 							reject(err.sqlMessage) :
 							resolve(responce);
-
 					} else {
 						err ?
 							modules.err(err.sqlMessage) :
