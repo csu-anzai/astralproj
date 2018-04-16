@@ -1,15 +1,17 @@
 BEGIN
-	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, deleteCount, deleteCount2, deleteCount3, errorLength, banksCount, bankID INT(11);
+	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, errorLength, banksCount, bankID, duplicateCount, emptyCount, secondsDiff, microsecondsDiff, emtyInArrayLength INT(11);
 	DECLARE templateSuccess, duplicate TINYINT(1);
 	DECLARE TemplateColumnName, columnName VARCHAR(128);
+	DECLARE endDate, startDate VARCHAR(26);
 	DECLARE message TEXT;
 	DECLARE columnLetters VARCHAR(3);
-	DECLARE columns, columnsKeys, company, columnKeysObj, errorColumns, errorObj, refreshResponce JSON;
+	DECLARE columns, columnsKeys, company, columnKeysObj, errorColumns, errorObj, refreshResponce, cleaningResponce JSON;
+	SET startDate = NOW(6);
 	SET responce = JSON_ARRAY();
 	SET templateSuccess = 1;
 	SET companiesLength = JSON_LENGTH(companies);
 	SET errorColumns = JSON_ARRAY();
-	SET deleteCount = 0;
+	SET emtyInArrayLength = 0;
 	IF companies IS NOT NULL AND companiesLength > 1
 		THEN BEGIN
 			SET columns = JSON_EXTRACT(companies, "$.columns");
@@ -64,49 +66,56 @@ BEGIN
 						IF iterator > companiesLength
 							THEN LEAVE rowsQueryLoop;
 						END IF;
-						SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator > 2, ",", ""),"(");
 						SET company = JSON_EXTRACT(companies, CONCAT("$.r", iterator));
-						SET iterator2 = 0;
-						colsQueryLoop: LOOP
-							IF iterator2 >= columnsKeysCount
-								THEN LEAVE colsQueryLoop;
-							END IF;
-							SET columnKeysObj = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator2, "]")));
-							SET duplicate = JSON_EXTRACT(columnKeysObj, "$.dup");
-							IF duplicate = 0
-								THEN BEGIN 
-									SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnKeysObj, "$.key"));
-									SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator2 > 0, ",", ""), IF(JSON_EXTRACT(company, CONCAT("$.", columnLetters)) IS NULL, "NULL", JSON_EXTRACT(company, CONCAT("$.", columnLetters))));
-								END;
-							END IF;
-							SET iterator2 = iterator2 + 1;
-							ITERATE colsQueryLoop;
-						END LOOP;
-						SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, ",",templateID,")");
+						IF company IS NOT NULL
+							THEN BEGIN
+								SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator > 2, ",", ""),"(");
+								SET iterator2 = 0;
+								colsQueryLoop: LOOP
+									IF iterator2 >= columnsKeysCount
+										THEN LEAVE colsQueryLoop;
+									END IF;
+									SET columnKeysObj = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator2, "]")));
+									SET duplicate = JSON_EXTRACT(columnKeysObj, "$.dup");
+									IF duplicate = 0
+										THEN BEGIN 
+											SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnKeysObj, "$.key"));
+											SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator2 > 0, ",", ""), IF(JSON_EXTRACT(company, CONCAT("$.", columnLetters)) IS NULL, "NULL", JSON_EXTRACT(company, CONCAT("$.", columnLetters))));
+										END;
+									END IF;
+									SET iterator2 = iterator2 + 1;
+									ITERATE colsQueryLoop;
+								END LOOP;
+								SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, ",",templateID,")");
+							END;
+							ELSE SET emtyInArrayLength = emtyInArrayLength + 1;
+						END IF;
 						SET iterator = iterator + 1;
 						ITERATE rowsQueryLoop;
 					END LOOP;
 					PREPARE newCompaniesQuery FROM @newCompaniesQuery;
 					EXECUTE newCompaniesQuery;
 					DEALLOCATE PREPARE newCompaniesQuery;
-					SELECT COUNT(*) INTO deleteCount FROM companies a, companies b WHERE a.company_id > b.company_id AND (a.company_ogrn = b.company_ogrn OR a.company_inn = b.company_inn);
-					IF deleteCount > 0
-						THEN DELETE a FROM companies a, companies b WHERE a.company_id > b.company_id AND (a.company_ogrn = b.company_ogrn OR a.company_inn = b.company_inn);
+					SET cleaningResponce = companiesCleaning();
+					SET duplicateCount = JSON_UNQUOTE(JSON_EXTRACT(cleaningResponce, "$.deleteDuplicateCompanies"));
+					SET emptyCount = JSON_UNQUOTE(JSON_EXTRACT(cleaningResponce, "$.deleteEmptyCompanies"));
+					SET companiesLength = companiesLength - 1 - (duplicateCount + emptyCount + emtyInArrayLength);
+					SET endDate = SYSDATE(6);
+					SET secondsDiff = TO_SECONDS(endDate) - TO_SECONDS(startDate);
+					IF secondsDiff = 0
+						THEN SET microsecondsDiff = MICROSECOND(endDate) - MICROSECOND(startDate);
+						ELSE BEGIN
+							SET secondsDiff = secondsDiff - 1;
+							SET microsecondsDiff = 1000000 - MICROSECOND(startDate) + MICROSECOND(endDate);
+							SET secondsDiff = secondsDiff + TRUNCATE(microsecondsDiff / 1000000, 0);
+							SET microsecondsDiff = microsecondsDiff % 1000000;
+						END;
 					END IF;
-					SELECT COUNT(*) INTO deleteCount2 FROM companies WHERE (company_phone IS NULL OR company_inn IS NULL) AND bank_id IS NOT NULL;
-					IF deleteCount2 > 0
-						THEN DELETE FROM companies WHERE (company_phone IS NULL OR company_inn IS NULL) AND bank_id IS NOT NULL;
-					END IF;
-					SELECT COUNT(*) INTO deleteCount3 FROM companies WHERE company_inn IS NULL AND bank_id IS NULL;
-					IF deleteCount3 > 0
-						THEN DELETE FROM companies WHERE company_inn IS NULL AND bank_id IS NULL;
-					END IF;
-					SET companiesLength = companiesLength - 1 - (deleteCount + deleteCount2 + deleteCount3);
 					SET responce = JSON_MERGE(responce,
 						JSON_OBJECT(
 							"type", "print",
 							"data", JSON_OBJECT(
-								"message", CONCAT("added ", companiesLength, " companies in the base")
+								"message", CONCAT("added ", companiesLength, " companies in the base. ", emtyInArrayLength," items in array be null. Delete ", emptyCount, " empty companies and ", duplicateCount, " duplicate companies. Seconds ", secondsDiff, ".", microsecondsDiff)
 							)
 						)
 					);

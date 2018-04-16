@@ -11,16 +11,16 @@ module.exports = (env, reducer) => {
 	}));
 	imap.start();
 	imap.on("server:connected", () => {
-		console.log("connect to imap server\n");
+		console.log("\nconnect to imap server\n");
 	});
 	imap.on("server:disconnected", () => {
-		console.log("disconnect from imap server\n");
+		console.log("\ndisconnect from imap server\n");
 	});
 	imap.on("error", err => {
-		console.log("error from imap connection: ", err, "\n");
+		console.log("\nerror from imap connection: ", err, "\n");
 	});
 	imap.on("attachment", attachment => {
-		console.log("new file in: ", attachment.path, "\n");
+		console.log("new file in: ", attachment.path);
 		let sheetRows = {};
 		try {
 			const workbook = xlsx.readFile(attachment.path),
@@ -38,7 +38,7 @@ module.exports = (env, reducer) => {
 				}
 			}
 			if (sheetRows) {
-				console.log("transform xlsx file to json format well done. File have " + Object.keys(sheetRows).length + " rows \n");
+				console.log("transform xlsx file to json format well done. File have " + (Object.keys(sheetRows).length - 1) + " rows. Date " + new Date() + "\n");
 				reducer.dispatch({
 					type: "saveParseResult",
 					data: sheetRows

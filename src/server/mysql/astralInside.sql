@@ -61,7 +61,7 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 ,`template_id` int(11)
 ,`company_kpp` varchar(9)
 ,`company_index` varchar(9)
-,`company_house` varchar(20)
+,`company_house` varchar(128)
 ,`company_region_type` varchar(50)
 ,`company_region_name` varchar(120)
 ,`company_area_type` varchar(60)
@@ -72,7 +72,7 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 ,`company_street_name` varchar(60)
 ,`company_innfl` varchar(12)
 ,`company_person_position_type` varchar(60)
-,`company_person_position_name` varchar(60)
+,`company_person_position_name` varchar(512)
 ,`company_doc_name` varchar(120)
 ,`company_doc_gifter` varchar(256)
 ,`company_doc_code` varchar(7)
@@ -144,7 +144,7 @@ CREATE TABLE `companies` (
   `template_id` int(11) DEFAULT NULL,
   `company_kpp` varchar(9) COLLATE utf8_bin DEFAULT NULL,
   `company_index` varchar(9) COLLATE utf8_bin DEFAULT NULL,
-  `company_house` varchar(20) COLLATE utf8_bin DEFAULT NULL,
+  `company_house` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `company_region_type` varchar(50) COLLATE utf8_bin DEFAULT NULL,
   `company_region_name` varchar(120) COLLATE utf8_bin DEFAULT NULL,
   `company_area_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
@@ -155,7 +155,7 @@ CREATE TABLE `companies` (
   `company_street_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
   `company_innfl` varchar(12) COLLATE utf8_bin DEFAULT NULL,
   `company_person_position_type` varchar(60) COLLATE utf8_bin DEFAULT NULL,
-  `company_person_position_name` varchar(60) COLLATE utf8_bin DEFAULT NULL,
+  `company_person_position_name` varchar(512) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_name` varchar(120) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_gifter` varchar(256) COLLATE utf8_bin DEFAULT NULL,
   `company_doc_code` varchar(7) COLLATE utf8_bin DEFAULT NULL,
@@ -188,6 +188,9 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
   SET NEW.city_id = (SELECT city_id FROM fns_codes WHERE fns_code_value = SUBSTRING(NEW.company_inn, 1, 4));
   SET NEW.bank_id = (SELECT bank_id FROM bank_cities WHERE city_id = NEW.city_id LIMIT 1);
   SET NEW.company_phone = REPLACE(CONCAT("+", REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(NEW.company_phone, "(", ""), ")",""), " ", ""), "-", ""), "—", ""), "+", "")), "+8", "+7");
+  IF NEW.bank_id = 1 AND (NEW.company_phone IS NULL OR NEW.company_inn IS NULL)
+    THEN SET NEW.bank_id = NULL;
+  END IF;
 END
 $$
 DELIMITER ;
@@ -253,6 +256,18 @@ CREATE TRIGGER `connections_before_update` BEFORE UPDATE ON `connections` FOR EA
 END
 $$
 DELIMITER ;
+CREATE TABLE `duplicate_companies_inn_view` (
+`length` bigint(21)
+,`company_inn` varchar(12)
+);
+CREATE TABLE `duplicate_companies_ogrn_view` (
+`length` bigint(21)
+,`company_ogrn` varchar(15)
+);
+CREATE TABLE `empty_companies_view` (
+`company_id` int(11)
+,`company_date_create` varchar(19)
+);
 
 CREATE TABLE `files` (
   `file_id` int(11) NOT NULL,
@@ -591,6 +606,15 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `bank_times_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
+DROP TABLE IF EXISTS `duplicate_companies_inn_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`duplicate_companies_inn_view`  AS  select `companies`.`length` AS `length`,`companies`.`company_inn` AS `company_inn` from (select count(`astralinside`.`companies`.`company_id`) AS `length`,`astralinside`.`companies`.`company_inn` AS `company_inn` from `astralinside`.`companies` group by `astralinside`.`companies`.`company_inn`) `companies` where ((`companies`.`length` > 1) and (`companies`.`company_inn` is not null)) ;
+DROP TABLE IF EXISTS `duplicate_companies_ogrn_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`duplicate_companies_ogrn_view`  AS  select `companies`.`length` AS `length`,`companies`.`company_ogrn` AS `company_ogrn` from (select count(`astralinside`.`companies`.`company_id`) AS `length`,`astralinside`.`companies`.`company_ogrn` AS `company_ogrn` from `astralinside`.`companies` group by `astralinside`.`companies`.`company_ogrn`) `companies` where ((`companies`.`length` > 1) and (`companies`.`company_ogrn` is not null)) ;
+DROP TABLE IF EXISTS `empty_companies_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`empty_companies_view`  AS  select `astralinside`.`companies`.`company_id` AS `company_id`,`astralinside`.`companies`.`company_date_create` AS `company_date_create` from `astralinside`.`companies` where (isnull(`astralinside`.`companies`.`company_ogrn`) and isnull(`astralinside`.`companies`.`company_ogrn_date`) and isnull(`astralinside`.`companies`.`company_person_name`) and isnull(`astralinside`.`companies`.`company_person_surname`) and isnull(`astralinside`.`companies`.`company_person_patronymic`) and isnull(`astralinside`.`companies`.`company_person_birthday`) and isnull(`astralinside`.`companies`.`company_person_birthplace`) and isnull(`astralinside`.`companies`.`company_inn`) and isnull(`astralinside`.`companies`.`company_address`) and isnull(`astralinside`.`companies`.`company_doc_number`) and isnull(`astralinside`.`companies`.`company_doc_date`) and isnull(`astralinside`.`companies`.`company_organization_name`) and isnull(`astralinside`.`companies`.`company_organization_code`) and isnull(`astralinside`.`companies`.`company_phone`) and isnull(`astralinside`.`companies`.`company_email`) and isnull(`astralinside`.`companies`.`company_okved_code`) and isnull(`astralinside`.`companies`.`company_okved_name`) and isnull(`astralinside`.`companies`.`company_kpp`) and isnull(`astralinside`.`companies`.`company_index`) and isnull(`astralinside`.`companies`.`company_house`) and isnull(`astralinside`.`companies`.`company_region_type`) and isnull(`astralinside`.`companies`.`company_region_name`) and isnull(`astralinside`.`companies`.`company_area_type`) and isnull(`astralinside`.`companies`.`company_area_name`) and isnull(`astralinside`.`companies`.`company_locality_type`) and isnull(`astralinside`.`companies`.`company_locality_name`) and isnull(`astralinside`.`companies`.`company_street_type`) and isnull(`astralinside`.`companies`.`company_street_name`) and isnull(`astralinside`.`companies`.`company_innfl`) and isnull(`astralinside`.`companies`.`company_person_position_type`) and isnull(`astralinside`.`companies`.`company_person_position_name`) and isnull(`astralinside`.`companies`.`company_doc_name`) and isnull(`astralinside`.`companies`.`company_doc_gifter`) and isnull(`astralinside`.`companies`.`company_doc_code`) and isnull(`astralinside`.`companies`.`company_doc_house`) and isnull(`astralinside`.`companies`.`company_doc_flat`) and isnull(`astralinside`.`companies`.`company_doc_region_type`) and isnull(`astralinside`.`companies`.`company_doc_region_name`) and isnull(`astralinside`.`companies`.`company_doc_area_type`) and isnull(`astralinside`.`companies`.`company_doc_area_name`) and isnull(`astralinside`.`companies`.`company_doc_locality_type`) and isnull(`astralinside`.`companies`.`company_doc_locality_name`) and isnull(`astralinside`.`companies`.`company_doc_street_type`) and isnull(`astralinside`.`companies`.`company_doc_street_name`) and isnull(`astralinside`.`companies`.`company_date_registration`) and isnull(`astralinside`.`companies`.`company_person_sex`) and isnull(`astralinside`.`companies`.`company_ip_type`)) ;
 DROP TABLE IF EXISTS `statistic_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`statistic_view`  AS  select `astralinside`.`companies`.`bank_id` AS `bank_id`,cast(`astralinside`.`companies`.`company_date_update` as date) AS `date`,cast(`astralinside`.`companies`.`company_date_update` as time(6)) AS `time`,`astralinside`.`companies`.`type_id` AS `type_id` from `astralinside`.`companies` group by `astralinside`.`companies`.`bank_id`,`date`,`time`,`astralinside`.`companies`.`type_id` order by `astralinside`.`companies`.`bank_id`,`date`,`time`,`astralinside`.`companies`.`type_id` ;
