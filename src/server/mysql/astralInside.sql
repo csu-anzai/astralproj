@@ -381,7 +381,12 @@ CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGI
           "types", JSON_ARRAY(
             16
           ),
-          "user", 0
+          "user", 0,
+          "dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)),
+          "dataDateEnd", DATE(NOW()),
+          "dataPeriod", 0,
+          "dataBank", 1,
+          "dataFree", 1
         )
       );
     END;
@@ -394,6 +399,7 @@ DELIMITER $$
 CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGIN
   DECLARE typeToView, period, bankID INT(11);
   DECLARE firstDate VARCHAR(19);
+  DECLARE dataFree, dataBank TINYINT(11);
   DECLARE types JSON;
   SELECT bank_id INTO bankID FROM users WHERE user_id = NEW.user_id;
   SET NEW.state_date_update = NOW();
@@ -427,6 +433,20 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
     WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(NOW()), "$.statistic.dateEnd", DATE(NOW()));
     WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.statistic.dateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
     ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.statistic.dateEnd", DATE(NOW()));
+  END CASE;
+  SET period = JSON_EXTRACT(NEW.state_json, "$.statistic.dataPeriod");
+  CASE period
+    WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.statistic.dataDateEnd", DATE(NOW()));
+    WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.statistic.dataDateEnd", DATE(NOW()));
+    WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.statistic.dataDateEnd", DATE(NOW()));
+    WHEN 3 THEN BEGIN
+      SET dataFree = JSON_UNQUOTE(JSON_EXTRACT(NEW.state_json, "$.statistic.dataFree"));
+      SET dataBank = JSON_UNQUOTE(JSON_EXTRACT(NEW.state_json, "$.statistic.dataBank"));
+      SELECT company_date_create INTO firstDate FROM companies WHERE IF(dataFree, type_id = 10, 1) AND IF(dataBank, bank_id = bankID, 1) ORDER BY company_date_create LIMIT 1;
+      SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(firstDate), "$.statistic.dataDateEnd", DATE(NOW()));
+    END;
+    WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.statistic.dataDateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
+    WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(NOW()), "$.statistic.dataDateEnd", DATE(NOW()));
   END CASE;
 END
 $$

@@ -13,7 +13,12 @@ BEGIN
 					"types", JSON_ARRAY(
 						16
 					),
-					"user", 0
+					"user", 0,
+					"dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)),
+					"dataDateEnd", DATE(NOW()),
+					"dataPeriod", 0,
+					"dataBank", 1,
+					"dataFree", 1
 				)
 			);
 		END;
