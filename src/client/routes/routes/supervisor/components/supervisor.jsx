@@ -1,11 +1,12 @@
 import React from 'react';
-import { Line, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 import Divider from 'material-ui/Divider';
+import Checkbox from 'material-ui/Checkbox';
 const partStyle = {
 	maxWidth: "800px",
-	margin: "0 auto"
+	margin: "0 auto 10px"
 };
 const headerStyle = {
 	textAlign: "center", 
@@ -19,6 +20,9 @@ export default class Supervisor extends React.Component {
 			typeToView: this.props.state.statistic && this.props.state.statistic.typeToView || 0,
 			period: this.props.state.statistic && this.props.state.statistic.period || 3,
 			user: this.props.state.statistic && this.props.state.statistic.user || 0,
+			dataPeriod: this.props.state.statistic && this.props.state.statistic.dataPeriod || 0,
+			dataFree: this.props.state.statistic && (this.props.state.statistic.dataFree ? true : false) || false,
+			dataBank: this.props.state.statistic && (this.props.state.statistic.dataBank ? true : false) || false,
 			colors: [
 				["rgb(75,192,192)", "rgba(75,192,192,0.4)"],
 				["rgb(173,162,249)", "rgba(173,162,249,0.4)"],
@@ -28,6 +32,9 @@ export default class Supervisor extends React.Component {
 		this.changeTypeToView = this.changeTypeToView.bind(this);
 		this.changePeriod = this.changePeriod.bind(this);
 		this.changeUser = this.changeUser.bind(this);
+		this.changeDataPeriod = this.changeDataPeriod.bind(this);
+		this.changeBank = this.changeBank.bind(this);
+		this.changeDataFree = this.changeDataFree.bind(this);
 	}
 	changeTypeToView(event, key, payload) {
 		this.props.dispatch({
@@ -69,6 +76,51 @@ export default class Supervisor extends React.Component {
 					this.props.state.connectionHash,
 					JSON.stringify({
 						user: payload
+					})
+				]
+			}
+		})
+	}
+	changeDataPeriod(event, key, payload) {
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						dataPeriod: payload
+					})
+				]
+			}
+		})
+	}
+	changeDataFree(obj, data){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						dataFree: data ? 1 : 0
+					})
+				]
+			}
+		})
+	}
+	changeBank(obj, data){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						dataBank: data ? 1 : 0
 					})
 				]
 			}
@@ -164,16 +216,70 @@ export default class Supervisor extends React.Component {
 			</div>
 			<div style = {partStyle}>
 				<h2 style = {headerStyle}>
-					Количество необработанных компаний в базе
+					Количество компаний в базе
 				</h2>
-				<Doughnut options = {{}} data = {{
-					datasets: [
-						{
-							backgroundColor: ["#90CAF9", "#81C784", "#FFD54F"],
-			        data: this.props.state.statistic && this.props.state.statistic.templates.map(template => template.freeItems) || []
-			    	}
-			    ],
-			    labels: this.props.state.statistic && this.props.state.statistic.templates.map(template => template.name) || []
+				<SelectField
+          floatingLabelText="Период"
+          value={this.props.state.statistic && this.props.state.statistic.dataPeriod != undefined ? this.props.state.statistic.dataPeriod : this.state.dataPeriod}
+          onChange={this.changeDataPeriod}
+        >
+        	<MenuItem value = {3} primaryText = "Все время" />
+        	<MenuItem value = {2} primaryText = "Год" />
+        	<MenuItem value = {1} primaryText = "Месяц" />
+        	<MenuItem value = {0} primaryText = "Неделя" />
+        	<MenuItem value = {4} primaryText = "Вчера" />
+        	<MenuItem value = {5} primaryText = "Сегодня" />
+        </SelectField>
+        <Checkbox 
+        	label = "Подходящие для Банка"
+        	checked = {this.props.state.statistic && this.props.state.statistic.dataBank != undefined ? (this.props.state.statistic.dataBank ? true : false) : this.state.dataBank}
+        	onCheck = {this.changeBank}
+        	style = {{
+        		display: "inline-block",
+        		width: "auto",
+        		verticalAlign: "super",
+        		whiteSpace: "nowrap",
+        		marginLeft: "10px"
+        	}}
+        />
+        <Checkbox 
+        	label = "Только свободные"
+        	checked = {this.props.state.statistic && this.props.state.statistic.dataFree != undefined ? (this.props.state.statistic.dataFree ? true : false) : this.state.dataFree}
+        	onCheck = {this.changeDataFree}
+        	style = {{
+        		display: "inline-block",
+        		width: "auto",
+        		verticalAlign: "super",
+        		whiteSpace: "nowrap",
+        		marginLeft: "10px"
+        	}}
+        />
+        <div style = {{
+        	margin: "10px 0",
+        	textAlign: "center",
+        	fontFamily: "Roboto, sans-serif"
+        }}>
+        	{
+        		this.props.state.statistic && this.props.state.statistic.templates.map(template => template.infoItems.length > 0 ? template.infoItems.reduce((before, after) => before + after) : 0).reduce((before, after) => before + after)
+        	}
+        	{" компаний за период: "}
+        	{
+        		this.props.state.statistic && 
+        		(this.props.state.statistic.dataDateStart == this.props.state.statistic.dataDateEnd ? 
+        			this.props.state.statistic.dataDateStart :
+        			`${this.props.state.statistic.dataDateStart} – ${this.props.state.statistic.dataDateEnd}`)
+        	}
+        </div>
+				<Bar data = {{
+			    labels: this.props.state.statistic && this.props.state.statistic.dataLabels || [],
+					datasets: this.props.state.statistic && this.props.state.statistic.templates.map((template, key) => ({
+						label: template.name,
+						backgroundColor: this.state.colors[key][1],
+						borderColor: this.state.colors[key][0],
+						pointHoverBackgroundColor: this.state.colors[key][0],
+						pointHoverBorderColor: 'rgba(220,220,220,1)',
+						data: template.infoItems || []
+					}))
 				}}/>
 			</div>
 		</div>

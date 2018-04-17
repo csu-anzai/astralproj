@@ -1,17 +1,19 @@
 BEGIN
-	DECLARE typeID, templateID, templateItemsCount, templateFreeItemsCount, userID, user, bankID, statisticCount, connectionID, typeToView, periodToView INT(11);
+	DECLARE typeID, templateID, templateItemsCount, templateInfoItemsCount, templatePeriodItemsCount, userID, user, bankID, statisticCount, connectionID, typeToView, periodToView, dataPeriod, templatesPeriodsLength, iterator INT(11);
 	DECLARE period VARCHAR(15);
-	DECLARE dateStart, dateEnd VARCHAR(19);
+	DECLARE dateStart, dateEnd, dataDateStart, dataDateEnd VARCHAR(19);
 	DECLARE typeName, searchResult, connectionApiID VARCHAR(128);
-	DECLARE done, connectionValid TINYINT(1);
-	DECLARE periodName VARCHAR(24);
-	DECLARE labels, templates, templateItems, types, users JSON;
+	DECLARE done, connectionValid, dataBank, dataFree TINYINT(1);
+	DECLARE periodName, dataPeriodName VARCHAR(24);
+	DECLARE labels, templates, templateItems, templateInfoItems, types, users, templatesPeriods JSON;
 	DECLARE companiesCursor CURSOR FOR SELECT * FROM custom_statistic_view;
 	DECLARE templatesCursor CURSOR FOR SELECT template_id, type_name FROM templates_view;
+	DECLARE templatesPeriodsCursor CURSOR FOR SELECT * FROM custom_data_view;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET connectionValid = checkConnection(connectionHash);
 	SELECT connection_api_id, user_id, connection_id INTO connectionApiID, userID, connectionID FROM users_connections_view WHERE connection_hash = connectionHash;
 	SET responce = JSON_ARRAY();
+	SET templatesPeriods = JSON_ARRAY();
 	IF connectionValid 
 		THEN BEGIN
 			SELECT bank_id INTO bankID FROM users WHERE user_id = userID;
@@ -21,16 +23,26 @@ BEGIN
 				state_json ->> "$.statistic.types",
 				state_json ->> "$.statistic.typeToView",
 				state_json ->> "$.statistic.period",
-				state_json ->> "$.statistic.user"
+				state_json ->> "$.statistic.user",
+				state_json ->> "$.statistic.dataDateStart",
+				state_json ->> "$.statistic.dataDateEnd",
+				state_json ->> "$.statistic.dataPeriod",
+				state_json ->> "$.statistic.dataBank",
+				state_json ->> "$.statistic.dataFree"
 			INTO
 				dateStart,
 				dateEnd,
 				types,
 				typeToView,
 				periodToView,
-				user
+				user,
+				dataDateStart,
+				dataDateEnd,
+				dataPeriod,
+				dataBank,
+				dataFree
 			FROM states WHERE connection_id = connectionID AND user_id = userID LIMIT 1;
-			IF date(dateStart) = date(dateEnd)
+			IF DATE(dateStart) = DATE(dateEnd)
 				THEN SET periodName = "CONCAT(HOUR(time),':00')";
 				ELSE BEGIN
 					SELECT COUNT(DISTINCT date) INTO statisticCount FROM statistic_view WHERE bank_id = bankID AND date BETWEEN DATE(dateStart) AND DATE(dateEnd) AND JSON_CONTAINS(types, JSON_ARRAY(type_id)) > 0;
@@ -43,12 +55,38 @@ BEGIN
 					END IF;
 				END;
 			END IF;
+			IF DATE(dataDateStart) = DATE(dataDateEnd)
+				THEN BEGIN
+					SET dataPeriodName = "time";
+					SET @mysqlText2 = CONCAT("CREATE VIEW custom_data_view AS SELECT CONCAT(HOUR(company_date_create),':',MINUTE(company_date_create)) time FROM companies WHERE IF(", dataFree, ", type_id = 10, 1) AND IF(", dataBank, ", bank_id = ", bankID, ", 1) AND DATE(company_date_create) = DATE('", dataDateStart, "') GROUP BY time");
+				END;
+				ELSE BEGIN 
+					SET dataPeriodName = "date";
+					SET @mysqlText2 = CONCAT("CREATE VIEW custom_data_view AS SELECT DATE(company_date_create) date FROM companies WHERE IF(", dataFree, ", type_id = 10, 1) AND IF(", dataBank, ", bank_id = ", bankID, ", 1) AND DATE(company_date_create) BETWEEN DATE('", dataDateStart, "') AND DATE('", dataDateEnd, "') GROUP BY date");
+				END;
+			END IF;
 			SET @mysqlText = CONCAT("CREATE VIEW custom_statistic_view AS SELECT ", periodName," period FROM statistic_view WHERE bank_id = ", bankID, " AND date BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "') AND JSON_CONTAINS('", types,"', JSON_ARRAY(type_id)) > 0 GROUP BY period");
 			SET labels = JSON_ARRAY();
 			SET templates = JSON_ARRAY();
 			PREPARE mysqlPrepare FROM @mysqlText;
 			EXECUTE mysqlPrepare;
 			DEALLOCATE PREPARE mysqlPrepare;
+			PREPARE mysqlPrepare FROM @mysqlText2;
+			EXECUTE mysqlPrepare;
+			DEALLOCATE PREPARE mysqlPrepare;
+			SET done = 0;
+			OPEN templatesPeriodsCursor;
+				templatesPeriodsLoop: LOOP
+					FETCH templatesPeriodsCursor INTO period;
+					IF done
+						THEN LEAVE templatesPeriodsLoop;
+					END IF;
+					SET templatesPeriods = JSON_MERGE(templatesPeriods, JSON_ARRAY(period));
+					ITERATE templatesPeriodsLoop;
+				END LOOP;
+			CLOSE templatesPeriodsCursor;
+			SET templatesPeriodsLength = JSON_LENGTH(templatesPeriods);
+			DROP VIEW IF EXISTS custom_data_view;
 			SET done = 0;
 			OPEN templatesCursor;
 				templatesLoop: LOOP
@@ -57,17 +95,31 @@ BEGIN
 						THEN LEAVE templatesLoop;
 					END IF;
 					SET searchResult = JSON_SEARCH(templates, "one", typeName, NULL, "$[*].name");
-					SELECT COUNT(*) INTO templateFreeItemsCount FROM companies WHERE type_id = 10 AND template_id = templateID AND bank_id = bankID;
+					SET templateInfoItems = JSON_ARRAY();
+					SET iterator = 0;
+					templatePeriodsLoop: LOOP
+						IF iterator >= templatesPeriodsLength
+							THEN LEAVE templatePeriodsLoop;
+						END IF;
+						SET period = JSON_UNQUOTE(JSON_EXTRACT(templatesPeriods, CONCAT("$[", iterator, "]")));
+						IF dataPeriodName = "date"
+							THEN SELECT COUNT(*) INTO templatePeriodItemsCount FROM companies WHERE template_id = templateID AND IF(dataBank, bank_id = bankID, 1) AND IF(dataFree, type_id = 10, 1) AND DATE(company_date_create) = DATE(period);
+							ELSE SELECT COUNT(*) INTO templatePeriodItemsCount FROM companies WHERE template_id = templateID AND IF(dataBank, bank_id = bankID, 1) AND IF(dataFree, type_id = 10, 1) AND DATE(company_date_create) = DATE(dataDateStart) AND HOUR(company_date_create) = HOUR(period) AND MINUTE(company_date_create) = MINUTE(period);
+						END IF;
+						SET templateInfoItems = JSON_MERGE(templateInfoItems, JSON_ARRAY(templatePeriodItemsCount));
+						SET iterator = iterator + 1;
+						ITERATE templatePeriodsLoop;
+					END LOOP;
 					IF searchResult IS NULL
 						THEN SET templates = JSON_MERGE(templates, JSON_OBJECT(
 							"name", typeName,
-							"freeItems", templateFreeItemsCount,
+							"infoItems", templateInfoItems,
 							"items", JSON_ARRAY()
 						));
 						ELSE BEGIN
-							SET searchResult = REPLACE(searchResult, ".name", ".freeItems");
-							SET templateFreeItemsCount = templateFreeItemsCount + JSON_UNQUOTE(JSON_EXTRACT(templates, searchResult));
-							SET templates = JSON_SET(templates, searchResult, templateFreeItemsCount);
+							SET searchResult = REPLACE(searchResult, ".name", ".infoItems");
+							SET templateInfoItemsCount = templateInfoItemsCount + JSON_UNQUOTE(JSON_EXTRACT(templates, searchResult));
+							SET templates = JSON_SET(templates, searchResult, templateInfoItemsCount);
 						END;
 					END IF;
 					ITERATE templatesLoop;
@@ -123,7 +175,13 @@ BEGIN
 									"dateStart", date(dateStart),
 									"dateEnd", date(dateEnd),
 									"user", user,
-									"users", getUsers(bankID)
+									"users", getUsers(bankID),
+									"dataLabels", templatesPeriods,
+									"dataPeriod", dataPeriod,
+									"dataFree", dataFree,
+									"dataBank", dataBank,
+									"dataDateStart", dataDateStart,
+									"dataDateEnd", dataDateEnd
 								)
 							)
 						)
