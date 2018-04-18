@@ -19,7 +19,6 @@ module.exports = (env, reducer) => {
 		console.log("\ndisconnect from imap server\n");
 	});
 	imap.on("error", err => {
-		reducer.modules.imap = 
 		console.log("\nerror from imap connection: ", err, "\n");
 	});
 	imap.on("attachment", attachment => {
