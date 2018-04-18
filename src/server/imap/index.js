@@ -28,7 +28,8 @@ module.exports = (env, reducer) => {
 			const workbook = xlsx.readFile(attachment.path),
 						first = Object.keys(workbook.Sheets)[0],
 						sheet = workbook.Sheets[first];
-			for(key in sheet){
+			console.log(Object.keys(workbook));
+			/*for(key in sheet){
 				if (!/!/.test(key)){
 					let param = sheet[key].v,
 							numbers = key.match(/\d+/)[0],
@@ -47,7 +48,7 @@ module.exports = (env, reducer) => {
 				}).then(then).catch(err);
 			} else {
 				console.log("transform xlsx file to json format have error. JSON result: " + sheetRows);
-			}
+			}*/
 		} catch(err) {
 			console.log(err);
 		}

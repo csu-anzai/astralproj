@@ -10,6 +10,7 @@ let 	then = require('./then');
 then = then.bind(this, reducer);
 reducer.initEvents({
 	io,
+	express,
 	nodemailer,
 	mysql,
 	reducer,
@@ -22,5 +23,11 @@ reducer.dispatch({
 	data: {
 		query: "disconnectAll",
 		values: []
+	}
+});
+reducer.dispatch({
+	type: "xlsxCreate",
+	data: {
+
 	}
 });
