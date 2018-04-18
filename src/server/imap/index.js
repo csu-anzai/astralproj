@@ -14,6 +14,8 @@ module.exports = (env, reducer) => {
 		console.log("\nconnect to imap server\n");
 	});
 	imap.on("server:disconnected", () => {
+		const imap = require("./")(env, reducer);
+		reducer.initEvents({imap});
 		console.log("\ndisconnect from imap server\n");
 	});
 	imap.on("error", err => {

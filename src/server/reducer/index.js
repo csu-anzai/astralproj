@@ -6,7 +6,7 @@ module.exports = class App {
 		this.modules = {};
 	}
 	initEvents(modules = {}){
-		Object.keys(modules).length > 0 && (this.modules = modules);
+		Object.keys(modules).length > 0 && (this.modules = Object.assign(this.modules, modules));
 		for(let i = 0; i < this.eventsPaths.length; i++){
 			let fileName = this.eventsPaths[i].match(/([aA-zZ]*)\.js/);
 			fileName && (this.events[fileName[1]] = require(`${__dirname}/events/${this.eventsPaths[i]}`)(modules));
