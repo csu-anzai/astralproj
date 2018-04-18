@@ -2,10 +2,7 @@ const request = require('request');
 module.exports = modules => (resolve, reject, data) => {
 	for(let i = 0; i < data.companies.length; i++){
 		let company = data.companies[i];
-		let body = {
-			securityKey: modules.env.tinkoff.securityKey,
-			partnerId: modules.env.tinkoff.partnerId,
-			agentId: modules.env.tinkoff.agentId,
+		let body = Object.assign({
 			source: "Федеральные партнеры",
 			subsource: "API",
 			firstName: company.companyPersonName,
@@ -14,7 +11,7 @@ module.exports = modules => (resolve, reject, data) => {
 			phoneNumber: company.companyPhone,
 			companyName: company.companyOrganizationName, 
 			innOrOgrn: company.companyInn || company.companyOgrn
-		};
+		}, modules.env.tinkoff);
 		let options = {
 			method: 'post',
 			body: body,
