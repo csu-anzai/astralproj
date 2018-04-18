@@ -22,6 +22,9 @@ module.exports = modules => (resolve, reject, data) => {
 			if(err){
 				reject(err);
 			} else {
+				if (body.success == 0) {
+					console.log(body);
+				}
 				modules.reducer.dispatch({
 					type: "query",
 					data: {
