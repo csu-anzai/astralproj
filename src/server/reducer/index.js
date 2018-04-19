@@ -9,7 +9,7 @@ module.exports = class App {
 		Object.keys(modules).length > 0 && (this.modules = Object.assign(this.modules, modules));
 		for(let i = 0; i < this.eventsPaths.length; i++){
 			let fileName = this.eventsPaths[i].match(/([aA-zZ]*)\.js/);
-			fileName && (this.events[fileName[1]] = require(`${__dirname}/events/${this.eventsPaths[i]}`)(modules));
+			fileName && (this.events[fileName[1]] = require(`${__dirname}/events/${this.eventsPaths[i]}`)(this.modules));
 		}
 	}
 	dispatch(event){
