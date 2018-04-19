@@ -4,9 +4,10 @@ const mailListener = require("mail-listener2"),
 let then = require("./../then");
 module.exports = (env, reducer) => {
 	then = then.bind(this, reducer);
-	const imap = new mailListener(Object.assign(env.imap, {
+	let envClone = JSON.parse(JSON.stringify(env));
+	const imap = new mailListener(Object.assign(envClone.imap, {
 		attachmentOptions: {
-			directory: __dirname + "/../" + env.imap.attachmentOptions.directory
+			directory: __dirname + "/../" + envClone.imap.attachmentOptions.directory
 		}
 	}));
 	imap.start();
