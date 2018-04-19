@@ -25,9 +25,3 @@ reducer.dispatch({
 		values: []
 	}
 });
-reducer.dispatch({
-	type: "xlsxCreate",
-	data: {
-
-	}
-});

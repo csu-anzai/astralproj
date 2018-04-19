@@ -5,3 +5,19 @@ module.exports = modules => (resolve, reject, data) => {
     console.log(filepath);
 	});
 }
+
+/*{
+  "name": "sheetname",
+  "data": [
+    [
+      1231,
+      4561,
+      7891
+    ],
+    [
+      1232,
+      4562,
+      7893
+    ]
+  ]
+}*/
