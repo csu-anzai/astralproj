@@ -30,8 +30,17 @@ BEGIN
 						10
 					),
 					"regions", JSON_ARRAY(),
+					"banks", JSON_ARRAY(NULL),
 					"nullColumns", JSON_ARRAY(),
-					"notNullColumns", JSON_ARRAY()
+					"notNullColumns", JSON_ARRAY(),
+					"limit", 50,
+					"offset", 0,
+					"orders", JSON_ARRAY(
+						JSON_OBJECT(
+							"name", "company_date_create",
+							"desc", 1
+						)
+					)
 				));
 			END IF;
 		END;
