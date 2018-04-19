@@ -22,8 +22,8 @@ BEGIN
 		);
 	END IF;
 	SET NEW.company_json = json_object(
-		'cityName', (SELECT (SELECT city_name FROM cities WHERE city_id = NEW.city_id) OR NULL),
-		'regionName', (SELECT (SELECT region_name FROM regions WHERE region_id = NEW.region_id) OR NULL),
+		'cityName', (SELECT city_name FROM cities WHERE city_id = NEW.city_id),
+		'regionName', (SELECT region_name FROM regions WHERE region_id = NEW.region_id),
 		'typeID', NEW.type_id,
 		'companyID', NEW.company_id,
 		'templateID', NEW.template_id,
