@@ -18,20 +18,29 @@ BEGIN
 					THEN LEAVE keysLoop;
 				END IF;
 				SET keyName = JSON_UNQUOTE(JSON_EXTRACT(filtersKeys, CONCAT("$[", iterator, "]")));
-				SET userFilters = JSON_SET(userFilters, CONCAT("$.", keyName), JSON_UNQUOTE(JSON_EXTRACT(filters, CONCAT("$.", keyName))));
+				SET userFilters = JSON_REMOVE(userFilters, CONCAT("$.", keyName));
 				SET iterator = iterator + 1;
 				ITERATE keysLoop;
 			END LOOP;
+			SET userFilters = JSON_MERGE(userFilters, filters);
 			UPDATE states SET state_json = JSON_SET(state_json, "$.download", userFilters) WHERE state_id = stateID;
-			SET responce = JSON_MERGE(responce, JSON_OBJECT(
-				"type", "procedure",
+			SET responce = JSON_MERGE(responce, sendToAlluserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+				"type", "merge",
 				"data", JSON_OBJECT(
-					"query", "getDownloadPreview",
-					"values", JSON_ARRAY(
-						connectionID
-					)
+					"download", userFilters
 				)
-			));
+			))));
+			IF JSON_CONTAINS(filtersKeys, JSON_ARRAY("limit")) OR JSON_CONTAINS(filtersKeys, JSON_ARRAY("offset"))
+				THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+					"type", "procedure",
+					"data", JSON_OBJECT(
+						"query", "getDownloadPreview",
+						"values", JSON_ARRAY(
+							userID
+						)
+					)
+				));
+			END IF;
 		END;
 		ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToSocket",

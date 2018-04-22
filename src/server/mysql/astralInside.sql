@@ -117,6 +117,11 @@ CREATE TABLE `columns` (
   `column_name` varchar(128) COLLATE utf8_bin NOT NULL,
   `column_blocked` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+CREATE TABLE `columns_translates_view` (
+`column_id` int(11)
+,`translate_to` varchar(128)
+,`column_name` varchar(128)
+);
 
 CREATE TABLE `companies` (
   `company_id` int(11) NOT NULL,
@@ -206,59 +211,59 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
     );
   END IF;
   SET NEW.company_json = json_object(
-    'cityName', (SELECT city_name FROM cities WHERE city_id = NEW.city_id),
-    'regionName', (SELECT region_name FROM regions WHERE region_id = NEW.region_id),
-    'typeID', NEW.type_id,
-    'companyID', NEW.company_id,
-    'templateID', NEW.template_id,
-    'cityID', NEW.city_id,
-    'regionID', NEW.region_id,
-    'companyDateCreate', NEW.company_date_create,
-    'companyDateUpdate', NEW.company_date_update,
-    'companyOgrn', NEW.company_ogrn,
-    'companyOgrnDate', NEW.company_ogrn_date,
-    'companyPersonBirthday', NEW.company_person_birthday,
-    'companyDocDate', NEW.company_doc_date,
-    'companyPersonName', NEW.company_person_name,
-    'companyPersonSurname', NEW.company_person_surname,
-    'companyPersonPatronymic', NEW.company_person_patronymic,
-    'companyPersonBirthplace', NEW.company_person_birthplace,
-    'companyAddress', NEW.company_address,
-    'companyOrganizationName', NEW.company_organization_name,
-    'companyEmail', NEW.company_email,
-    'companyInn', NEW.company_inn,
-    'companyDocNumber', NEW.company_doc_number,
-    'companyInnfl', NEW.company_innfl,
-    'companyOrganizationCode', NEW.company_organization_code,
-    'companyPhone', NEW.company_phone,
-    'companyHouse', NEW.company_house,
-    'companyDocHouse', NEW.company_doc_house,
-    'companyOkvedCode', NEW.company_okved_code,
-    'companyOkvedName', NEW.company_okved_name,
-    'companyKpp', NEW.company_kpp,
-    'companyIndex', NEW.company_index,
-    'companyRegionType', NEW.company_region_type,
-    'companyDocRegionType', NEW.company_doc_region_type,
-    'companyRegionName', NEW.company_region_name,
-    'companyDocName', NEW.company_doc_name,
-    'companyDocRegionName', NEW.company_doc_region_name,
-    'companyAreaType', NEW.company_area_type,
-    'companyAreaName', NEW.company_area_name,
-    'companyLocalityType', NEW.company_locality_type,
-    'companyLocalityName', NEW.company_locality_name,
-    'companyStreetType', NEW.company_street_type,
-    'companyStreetName', NEW.company_street_name,
-    'companyPersonPositionType', NEW.company_person_position_type,
-    'companyPersonPositionName', NEW.company_person_position_name,
-    'companyDocAreaType', NEW.company_doc_area_type,
-    'companyDocAreaName', NEW.company_doc_area_name,
-    'companyDocLocalityType', NEW.company_doc_locality_type,
-    'companyDocLocalityName', NEW.company_doc_locality_name,
-    'companyDocStreetType', NEW.company_doc_street_type,
-    'companyDocStreetName', NEW.company_doc_street_name,
-    'companyDocGifter', NEW.company_doc_gifter,
-    'companyDocCode', NEW.company_doc_code,
-    'companyDocFlat', NEW.company_doc_flat
+    'city_name', (SELECT city_name FROM cities WHERE city_id = NEW.city_id),
+    'region_name', (SELECT region_name FROM regions WHERE region_id = NEW.region_id),
+    'type_id', NEW.type_id,
+    'company_id', NEW.company_id,
+    'template_id', NEW.template_id,
+    'city_id', NEW.city_id,
+    'region_id', NEW.region_id,
+    'company_date_create', NEW.company_date_create,
+    'company_date_update', NEW.company_date_update,
+    'company_ogrn', NEW.company_ogrn,
+    'company_ogrn_date', NEW.company_ogrn_date,
+    'company_person_birthday', NEW.company_person_birthday,
+    'company_doc_date', NEW.company_doc_date,
+    'company_person_name', NEW.company_person_name,
+    'company_person_surname', NEW.company_person_surname,
+    'company_person_patronymic', NEW.company_person_patronymic,
+    'company_person_birthplace', NEW.company_person_birthplace,
+    'company_address', NEW.company_address,
+    'company_organization_name', NEW.company_organization_name,
+    'company_email', NEW.company_email,
+    'company_inn', NEW.company_inn,
+    'company_doc_number', NEW.company_doc_number,
+    'company_innfl', NEW.company_innfl,
+    'company_organization_code', NEW.company_organization_code,
+    'company_phone', NEW.company_phone,
+    'company_house', NEW.company_house,
+    'company_doc_house', NEW.company_doc_house,
+    'company_okved_code', NEW.company_okved_code,
+    'company_okved_name', NEW.company_okved_name,
+    'company_kpp', NEW.company_kpp,
+    'company_index', NEW.company_index,
+    'company_region_type', NEW.company_region_type,
+    'company_doc_region_type', NEW.company_doc_region_type,
+    'company_region_name', NEW.company_region_name,
+    'company_doc_name', NEW.company_doc_name,
+    'company_doc_region_name', NEW.company_doc_region_name,
+    'company_area_type', NEW.company_area_type,
+    'company_area_name', NEW.company_area_name,
+    'company_locality_type', NEW.company_locality_type,
+    'company_locality_name', NEW.company_locality_name,
+    'company_street_type', NEW.company_street_type,
+    'company_street_name', NEW.company_street_name,
+    'company_person_position_type', NEW.company_person_position_type,
+    'company_person_position_name', NEW.company_person_position_name,
+    'company_doc_area_type', NEW.company_doc_area_type,
+    'company_doc_area_name', NEW.company_doc_area_name,
+    'company_doc_locality_type', NEW.company_doc_locality_type,
+    'company_doc_locality_name', NEW.company_doc_locality_name,
+    'company_doc_street_type', NEW.company_doc_street_type,
+    'company_doc_street_name', NEW.company_doc_street_name,
+    'company_doc_gifter', NEW.company_doc_gifter,
+    'company_doc_code', NEW.company_doc_code,
+    'company_doc_flat', NEW.company_doc_flat
   );
 END
 $$
@@ -267,8 +272,8 @@ DELIMITER $$
 CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH ROW BEGIN
   SET NEW.company_date_update = NOW();
   SET NEW.company_json = JSON_SET(NEW.company_json,
-    "$.typeID", NEW.type_id,
-    "$.companyDateUpdate", NEW.company_date_update
+    "$.type_id", NEW.type_id,
+    "$.company_date_update", NEW.company_date_update
   );
 END
 $$
@@ -344,7 +349,7 @@ CREATE TABLE `empty_companies_view` (
 
 CREATE TABLE `files` (
   `file_id` int(11) NOT NULL,
-  `file_name` int(11) DEFAULT NULL,
+  `file_name` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `type_id` int(11) DEFAULT NULL,
   `file_date_create` varchar(19) COLLATE utf8_bin NOT NULL,
   `purchase_id` int(11) DEFAULT NULL,
@@ -466,7 +471,7 @@ CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGI
         THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download", JSON_OBJECT(
           "dateStart", DATE(NOW()),
           "dateEnd", DATE(NOW()),
-          "type", 0,
+          "type", 10,
           "types", JSON_ARRAY(
             10
           ),
@@ -481,7 +486,8 @@ CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGI
               "name", "company_date_create",
               "desc", 1
             )
-          )
+          ),
+          "count", 100
         ));
       END IF;
     END;
@@ -492,7 +498,7 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGIN
-  DECLARE typeToView, period, bankID INT(11);
+  DECLARE typeToView, period, bankID, type INT(11);
   DECLARE firstDate VARCHAR(19);
   DECLARE dataFree, dataBank TINYINT(11);
   DECLARE types JSON;
@@ -542,6 +548,21 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
     END;
     WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.statistic.dataDateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
     WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(NOW()), "$.statistic.dataDateEnd", DATE(NOW()));
+  END CASE;
+  SET type = JSON_EXTRACT(NEW.state_json, "$.download.type");
+  CASE type
+    WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 10));
+    WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(17));
+    WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(15));
+    WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(16));
+    WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(13));
+    WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(14));
+    WHEN 6 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(9));
+    WHEN 7 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(15, 16, 17));
+    WHEN 8 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(13, 14));
+    WHEN 9 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(13, 14, 15, 16, 17));
+    WHEN 10 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(10));
+    ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 10));
   END CASE;
 END
 $$
@@ -732,6 +753,9 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `bank_times_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
+DROP TABLE IF EXISTS `columns_translates_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`columns_translates_view`  AS  select `c`.`column_id` AS `column_id`,if((`t`.`translate_to` is not null),`t`.`translate_to`,`c`.`column_name`) AS `translate_to`,`c`.`column_name` AS `column_name` from (`astralinside`.`columns` `c` left join `astralinside`.`translates` `t` on((`t`.`translate_from` = `c`.`column_name`))) ;
 DROP TABLE IF EXISTS `duplicate_companies_inn_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`duplicate_companies_inn_view`  AS  select `companies`.`length` AS `length`,`companies`.`company_inn` AS `company_inn` from (select count(`astralinside`.`companies`.`company_id`) AS `length`,`astralinside`.`companies`.`company_inn` AS `company_inn` from `astralinside`.`companies` group by `astralinside`.`companies`.`company_inn`) `companies` where ((`companies`.`length` > 1) and (`companies`.`company_inn` is not null)) ;

@@ -24,11 +24,11 @@ BEGIN
 						THEN LEAVE companiesLoop;
 					END IF;
 					SET company = JSON_REMOVE(company, 
-						"$.cityID",
-						"$.companyID",
-						"$.regionID",
-						"$.templateID",
-						"$.typeID"
+						"$.city_id",
+						"$.company_id",
+						"$.region_id",
+						"$.template_id",
+						"$.type_id"
 					);
 					SET companyKeys = JSON_KEYS(company);
 					SET iterator = 0;
@@ -38,11 +38,14 @@ BEGIN
 						IF iterator >= keysLength
 							THEN LEAVE companyKeysLoop;
 						END IF;
-						SET keyName = JSON_EXTRACT(companyKeys, CONCAT("$[", iterator, "]"));
+						SET keyName = JSON_UNQUOTE(JSON_EXTRACT(companyKeys, CONCAT("$[", iterator, "]")));
 						SET companyArray = JSON_MERGE(companyArray, JSON_ARRAY(JSON_EXTRACT(company, CONCAT("$.", keyName))));
 						IF !translateDone
 							THEN BEGIN
-								SELECT translate_to INTO translateTo FROM translates WHERE translate_from = keyName;
+								SET translateTo = (SELECT translate_to FROM translates WHERE translate_from = keyName);
+								IF translateTo IS NULL
+									THEN SET translateTo = keyName;
+								END IF;
 								SET translateNames = JSON_MERGE(translateNames, JSON_ARRAY(translateTo));
 							END;
 						END IF;
@@ -59,14 +62,32 @@ BEGIN
 					ITERATE companiesLoop;
 				END LOOP;
 			CLOSE companiesCursor;
-			UPDATE companies SET type_id = 22 WHERE user_id = userID AND type_id = 20;
+			UPDATE companies SET type_id = 22, file_id = fileID WHERE user_id = userID AND type_id = 20;
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "xlsxCreate",
 				"data", JSON_OBJECT(
 					"name", DATE(NOW()),
-					"data", companies
+					"data", companies,
+					"fileID", fileID
 				)
 			));
+			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
+				JSON_OBJECT(
+					"type", "merge",
+					"data", JSON_OBJECT(
+						"downloadCompanies", JSON_ARRAY(),
+						"downloadCompaniesColumnsNames", JSON_ARRAY() 
+					)
+				),
+				JSON_OBJECT(
+					"type", "mergeDeep",
+					"data", JSON_OBJECT(
+						"download", JSON_OBJECT(
+							"message", "Компании отправленны на запись в файл"
+						)
+					)
+				)
+			)));
 		END;
 		ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToSocket",

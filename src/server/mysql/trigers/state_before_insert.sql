@@ -25,7 +25,7 @@ BEGIN
 				THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download", JSON_OBJECT(
 					"dateStart", DATE(NOW()),
 					"dateEnd", DATE(NOW()),
-					"type", 0,
+					"type", 10,
 					"types", JSON_ARRAY(
 						10
 					),
@@ -40,7 +40,8 @@ BEGIN
 							"name", "company_date_create",
 							"desc", 1
 						)
-					)
+					),
+					"count", 100
 				));
 			END IF;
 		END;

@@ -3,6 +3,7 @@ import Drawer from 'material-ui/Drawer';
 import {List, ListItem, makeSelectable} from 'material-ui/List';
 import Home from 'material-ui/svg-icons/action/home';
 import DonutSmall from 'material-ui/svg-icons/action/donut-small';
+import FileDownload from 'material-ui/svg-icons/file/file-download';
 import { push } from 'react-router-redux';
 import { connect } from 'react-redux';
 let SelectableList = makeSelectable(List);
@@ -53,6 +54,14 @@ class Menu extends React.Component {
             primaryText = "Статистика" 
             leftIcon = { <DonutSmall/> }
             value = "/supervisor"
+          />
+        }
+        {
+          this.props.state.userType == 1 &&
+          <ListItem 
+            primaryText = "Ручная выгрузка" 
+            leftIcon = { <FileDownload/> }
+            value = "/download"
           />
         }
 			</SelectableList>

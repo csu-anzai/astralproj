@@ -47,7 +47,7 @@ export default class Tinkoff extends React.Component {
 		});
 	}
 	upload(){
-		let uploadCompanies = this.props.state.companies.filter(item => item.typeID == 13).map(i => i.companyID);
+		let uploadCompanies = this.props.state.companies.filter(item => item.type_id == 13).map(i => i.company_id);
 		this.props.dispatch({
 			type: "query",
 			socket: true,
@@ -84,22 +84,22 @@ export default class Tinkoff extends React.Component {
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
 					<BottomNavigationItem
-            label={"В РАБОТЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 10 || i.typeID == 9).length || 0)+")"}
+            label={"В РАБОТЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 10 || i.type_id == 9).length || 0)+")"}
             icon={<Restore/>}
             onClick={() => this.select(0)}
           />
           <BottomNavigationItem
-            label={"ИНТЕРЕСНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 13).length || 0)+")"}
+            label={"ИНТЕРЕСНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 13).length || 0)+")"}
             icon={<Favorite/>}
             onClick={() => this.select(1)}
           />
           <BottomNavigationItem
-            label={"НЕ ИНТЕРЕСНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 14).length || 0)+")"}
+            label={"НЕ ИНТЕРЕСНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 14).length || 0)+")"}
             icon={<HighlightOff/>}
             onClick={() => this.select(2)}
           />
           <BottomNavigationItem
-            label={"УТВЕРЖДЕНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 15 || i.typeID == 16 || i.typeID == 17).length || 0)+")"}
+            label={"УТВЕРЖДЕНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 15 || i.type_id == 16 || i.type_id == 17).length || 0)+")"}
             icon={<CheckCircle/>}
             onClick={() => this.select(3)}
           />
@@ -137,7 +137,7 @@ export default class Tinkoff extends React.Component {
 				                	backgroundColor="#a4c639"
 				                	labelColor = "#fff"
 				                	onClick = {()=>{this.refresh.call(this)}}
-				                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 9 || i.typeID == 10).length >= this.state.limit) ? true : false}
+				                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 9 || i.type_id == 10).length >= this.state.limit) ? true : false}
 				                />
 				              }
 				              {
@@ -147,7 +147,7 @@ export default class Tinkoff extends React.Component {
 				                	backgroundColor="#FF5722"
 				                	labelColor = "#fff"
 				                	onClick = {()=>{this.upload.call(this)}}
-				                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.typeID == 13).length > 0) ? false : true}
+				                	disabled = {(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 13).length > 0) ? false : true}
 				                />
 			              	}
 		              	</div>
@@ -174,19 +174,19 @@ export default class Tinkoff extends React.Component {
 	          	{
 	          		this.props.state.companies && this.props.state.companies.length > 0 && this.props.state.companies.map((company, key) => (
 		              (
-		              	(this.state.selectedIndex == 0 && (company.typeID == 10 || company.typeID == 9)) || 
-		              	(this.state.selectedIndex == 1 && company.typeID == 13) || 
-		              	(this.state.selectedIndex == 2 && company.typeID == 14) || 
-		              	(this.state.selectedIndex == 3 && (company.typeID == 15 || company.typeID == 16 || company.typeID == 17))
+		              	(this.state.selectedIndex == 0 && (company.type_id == 10 || company.type_id == 9)) || 
+		              	(this.state.selectedIndex == 1 && company.type_id == 13) || 
+		              	(this.state.selectedIndex == 2 && company.type_id == 14) || 
+		              	(this.state.selectedIndex == 3 && (company.type_id == 15 || company.type_id == 16 || company.type_id == 17))
 		              ) &&
 		              <TableRow key = {key}>
-		                <TableRowColumn>{company.companyPhone || "–"}</TableRowColumn>
-		                <TableRowColumn>{company.templateID == 1 ? "ИП" : "ООО"}</TableRowColumn>
-		                <TableRowColumn>{company.companyInn || "–"}</TableRowColumn>
-		                <TableRowColumn>{company.regionName || "–"}</TableRowColumn>
-		                <TableRowColumn>{company.cityName || "–"}</TableRowColumn>
-		                <TableRowColumn title={company.companyOrganizationName} style={{whiteSpace: "normal"}}>{company.companyOrganizationName || "–"}</TableRowColumn>
-		                <TableRowColumn title={`${company.companyPersonName || ""} ${company.companyPersonSurname || ""} ${company.companyPersonPatronymic || ""}`} style={{whiteSpace: "normal"}}>{`${company.companyPersonName} ${company.companyPersonSurname} ${company.companyPersonPatronymic}`}</TableRowColumn>
+		                <TableRowColumn>{company.company_phone || "–"}</TableRowColumn>
+		                <TableRowColumn>{company.template_id == 1 ? "ИП" : "ООО"}</TableRowColumn>
+		                <TableRowColumn>{company.company_inn || "–"}</TableRowColumn>
+		                <TableRowColumn>{company.region_name || "–"}</TableRowColumn>
+		                <TableRowColumn>{company.city_name || "–"}</TableRowColumn>
+		                <TableRowColumn title={company.company_organization_name} style={{whiteSpace: "normal"}}>{company.company_organization_name || "–"}</TableRowColumn>
+		                <TableRowColumn title={`${company.company_person_name || ""} ${company.company_person_surname || ""} ${company.company_person_patronymic || ""}`} style={{whiteSpace: "normal"}}>{`${company.company_person_name} ${company.company_person_surname} ${company.company_person_patronymic}`}</TableRowColumn>
 		                { 
 		                	<TableRowColumn>
 		                		{
@@ -194,7 +194,7 @@ export default class Tinkoff extends React.Component {
 				                	<RaisedButton
 				                		icon = {<Check color = "#fff"/>}
 				                		backgroundColor="#a4c639"
-				                		onClick = {this.valid.bind(this, company.companyID, 1)}
+				                		onClick = {this.valid.bind(this, company.company_id, 1)}
 				                	/>
 		                		}
 		                		{
@@ -203,18 +203,18 @@ export default class Tinkoff extends React.Component {
 				                		icon = {<DeleteForever color = "#fff"/>}
 				                		secondary = {true}
 				                		style = {{ marginLeft: "5px" }}
-				                		onClick = {this.valid.bind(this, company.companyID, 0)}
+				                		onClick = {this.valid.bind(this, company.company_id, 0)}
 				                	/>
 		                		}
 		                		{
 		                			this.state.selectedIndex == 3 &&
 		                			<span style = {{
-		                				color: company.typeID == 15 ? "inherit" : company.typeID == 16 ? "green" : company.typeID == 17 && "red"
+		                				color: company.type_id == 15 ? "inherit" : company.type_id == 16 ? "green" : company.type_id == 17 && "red"
 		                			}}>
 		                				{
-				                			company.typeID == 15 ? "В процессе" :
-				                			company.typeID == 16 ? "Успешно" :
-				                			company.typeID == 17 && "Ошибка"
+				                			company.type_id == 15 ? "В процессе" :
+				                			company.type_id == 16 ? "Успешно" :
+				                			company.type_id == 17 && "Ошибка"
 		                				}
 		                			</span>
 		                		}

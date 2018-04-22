@@ -1,4 +1,5 @@
 import Tinkoff from './tinkoff';
+import Download from './download';
 import Supervisor from './supervisor';
 import Login from './login';
 import ForgotPassword from './forgotPassword';
@@ -12,7 +13,8 @@ class Childrens extends React.Component {
 				this.props.state.auth && (
 					this.props.state.userType == 1 ? [
 						<Route key = {1} path = "/supervisor" component = {Supervisor}/>,
-						<Route key = {2} path = "/tinkoff" component = {Tinkoff}/>
+						<Route key = {2} path = "/tinkoff" component = {Tinkoff}/>,
+						<Route key = {3} path = "/download" component = {Download}/>
 					] :
 					this.props.state.userType == 18 ?
 						<Route path = "/tinkoff" component = {Tinkoff}/> :

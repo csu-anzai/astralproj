@@ -1,23 +1,22 @@
 const JE = require('json-xlsx');
 module.exports = modules => (resolve, reject, data) => {
-	const je = new JE({tmpDir: __dirname + '/files/'});
-	je.write(data, (err, filepath) => {
-    console.log(filepath);
+	const je = new JE({tmpDir: __dirname + '/../../express' + modules.env.express.staticPath});
+	je.write({name: data.name, data: data.data}, (err, filepath) => {
+    if (err) {
+    	reject(err);
+    } else {
+    	let fileName = filepath.match(".*/(.*\.xlsx)")[1];
+			filepath = `${modules.env.ws.location}:${modules.env.ws.port}/${fileName}`;
+    	modules.reducer.dispatch({
+    		type: "query",
+    		data: {
+    			query: "updateFileName",
+    			values: [
+    				data.fileID,
+    				filepath
+    			]
+    		}
+    	}).then(resolve).catch(reject);
+    }
 	});
 }
-
-/*{
-  "name": "sheetname",
-  "data": [
-    [
-      1231,
-      4561,
-      7891
-    ],
-    [
-      1232,
-      4562,
-      7893
-    ]
-  ]
-}*/
