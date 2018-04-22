@@ -10,6 +10,7 @@ let 	then = require('./then');
 then = then.bind(this, reducer);
 reducer.initEvents({
 	io,
+	express,
 	nodemailer,
 	mysql,
 	reducer,

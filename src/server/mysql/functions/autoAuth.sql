@@ -2,7 +2,7 @@ BEGIN
 	DECLARE connectionID, userID, activeCompaniesLength, typeID INT(11);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userAuth, connectionEnd TINYINT(1);
-    DECLARE responce, activeCompanies JSON;
+    DECLARE responce, activeCompanies, downloadFilters JSON;
     SET responce = JSON_ARRAY();
 	SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     SELECT user_id, user_auth, type_id INTO userID, userAuth, typeID FROM users WHERE user_hash = userHash;
@@ -75,6 +75,40 @@ BEGIN
                             "query", "getBankStatistic",
                             "values", JSON_ARRAY(
                                 CONCAT(connectionHash)
+                            )
+                        )
+                    ));
+                END;
+            END IF;
+            IF typeID = 1
+                THEN BEGIN
+                    SELECT state_json ->> "$.download" INTO downloadFilters FROM states WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
+                    SET responce = JSON_MERGE(responce, JSON_ARRAY(
+                        JSON_OBJECT(
+                            "type", "sendToSocket",
+                            "data", JSON_OBJECT(
+                                "socketID", connectionApiID,
+                                "data", JSON_ARRAY(
+                                    JSON_OBJECT(
+                                        "type", "merge",
+                                        "data", JSON_OBJECT(
+                                            "download", downloadFilters,
+                                            "banks", getBanks(),
+                                            "regions", getRegions(),
+                                            "columns", getColumns(),
+                                            "files", getUserFiles(userID)
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ));
+                    SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                        "type", "procedure",
+                        "data", JSON_OBJECT(
+                            "query", "getDownloadPreview",
+                            "values", JSON_ARRAY(
+                                userID
                             )
                         )
                     ));

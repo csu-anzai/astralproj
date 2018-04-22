@@ -13,5 +13,6 @@ module.exports = (env, reducer) => {
 		let data = JSON.parse(req.body.data);
 		reducer.dispatch(data).then(then).catch(err);
 	});
+	express.use(Express.static(__dirname + env.express.staticPath));
 	return express;
 }

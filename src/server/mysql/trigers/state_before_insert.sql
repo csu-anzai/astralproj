@@ -21,6 +21,29 @@ BEGIN
 					"dataFree", 1
 				)
 			);
+			IF typeID = 1
+				THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download", JSON_OBJECT(
+					"dateStart", DATE(NOW()),
+					"dateEnd", DATE(NOW()),
+					"type", 10,
+					"types", JSON_ARRAY(
+						10
+					),
+					"regions", JSON_ARRAY(),
+					"banks", JSON_ARRAY(NULL),
+					"nullColumns", JSON_ARRAY(),
+					"notNullColumns", JSON_ARRAY(),
+					"limit", 50,
+					"offset", 0,
+					"orders", JSON_ARRAY(
+						JSON_OBJECT(
+							"name", "company_date_create",
+							"desc", 1
+						)
+					),
+					"count", 100
+				));
+			END IF;
 		END;
 		ELSE SET NEW.state_json = JSON_OBJECT();
 	END IF;
