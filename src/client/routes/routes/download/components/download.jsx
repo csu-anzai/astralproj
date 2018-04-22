@@ -133,7 +133,6 @@ export default class Download extends React.Component {
 		})
 	}
 	render(){
-		console.log(this.props.state);
 		return <div>
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.select}>
@@ -285,7 +284,7 @@ export default class Download extends React.Component {
 							        	onClick = {this.reserveCompanies}
 							        />
 							        <FlatButton 
-							        	label = "Создать файл" 
+							        	label = {"Создать файл (" + (this.props.state.download && this.props.state.download.companiesCount || 0) + ")"}
 							        	primary = {true} 
 							        	style = {{display: "inline-block"}}
 							        	disabled = {this.props.state.download && this.props.state.download.companiesCount > 0 ? false : true}
