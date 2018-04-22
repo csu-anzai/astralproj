@@ -95,7 +95,8 @@ BEGIN
                                             "download", downloadFilters,
                                             "banks", getBanks(),
                                             "regions", getRegions(),
-                                            "columns", getColumns()
+                                            "columns", getColumns(),
+                                            "files", getUserFiles(userID)
                                         )
                                     )
                                 )

@@ -15,6 +15,12 @@ BEGIN
 					"companiesCount", 0
 				)
 			)
+		),
+		JSON_OBJECT(
+			"type", "merge",
+			"data", JSON_OBJECT(
+				"files", getUserFiles(userID)
+			)
 		)
 	)));
 	RETURN responce;

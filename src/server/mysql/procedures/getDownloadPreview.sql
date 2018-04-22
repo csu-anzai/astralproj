@@ -2,11 +2,12 @@ BEGIN
 	DECLARE limitOption, offsetOption, ordersLength, iterator, keysLength, companiesCount INT(11);
 	DECLARE done TINYINT(1);
 	DECLARE translateTo VARCHAR(128);
-	DECLARE company, orders, orderObject, companies, keysNames JSON;
+	DECLARE company, orders, orderObject, companies, keysNames, files JSON;
 	DECLARE companiesCursor CURSOR FOR SELECT company_json FROM custom_download_view;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET responce = JSON_ARRAY();
 	SET companies = JSON_ARRAY();
+	SET files = JSON_ARRAY();
 	SELECT 
 		state_json ->> "$.download.limit",
 		state_json ->> "$.download.offset",
