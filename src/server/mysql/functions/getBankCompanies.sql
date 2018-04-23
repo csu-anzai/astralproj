@@ -6,7 +6,7 @@ BEGIN
 	DECLARE responce, companiesArray, company JSON;
 	DECLARE done, connectionValid TINYINT(1);
 	DECLARE companiesCursor CURSOR FOR SELECT company_json, company_id FROM bank_cities_time_priority_companies_view WHERE bank_id = bankID AND date(company_date_create) = date(now()) AND time_id = timeID AND user_id IS NULL LIMIT rows;
-	DECLARE userCompaniesCursor CURSOR FOR SELECT DISTINCT company_json FROM bank_cities_time_priority_companies_view WHERE bank_id = bankID AND user_id = userID AND date(company_date_create) = date(now()) AND type_id != 9;
+	DECLARE userCompaniesCursor CURSOR FOR SELECT company_json FROM companies WHERE bank_id = bankID AND user_id = userID AND date(company_date_create) = date(now()) AND type_id != 9;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET connectionValid = checkConnection(connectionHash);
 	SELECT connection_api_id INTO connectionApiID FROM users_connections_view WHERE connection_hash = connectionHash;
