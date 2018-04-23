@@ -75,10 +75,10 @@ BEGIN
 									"data", JSON_OBJECT(
 										"name", "companies",
 										"search", JSON_OBJECT(
-											"companyID", companyID
+											"company_id", companyID
 										),
 										"values", JSON_OBJECT(
-											"typeID", 15
+											"type_id", 15
 										)
 									)
 								))));

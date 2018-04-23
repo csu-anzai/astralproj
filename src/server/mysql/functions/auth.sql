@@ -87,7 +87,7 @@ BEGIN
                                             "banks", getBanks(),
                                             "regions", getRegions(),
                                             "columns", getColumns(),
-                                            "files", getUserFiles()
+                                            "files", getUserFiles(userID)
                                         )
                                     )
                                 )

@@ -11,10 +11,10 @@ BEGIN
 			"data", JSON_OBJECT(
 				"name", "companies",
 				"search", JSON_OBJECT(
-					"companyID", companyID
+					"company_id", companyID
 				),
 				"values", JSON_OBJECT(
-					"typeID", typeID
+					"type_id", typeID
 				)
 			)
 		))));
