@@ -106,7 +106,7 @@ export default class Download extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						[type]: `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+						[type]: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
 					})
 				]
 			}

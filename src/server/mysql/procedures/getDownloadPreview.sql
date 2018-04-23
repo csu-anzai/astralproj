@@ -115,15 +115,22 @@ BEGIN
 				)
 			));
 		END;
-		ELSE SET responce = sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-			"type", "mergeDeep",
-			"data", JSON_OBJECT(
-				"download", JSON_OBJECT(
-					"message", "Компаний для формирования файла не обнаружено"
-				),
-				"downloadCompanies", JSON_ARRAY(),
-				"downloadCompaniesColumnsNames", JSON_ARRAY()
+		ELSE SET responce = sendToAllUserSockets(userID, JSON_ARRAY(
+			JSON_OBJECT(
+				"type", "mergeDeep",
+				"data", JSON_OBJECT(
+					"download", JSON_OBJECT(
+						"message", "Компаний для формирования файла не обнаружено"
+					)
+				)
+			),
+			JSON_OBJECT(
+				"type", "merge",
+				"data", JSON_OBJECT(
+					"downloadCompanies", JSON_ARRAY(),
+					"downloadCompaniesColumnsNames", JSON_ARRAY()
+				)
 			)
-		)));
+		));
 	END IF;
 END
