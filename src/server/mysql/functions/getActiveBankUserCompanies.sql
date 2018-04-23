@@ -1,7 +1,7 @@
 BEGIN
 	DECLARE company, responce JSON;
 	DECLARE done TINYINT(1);
-	DECLARE companiesCursor CURSOR FOR SELECT DISTINCT company_json FROM bank_cities_time_priority_companies_view WHERE user_id = userID AND DATE(company_date_create) = DATE(NOW());
+	DECLARE companiesCursor CURSOR FOR SELECT DISTINCT company_json FROM companies WHERE user_id = userID AND DATE(company_date_create) = DATE(NOW());
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET responce = JSON_ARRAY();
 	OPEN companiesCursor;

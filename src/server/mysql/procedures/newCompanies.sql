@@ -96,6 +96,7 @@ BEGIN
 					PREPARE newCompaniesQuery FROM @newCompaniesQuery;
 					EXECUTE newCompaniesQuery;
 					DEALLOCATE PREPARE newCompaniesQuery;
+					UPDATE companies SET company_json = JSON_SET(company_json, "$.company_id", company_id) WHERE company_json ->> "$.company_id" = 0;
 					SET cleaningResponce = companiesCleaning();
 					SET duplicateCount = JSON_UNQUOTE(JSON_EXTRACT(cleaningResponce, "$.deleteDuplicateCompanies"));
 					SET emptyCount = JSON_UNQUOTE(JSON_EXTRACT(cleaningResponce, "$.deleteEmptyCompanies"));
