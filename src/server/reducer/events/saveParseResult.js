@@ -28,7 +28,7 @@ module.exports = modules => (resolve, reject, data) => {
 				let object = queries[queries.length - 1];
 				for (let i = 0; i < remainder; i++) {
 					let key = keys[integers * part + i];
-					object[`r${i+1}`] = data[key];
+					object[`r${i+2}`] = data[key];
 				}
 			}
 		}
@@ -45,7 +45,7 @@ module.exports = modules => (resolve, reject, data) => {
 					]
 				},
 				(err, responce) => {
-					if (i >= queries.length) {
+					if (i == queries.length - 1) {
 						err ?
 							reject(err.sqlMessage) :
 							resolve(responce);
