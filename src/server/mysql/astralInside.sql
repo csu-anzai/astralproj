@@ -334,14 +334,6 @@ CREATE TRIGGER `connections_before_update` BEFORE UPDATE ON `connections` FOR EA
 END
 $$
 DELIMITER ;
-CREATE TABLE `duplicate_companies_inn_view` (
-`length` bigint(21)
-,`company_inn` varchar(12)
-);
-CREATE TABLE `duplicate_companies_ogrn_view` (
-`length` bigint(21)
-,`company_ogrn` varchar(15)
-);
 CREATE TABLE `empty_companies_view` (
 `company_id` int(11)
 ,`company_date_create` varchar(19)
@@ -756,12 +748,6 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `columns_translates_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`columns_translates_view`  AS  select `c`.`column_id` AS `column_id`,if((`t`.`translate_to` is not null),`t`.`translate_to`,`c`.`column_name`) AS `translate_to`,`c`.`column_name` AS `column_name` from (`astralinside`.`columns` `c` left join `astralinside`.`translates` `t` on((`t`.`translate_from` = `c`.`column_name`))) ;
-DROP TABLE IF EXISTS `duplicate_companies_inn_view`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`duplicate_companies_inn_view`  AS  select `companies`.`length` AS `length`,`companies`.`company_inn` AS `company_inn` from (select count(`astralinside`.`companies`.`company_id`) AS `length`,`astralinside`.`companies`.`company_inn` AS `company_inn` from `astralinside`.`companies` group by `astralinside`.`companies`.`company_inn`) `companies` where ((`companies`.`length` > 1) and (`companies`.`company_inn` is not null)) ;
-DROP TABLE IF EXISTS `duplicate_companies_ogrn_view`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`duplicate_companies_ogrn_view`  AS  select `companies`.`length` AS `length`,`companies`.`company_ogrn` AS `company_ogrn` from (select count(`astralinside`.`companies`.`company_id`) AS `length`,`astralinside`.`companies`.`company_ogrn` AS `company_ogrn` from `astralinside`.`companies` group by `astralinside`.`companies`.`company_ogrn`) `companies` where ((`companies`.`length` > 1) and (`companies`.`company_ogrn` is not null)) ;
 DROP TABLE IF EXISTS `empty_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`empty_companies_view`  AS  select `astralinside`.`companies`.`company_id` AS `company_id`,`astralinside`.`companies`.`company_date_create` AS `company_date_create` from `astralinside`.`companies` where (isnull(`astralinside`.`companies`.`company_ogrn`) and isnull(`astralinside`.`companies`.`company_ogrn_date`) and isnull(`astralinside`.`companies`.`company_person_name`) and isnull(`astralinside`.`companies`.`company_person_surname`) and isnull(`astralinside`.`companies`.`company_person_patronymic`) and isnull(`astralinside`.`companies`.`company_person_birthday`) and isnull(`astralinside`.`companies`.`company_person_birthplace`) and isnull(`astralinside`.`companies`.`company_inn`) and isnull(`astralinside`.`companies`.`company_address`) and isnull(`astralinside`.`companies`.`company_doc_number`) and isnull(`astralinside`.`companies`.`company_doc_date`) and isnull(`astralinside`.`companies`.`company_organization_name`) and isnull(`astralinside`.`companies`.`company_organization_code`) and isnull(`astralinside`.`companies`.`company_phone`) and isnull(`astralinside`.`companies`.`company_email`) and isnull(`astralinside`.`companies`.`company_okved_code`) and isnull(`astralinside`.`companies`.`company_okved_name`) and isnull(`astralinside`.`companies`.`company_kpp`) and isnull(`astralinside`.`companies`.`company_index`) and isnull(`astralinside`.`companies`.`company_house`) and isnull(`astralinside`.`companies`.`company_region_type`) and isnull(`astralinside`.`companies`.`company_region_name`) and isnull(`astralinside`.`companies`.`company_area_type`) and isnull(`astralinside`.`companies`.`company_area_name`) and isnull(`astralinside`.`companies`.`company_locality_type`) and isnull(`astralinside`.`companies`.`company_locality_name`) and isnull(`astralinside`.`companies`.`company_street_type`) and isnull(`astralinside`.`companies`.`company_street_name`) and isnull(`astralinside`.`companies`.`company_innfl`) and isnull(`astralinside`.`companies`.`company_person_position_type`) and isnull(`astralinside`.`companies`.`company_person_position_name`) and isnull(`astralinside`.`companies`.`company_doc_name`) and isnull(`astralinside`.`companies`.`company_doc_gifter`) and isnull(`astralinside`.`companies`.`company_doc_code`) and isnull(`astralinside`.`companies`.`company_doc_house`) and isnull(`astralinside`.`companies`.`company_doc_flat`) and isnull(`astralinside`.`companies`.`company_doc_region_type`) and isnull(`astralinside`.`companies`.`company_doc_region_name`) and isnull(`astralinside`.`companies`.`company_doc_area_type`) and isnull(`astralinside`.`companies`.`company_doc_area_name`) and isnull(`astralinside`.`companies`.`company_doc_locality_type`) and isnull(`astralinside`.`companies`.`company_doc_locality_name`) and isnull(`astralinside`.`companies`.`company_doc_street_type`) and isnull(`astralinside`.`companies`.`company_doc_street_name`) and isnull(`astralinside`.`companies`.`company_date_registration`) and isnull(`astralinside`.`companies`.`company_person_sex`) and isnull(`astralinside`.`companies`.`company_ip_type`)) ;
@@ -807,6 +793,8 @@ ALTER TABLE `columns`
 
 ALTER TABLE `companies`
   ADD PRIMARY KEY (`company_id`),
+  ADD UNIQUE KEY `company_inn` (`company_inn`),
+  ADD UNIQUE KEY `company_ogrn` (`company_ogrn`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `type_id` (`type_id`),
   ADD KEY `purchase_id` (`purchase_id`),
