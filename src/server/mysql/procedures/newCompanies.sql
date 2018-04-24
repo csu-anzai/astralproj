@@ -1,10 +1,10 @@
 BEGIN
-	DECLARE companiesLength, templateID, templateСoncurrences, companiesKeysLength, iterator, iterator2, errCount, secondsDiff, microsecondsDiff, emptyCompanies INT(11);
+	DECLARE companiesLength, templateID, templateСoncurrences, companiesKeysLength, iterator, iterator2, errCount, secondsDiff, microsecondsDiff, emptyCompanies, banksCount, bankID INT(11);
 	DECLARE message, columnValue TEXT;
 	DECLARE columnName VARCHAR(128);
 	DECLARE templateColumnLetters VARCHAR(3);
 	DECLARE endDate, startDate VARCHAR(26);
-	DECLARE columns, companiesKeys, company JSON;
+	DECLARE columns, companiesKeys, company, refreshResponce JSON;
 	DECLARE done TINYINT(1);
 	DECLARE templateCursor CURSOR FOR SELECT column_name, template_column_letters FROM custom_template_columns_view;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
@@ -99,7 +99,7 @@ BEGIN
 							delete c from companies c, empty_companies_view ecv where c.company_id = ecv.company_id;
 							SET message = CONCAT(
 								"Добавленно ",
-								companiesLength - errCount,
+								companiesLength - errCount - emptyCompanies,
 								" компаний из ",
 								companiesLength,
 								". Дубликатов ",
@@ -107,6 +107,22 @@ BEGIN
 								", пустых ",
 								emptyCompanies
 							);
+							SET companiesLength = companiesLength - errCount - emptyCompanies;
+							SELECT COUNT(DISTINCT bank_id) INTO banksCount FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT companiesLength) companies WHERE bank_id IS NOT NULL;
+							SET iterator = 0;
+							banksLoop: LOOP						
+								IF iterator >= banksCount
+									THEN LEAVE banksLoop;
+								END IF;
+								SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT companiesLength) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
+								SET refreshResponce = JSON_ARRAY();
+								CALL refreshBankSupervisors(bankID, refreshResponce);
+								IF JSON_LENGTH(refreshResponce) > 0 
+									THEN SET responce = JSON_MERGE(responce, refreshResponce);
+								END IF;
+								SET iterator = iterator + 1;
+								ITERATE banksLoop;
+							END LOOP;
 						END;
 						ELSE SET message = CONCAT("Не все колонки соответствуют шаблону ", templateID, " (", templateСoncurrences, "/", companiesKeysLength, ")");
 					END IF;
