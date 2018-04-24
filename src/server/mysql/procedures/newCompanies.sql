@@ -1,162 +1,137 @@
 BEGIN
-	DECLARE templateID, oldTemplateID, iterator, iterator2, columnsKeysCount, companiesLength, errorLength, banksCount, bankID, duplicateCount, emptyCount, secondsDiff, microsecondsDiff, emtyInArrayLength INT(11);
-	DECLARE templateSuccess, duplicate TINYINT(1);
-	DECLARE TemplateColumnName, columnName VARCHAR(128);
+	DECLARE companiesLength, templateID, templateСoncurrences, companiesKeysLength, iterator, iterator2, errCount, secondsDiff, microsecondsDiff, emptyCompanies INT(11);
+	DECLARE message, columnValue TEXT;
+	DECLARE columnName VARCHAR(128);
+	DECLARE templateColumnLetters VARCHAR(3);
 	DECLARE endDate, startDate VARCHAR(26);
-	DECLARE message TEXT;
-	DECLARE columnLetters VARCHAR(3);
-	DECLARE columns, columnsKeys, company, columnKeysObj, errorColumns, errorObj, refreshResponce, cleaningResponce JSON;
+	DECLARE columns, companiesKeys, company JSON;
+	DECLARE done TINYINT(1);
+	DECLARE templateCursor CURSOR FOR SELECT column_name, template_column_letters FROM custom_template_columns_view;
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+	DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET errCount = errCount + 1;
 	SET startDate = NOW(6);
-	SET responce = JSON_ARRAY();
-	SET templateSuccess = 1;
+	SET errCount = 0;
 	SET companiesLength = JSON_LENGTH(companies);
-	SET errorColumns = JSON_ARRAY();
-	SET emtyInArrayLength = 0;
+	SET responce = JSON_ARRAY();
 	IF companies IS NOT NULL AND companiesLength > 1
 		THEN BEGIN
 			SET columns = JSON_EXTRACT(companies, "$.columns");
-			SET columnsKeys = JSON_KEYS(columns);
-			SET columnsKeysCount = JSON_LENGTH(columnsKeys);
-			SET iterator = 0;
-			columnsLoop: LOOP
-				IF iterator >= columnsKeysCount OR templateSuccess = 0
-					THEN LEAVE columnsLoop;
-				END IF;
-				SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator, "]")));
-				SET TemplateColumnName = JSON_UNQUOTE(JSON_EXTRACT(columns, CONCAT("$.", columnLetters)));
-				SET templateID = (SELECT template_id FROM template_columns_view WHERE template_column_name = TemplateColumnName AND template_column_letters = columnLetters);
-				IF iterator = 0 
-					THEN SET oldTemplateID = templateID;
-				END IF;
-				IF templateID IS NULL OR templateID != oldTemplateID
-					THEN BEGIN 
-						SET templateSuccess = 0;
-						SET errorColumns = JSON_MERGE(errorColumns, JSON_OBJECT(
-							"name", TemplateColumnName,
-							"letters", columnLetters
-						));
-					END;
-				END IF;
-				SET iterator = iterator + 1;
-				ITERATE columnsLoop;
-			END LOOP;
-			IF templateSuccess AND templateID IS NOT NULL
+			SET companies = JSON_REMOVE(companies, "$.columns");
+			SET companiesLength = companiesLength - 1;
+			SET companiesKeys = JSON_KEYS(columns);
+			SET companiesKeysLength = JSON_LENGTH(companiesKeys);
+			SELECT template_id, COUNT(template_column_name) weight INTO templateID, templateСoncurrences FROM template_columns WHERE JSON_CONTAINS(companiesKeys, JSON_ARRAY(template_column_letters)) AND template_column_name = JSON_UNQUOTE(JSON_EXTRACT(columns, CONCAT("$.", template_column_letters))) group by template_id order by weight desc limit 1;
+			IF templateID IS NOT NULL 
 				THEN BEGIN
-					SET @newCompaniesQuery = "INSERT INTO companies (";
-					SET iterator = 0;
-					columnsQueryLoop: LOOP
-						IF iterator >= columnsKeysCount
-							THEN LEAVE columnsQueryLoop;
-						END IF;
-						SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator, "]")));
-						SELECT column_name, template_column_duplicate INTO columnName, duplicate FROM template_columns_view WHERE template_id = templateID AND template_column_letters = columnLetters;
-						IF duplicate = 0
-							THEN SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator > 0, ",", ""), columnName);
-						END IF;
-						SET columnsKeys = JSON_SET(columnsKeys, CONCAT("$[", iterator, "]"), JSON_OBJECT(
-							"key", JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator, "]")),
-							"dup", duplicate
-						));
-						SET iterator = iterator + 1;
-						ITERATE columnsQueryLoop;
-					END LOOP;
-					SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, ",template_id) VALUES ");
-					SET iterator = 2;
-					rowsQueryLoop: LOOP
-						IF iterator > companiesLength
-							THEN LEAVE rowsQueryLoop;
-						END IF;
-						SET company = JSON_EXTRACT(companies, CONCAT("$.r", iterator));
-						IF company IS NOT NULL
-							THEN BEGIN
-								SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator > 2, ",", ""),"(");
-								SET iterator2 = 0;
-								colsQueryLoop: LOOP
-									IF iterator2 >= columnsKeysCount
-										THEN LEAVE colsQueryLoop;
+					IF templateСoncurrences = companiesKeysLength
+						THEN BEGIN
+							SET @mysqlText = CONCAT(
+								"CREATE VIEW custom_template_columns_view AS SELECT column_name, template_column_letters FROM template_columns_view WHERE template_id = ",
+								templateID,
+								" AND template_column_duplicate = 0 AND JSON_CONTAINS('",
+								companiesKeys,
+								"', JSON_ARRAY(template_column_letters))"
+							);
+							PREPARE mysqlPrepare FROM @mysqlText;
+							EXECUTE mysqlPrepare;
+							DEALLOCATE PREPARE mysqlPrepare;
+							SET done = 0;
+							SET companiesKeys = JSON_ARRAY();
+							OPEN templateCursor;
+								templateLoop: LOOP
+									FETCH templateCursor INTO columnName, templateColumnLetters;
+									IF done 
+										THEN LEAVE templateLoop;
 									END IF;
-									SET columnKeysObj = JSON_UNQUOTE(JSON_EXTRACT(columnsKeys, CONCAT("$[", iterator2, "]")));
-									SET duplicate = JSON_EXTRACT(columnKeysObj, "$.dup");
-									IF duplicate = 0
-										THEN BEGIN 
-											SET columnLetters = JSON_UNQUOTE(JSON_EXTRACT(columnKeysObj, "$.key"));
-											SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, IF(iterator2 > 0, ",", ""), IF(JSON_EXTRACT(company, CONCAT("$.", columnLetters)) IS NULL, "NULL", JSON_EXTRACT(company, CONCAT("$.", columnLetters))));
-										END;
-									END IF;
-									SET iterator2 = iterator2 + 1;
-									ITERATE colsQueryLoop;
+									SET companiesKeys = JSON_MERGE(companiesKeys, JSON_OBJECT(
+										"letters", templateColumnLetters, 
+										"column", columnName
+									));
+									ITERATE templateLoop;
 								END LOOP;
-								SET @newCompaniesQuery = CONCAT(@newCompaniesQuery, ",",templateID,")");
-							END;
-							ELSE SET emtyInArrayLength = emtyInArrayLength + 1;
-						END IF;
-						SET iterator = iterator + 1;
-						ITERATE rowsQueryLoop;
-					END LOOP;
-					PREPARE newCompaniesQuery FROM @newCompaniesQuery;
-					EXECUTE newCompaniesQuery;
-					DEALLOCATE PREPARE newCompaniesQuery;
-					UPDATE companies SET company_json = JSON_SET(company_json, "$.company_id", company_id) WHERE company_json ->> "$.company_id" = 0;
-					SET cleaningResponce = companiesCleaning();
-					SET duplicateCount = JSON_UNQUOTE(JSON_EXTRACT(cleaningResponce, "$.deleteDuplicateCompanies"));
-					SET emptyCount = JSON_UNQUOTE(JSON_EXTRACT(cleaningResponce, "$.deleteEmptyCompanies"));
-					SET companiesLength = companiesLength - 1 - (duplicateCount + emptyCount + emtyInArrayLength);
-					SET endDate = SYSDATE(6);
-					SET secondsDiff = TO_SECONDS(endDate) - TO_SECONDS(startDate);
-					IF secondsDiff = 0
-						THEN SET microsecondsDiff = MICROSECOND(endDate) - MICROSECOND(startDate);
-						ELSE BEGIN
-							SET secondsDiff = secondsDiff - 1;
-							SET microsecondsDiff = 1000000 - MICROSECOND(startDate) + MICROSECOND(endDate);
-							SET secondsDiff = secondsDiff + TRUNCATE(microsecondsDiff / 1000000, 0);
-							SET microsecondsDiff = microsecondsDiff % 1000000;
+							CLOSE templateCursor;
+							DROP VIEW IF EXISTS custom_template_columns_view;
+							SET iterator = 0;
+							SET companiesKeysLength = JSON_LENGTH(companiesKeys);
+							companiesLoop: LOOP
+								IF iterator >= companiesLength
+									THEN LEAVE companiesLoop;
+								END IF;
+								SET company = JSON_EXTRACT(companies, CONCAT("$.r", iterator + 1));
+								SET iterator2 = 0;
+								SET @mysqlText = "INSERT INTO companies (template_id, ";
+								companiesKeysLoop: LOOP
+									IF iterator2 >= companiesKeysLength
+										THEN LEAVE companiesKeysLoop;
+									END IF;
+									SET @mysqlText = CONCAT(
+										@mysqlText,
+										IF(iterator2 = 0, "", ","),
+										JSON_UNQUOTE(JSON_EXTRACT(companiesKeys, CONCAT("$[", iterator2, "].column")))
+									);
+									SET iterator2 = iterator2 + 1;
+									ITERATE companiesKeysLoop;
+								END LOOP;
+								SET @mysqlText = CONCAT(@mysqlText, ") VALUES (", templateID, ", ");
+								SET iterator2 = 0;
+								companyLoop: LOOP
+									IF iterator2 >= companiesKeysLength
+										THEN LEAVE companyLoop;
+									END IF;
+									SET templateColumnLetters = JSON_UNQUOTE(JSON_EXTRACT(companiesKeys, CONCAT("$[", iterator2, "].letters")));
+									SET columnValue = JSON_UNQUOTE(JSON_EXTRACT(company, CONCAT("$.", templateColumnLetters)));
+									SET @mysqlText = CONCAT(
+										@mysqlText,
+										IF(iterator2 = 0, "", ","),
+										IF(columnValue IS NULL, "NULL", CONCAT("'", columnValue, "'"))
+									);
+									SET iterator2 = iterator2 + 1;
+									ITERATE companyLoop;
+								END LOOP;
+								SET @mysqlText = CONCAT(@mysqlText, ")");
+								PREPARE mysqlPrepare FROM @mysqlText;
+								EXECUTE mysqlPrepare;
+								DEALLOCATE PREPARE mysqlPrepare;
+								SET iterator = iterator + 1;
+								ITERATE companiesLoop;
+							END LOOP;
+							SELECT COUNT(*) INTO emptyCompanies FROM empty_companies_view;
+							delete c from companies c, empty_companies_view ecv where c.company_id = ecv.company_id;
+							SET message = CONCAT(
+								"Добавленно ",
+								companiesLength - errCount,
+								" компаний из ",
+								companiesLength,
+								". Дубликатов ",
+								errCount,
+								", пустых ",
+								emptyCompanies
+							);
 						END;
+						ELSE SET message = CONCAT("Не все колонки соответствуют шаблону ", templateID, " (", templateСoncurrences, "/", companiesKeysLength, ")");
 					END IF;
-					SET responce = JSON_MERGE(responce,
-						JSON_OBJECT(
-							"type", "print",
-							"data", JSON_OBJECT(
-								"message", CONCAT("added ", companiesLength, " companies in the base. ", emtyInArrayLength," items in array be null. Delete ", emptyCount, " empty companies and ", duplicateCount, " duplicate companies. Seconds ", secondsDiff, ".", microsecondsDiff)
-							)
-						)
-					);
-					SELECT COUNT(DISTINCT bank_id) INTO banksCount FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT companiesLength) companies WHERE bank_id IS NOT NULL;
-					SET iterator = 0;
-					banksLoop: LOOP
-						IF iterator >= banksCount
-							THEN LEAVE banksLoop;
-						END IF;
-						SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT companiesLength) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
-						SET refreshResponce = JSON_ARRAY();
-						CALL refreshBankSupervisors(bankID, refreshResponce);
-						IF JSON_LENGTH(refreshResponce) > 0 
-							THEN SET responce = JSON_MERGE(responce, refreshResponce);
-						END IF;
-						SET iterator = iterator + 1;
-						ITERATE banksLoop;
-					END LOOP;
 				END;
-				ELSE BEGIN
-					SET message = "error in template for column: ";
-					SET errorLength = JSON_LENGTH(errorColumns);
-					SET iterator = 0;
-					errorLoop: LOOP
-						IF iterator >= errorLength
-							THEN LEAVE errorLoop;
-						END IF;
-						SET errorObj = JSON_EXTRACT(errorColumns, CONCAT("$[", iterator, "]"));
-						SET message = CONCAT(message, "'", JSON_UNQUOTE(JSON_EXTRACT(errorObj, "$.name")), " - ", JSON_UNQUOTE(JSON_EXTRACT(errorObj, "$.letters")), "' ");
-						SET iterator = iterator + 1;
-						ITERATE errorLoop;
-					END LOOP;
-					SET responce = JSON_MERGE(responce, JSON_OBJECT(
-						"type", "print",
-						"data", JSON_OBJECT(
-							"message", message
-						)
-					));
-				END;
+				ELSE SET message = "Не удалось обнаружить шаблон";
 			END IF;
 		END;
+		ELSE SET message = "Нет компаний для загрузки";
 	END IF;
+	SET endDate = SYSDATE(6);
+	SET secondsDiff = TO_SECONDS(endDate) - TO_SECONDS(startDate);
+	IF secondsDiff = 0
+		THEN SET microsecondsDiff = MICROSECOND(endDate) - MICROSECOND(startDate);
+		ELSE BEGIN
+			SET secondsDiff = secondsDiff - 1;
+			SET microsecondsDiff = 1000000 - MICROSECOND(startDate) + MICROSECOND(endDate);
+			SET secondsDiff = secondsDiff + TRUNCATE(microsecondsDiff / 1000000, 0);
+			SET microsecondsDiff = microsecondsDiff % 1000000;
+		END;
+	END IF;
+	SET message = CONCAT(message, ". Затраченное время в секундах: ", secondsDiff, ".", microsecondsDiff);
+	SET responce = JSON_MERGE(responce, JSON_OBJECT(
+		"type", "print",
+		"data", JSON_OBJECT(
+			"message", message
+		)
+	));
 END
