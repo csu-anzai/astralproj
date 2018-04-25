@@ -97,6 +97,7 @@ BEGIN
 							END LOOP;
 							SELECT COUNT(*) INTO emptyCompanies FROM empty_companies_view;
 							delete c from companies c, empty_companies_view ecv where c.company_id = ecv.company_id;
+							UPDATE companies SET company_json = JSON_SET(company_json, "$.company_id", company_id) WHERE state_json ->> "$.company_id" = 0;
 							SET message = CONCAT(
 								"Добавленно ",
 								companiesLength - errCount - emptyCompanies,
