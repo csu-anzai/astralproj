@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE companiesLength, templateID, templateСoncurrences, companiesKeysLength, iterator, iterator2, errCount, secondsDiff, microsecondsDiff, emptyCompanies, banksCount, bankID INT(11);
+	DECLARE companiesLength, templateID, templateСoncurrences, companiesKeysLength, iterator, iterator2, secondsDiff, microsecondsDiff, banksCount, bankID, insertCompaniesCount INT(11);
 	DECLARE message, columnValue TEXT;
 	DECLARE columnName VARCHAR(128);
 	DECLARE templateColumnLetters VARCHAR(3);
@@ -8,9 +8,7 @@ BEGIN
 	DECLARE done TINYINT(1);
 	DECLARE templateCursor CURSOR FOR SELECT column_name, template_column_letters FROM custom_template_columns_view;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-	DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET errCount = errCount + 1;
 	SET startDate = NOW(6);
-	SET errCount = 0;
 	SET companiesLength = JSON_LENGTH(companies);
 	SET responce = JSON_ARRAY();
 	IF companies IS NOT NULL AND companiesLength > 1
@@ -37,6 +35,7 @@ BEGIN
 							DEALLOCATE PREPARE mysqlPrepare;
 							SET done = 0;
 							SET companiesKeys = JSON_ARRAY();
+							SET @mysqlText = "INSERT LOW_PRIORITY IGNORE INTO companies (template_id, ";
 							OPEN templateCursor;
 								templateLoop: LOOP
 									FETCH templateCursor INTO columnName, templateColumnLetters;
@@ -47,9 +46,16 @@ BEGIN
 										"letters", templateColumnLetters, 
 										"column", columnName
 									));
+									SET @mysqlText = CONCAT(
+										@mysqlText,
+										",",
+										columnName
+									);
 									ITERATE templateLoop;
 								END LOOP;
 							CLOSE templateCursor;
+							SET @mysqlText = REPLACE(@mysqlText, "template_id, ,", "template_id,");
+							SET @mysqlText = CONCAT(@mysqlText, ") VALUES ");
 							DROP VIEW IF EXISTS custom_template_columns_view;
 							SET iterator = 0;
 							SET companiesKeysLength = JSON_LENGTH(companiesKeys);
@@ -58,21 +64,7 @@ BEGIN
 									THEN LEAVE companiesLoop;
 								END IF;
 								SET company = JSON_EXTRACT(companies, CONCAT("$.r", iterator + 1));
-								SET iterator2 = 0;
-								SET @mysqlText = "INSERT INTO companies (template_id, ";
-								companiesKeysLoop: LOOP
-									IF iterator2 >= companiesKeysLength
-										THEN LEAVE companiesKeysLoop;
-									END IF;
-									SET @mysqlText = CONCAT(
-										@mysqlText,
-										IF(iterator2 = 0, "", ","),
-										JSON_UNQUOTE(JSON_EXTRACT(companiesKeys, CONCAT("$[", iterator2, "].column")))
-									);
-									SET iterator2 = iterator2 + 1;
-									ITERATE companiesKeysLoop;
-								END LOOP;
-								SET @mysqlText = CONCAT(@mysqlText, ") VALUES (", templateID, ", ");
+								SET @mysqlText = CONCAT(@mysqlText, "(", templateID, ", ");
 								SET iterator2 = 0;
 								companyLoop: LOOP
 									IF iterator2 >= companiesKeysLength
@@ -88,34 +80,32 @@ BEGIN
 									SET iterator2 = iterator2 + 1;
 									ITERATE companyLoop;
 								END LOOP;
-								SET @mysqlText = CONCAT(@mysqlText, ")");
-								PREPARE mysqlPrepare FROM @mysqlText;
-								EXECUTE mysqlPrepare;
-								DEALLOCATE PREPARE mysqlPrepare;
+								SET @mysqlText = CONCAT(@mysqlText, ")", IF(iterator = companiesLength - 1, "", ","));
 								SET iterator = iterator + 1;
 								ITERATE companiesLoop;
 							END LOOP;
-							SELECT COUNT(*) INTO emptyCompanies FROM empty_companies_view;
-							delete c from companies c, empty_companies_view ecv where c.company_id = ecv.company_id;
-							UPDATE companies SET company_json = JSON_SET(company_json, "$.company_id", company_id) WHERE state_json ->> "$.company_id" = 0;
+							SELECT company_id INTO insertCompaniesCount FROM companies ORDER BY company_id DESC LIMIT 1;
+							PREPARE mysqlPrepare FROM @mysqlText;
+							EXECUTE mysqlPrepare;
+							DEALLOCATE PREPARE mysqlPrepare;
+							DELETE LOW_PRIORITY c from companies c, empty_companies_view ecv where c.company_id = ecv.company_id;
+							SELECT count(*) INTO insertCompaniesCount FROM companies WHERE company_id > insertCompaniesCount;
+							UPDATE LOW_PRIORITY companies SET company_json = JSON_SET(company_json, "$.company_id", company_id) WHERE company_json ->> "$.company_id" = 0;
 							SET message = CONCAT(
 								"Добавленно ",
-								companiesLength - errCount - emptyCompanies,
+								insertCompaniesCount,
 								" компаний из ",
 								companiesLength,
-								". Дубликатов ",
-								errCount,
-								", пустых ",
-								emptyCompanies
+								". Удалено ",
+								companiesLength - insertCompaniesCount
 							);
-							SET companiesLength = companiesLength - errCount - emptyCompanies;
-							SELECT COUNT(DISTINCT bank_id) INTO banksCount FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT companiesLength) companies WHERE bank_id IS NOT NULL;
+							SELECT COUNT(DISTINCT bank_id) INTO banksCount FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT insertCompaniesCount) companies WHERE bank_id IS NOT NULL;
 							SET iterator = 0;
 							banksLoop: LOOP						
 								IF iterator >= banksCount
 									THEN LEAVE banksLoop;
 								END IF;
-								SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT companiesLength) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
+								SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT insertCompaniesCount) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
 								SET refreshResponce = JSON_ARRAY();
 								CALL refreshBankSupervisors(bankID, refreshResponce);
 								IF JSON_LENGTH(refreshResponce) > 0 

@@ -42,6 +42,7 @@ export default class Supervisor extends React.Component {
 			socket: true,
 			data: {
 				query: "setBankStatisticFilter",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
@@ -57,6 +58,7 @@ export default class Supervisor extends React.Component {
 			socket: true,
 			data: {
 				query: "setBankStatisticFilter",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
@@ -72,6 +74,7 @@ export default class Supervisor extends React.Component {
 			socket: true,
 			data: {
 				query: "setBankStatisticFilter",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
@@ -87,6 +90,7 @@ export default class Supervisor extends React.Component {
 			socket: true,
 			data: {
 				query: "setBankStatisticFilter",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
@@ -102,6 +106,7 @@ export default class Supervisor extends React.Component {
 			socket: true,
 			data: {
 				query: "setBankStatisticFilter",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
@@ -117,6 +122,7 @@ export default class Supervisor extends React.Component {
 			socket: true,
 			data: {
 				query: "setBankStatisticFilter",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({

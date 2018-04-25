@@ -38,6 +38,7 @@ export default class Tinkoff extends React.Component {
 			socket: true,
 			data: {
 				query: "getBankCompanies",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					1,
@@ -53,6 +54,7 @@ export default class Tinkoff extends React.Component {
 			socket: true,
 			data: {
 				query: "sendToApi",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify(uploadCompanies)
@@ -66,6 +68,7 @@ export default class Tinkoff extends React.Component {
 			socket: true,
 			data: {
 				query: "companyValidation",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					company_id,
