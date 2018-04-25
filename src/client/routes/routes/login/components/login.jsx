@@ -90,6 +90,7 @@ export default class Login extends React.Component {
 			socket: true,
 			data: {
 				query: "auth",
+				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					this.state.email,
@@ -107,6 +108,7 @@ export default class Login extends React.Component {
 					socket: true,
 					data: {
 						query: "autoAuth",
+						priority: true,
 						values: [
 							app.userHash,
 							this.props.state.connectionHash
