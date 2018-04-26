@@ -2,7 +2,7 @@ BEGIN
 	DECLARE connectionID, userID, activeCompaniesLength, typeID INT(11);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userAuth, connectionEnd TINYINT(1);
-    DECLARE responce, activeCompanies, downloadFilters JSON;
+    DECLARE responce, activeCompanies, downloadFilters, distributionFilters JSON;
     SET responce = JSON_ARRAY();
 	SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     SELECT user_id, user_auth, type_id INTO userID, userAuth, typeID FROM users WHERE user_hash = userHash;
@@ -50,6 +50,7 @@ BEGIN
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(userID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+                    SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
                     IF activeCompaniesLength > 0
                         THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
                             "type", "sendToSocket",
@@ -59,6 +60,7 @@ BEGIN
                                     "type", "merge",
                                     "data", JSON_OBJECT(
                                         "companies", activeCompanies,
+                                        "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength)
                                     )
                                 ))
