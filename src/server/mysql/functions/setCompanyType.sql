@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE userID, typeID, bankID INT(11);
+	DECLARE userID, bankID INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE responce JSON;
@@ -8,7 +8,6 @@ BEGIN
 	SET responce = JSON_ARRAY();
 	IF connectionValid
 		THEN BEGIN
-			SET typeID = IF(companyValidation, 13, 14);
 			UPDATE companies SET type_id = typeID WHERE company_id = companyID AND user_id = userID;
 			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
 				JSON_OBJECT(
