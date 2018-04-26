@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE companyID, typeID, userID, iterator, validCompaniesLength, bankID INT(11);
+	DECLARE companyID, typeID, userID, iterator, companiesLength, bankID INT(11);
 	DECLARE done, connectionValid TINYINT(1);
 	DECLARE connectionApiID, companyPersonName, companyPersonSurname, companyPersonPatronymic VARCHAR(128);
 	DECLARE companyPhone VARCHAR(20);
@@ -15,7 +15,6 @@ BEGIN
 	IF connectionValid 
 		THEN BEGIN
 			SET done = 0;
-			SET validCompaniesIDArray = JSON_ARRAY();
 			SET validCompaniesArray = JSON_ARRAY();
 			OPEN companiesCursor;
 				companiesLOOP: LOOP
@@ -23,27 +22,22 @@ BEGIN
 					IF done 
 						THEN LEAVE companiesLOOP;
 					END IF;
-					IF typeID = 13	
-						THEN BEGIN 
-							SET validCompaniesIDArray = JSON_MERGE(validCompaniesIDArray, CONCAT(companyID));
-							SET validCompaniesArray = JSON_MERGE(validCompaniesArray, JSON_OBJECT(
-								"companyID", companyID,
-								"companyPersonName", companyPersonName,
-								"companyPersonSurname", companyPersonSurname,
-								"companyPersonPatronymic", companyPersonPatronymic,
-								"companyPhone", companyPhone,
-								"companyOrganizationName", companyOrganizationName,
-								"companyInn", companyInn,
-								"companyOgrn", companyOgrn 
-							));
-						END;
-					END IF;
+					SET validCompaniesArray = JSON_MERGE(validCompaniesArray, JSON_OBJECT(
+						"companyID", companyID,
+						"companyPersonName", companyPersonName,
+						"companyPersonSurname", companyPersonSurname,
+						"companyPersonPatronymic", companyPersonPatronymic,
+						"companyPhone", companyPhone,
+						"companyOrganizationName", companyOrganizationName,
+						"companyInn", companyInn,
+						"companyOgrn", companyOgrn 
+					));
 					ITERATE companiesLOOP;
 				END LOOP;
 			CLOSE companiesCursor;
-			IF (JSON_LENGTH(validCompaniesIDArray) > 0)
+			IF (JSON_LENGTH(companiesArray) > 0)
 				THEN BEGIN
-					UPDATE companies SET type_id = 15 WHERE JSON_CONTAINS(validCompaniesIDArray, CONCAT(company_id));
+					UPDATE companies SET type_id = 15 WHERE JSON_CONTAINS(companiesArray, CONCAT(company_id));
 					SET responce = JSON_MERGE(responce, 
 						JSON_OBJECT(
 							"type", "sendToApi",
@@ -61,12 +55,12 @@ BEGIN
 							)
 						)
 					);
-					SET validCompaniesLength = JSON_LENGTH(validCompaniesArray);
-					IF validCompaniesLength > 0
+					SET companiesLength = JSON_LENGTH(companiesArray);
+					IF companiesLength > 0
 						THEN BEGIN
 							SET iterator = 0;
 							validCompaniesLoop: LOOP
-								IF iterator >= validCompaniesLength
+								IF iterator >= companiesLength
 									THEN LEAVE validCompaniesLoop;
 								END IF;
 								SET companyID = JSON_UNQUOTE(JSON_EXTRACT(validCompaniesArray, CONCAT("$[", iterator, "].companyID")));

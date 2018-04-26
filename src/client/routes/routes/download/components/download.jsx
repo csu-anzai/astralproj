@@ -240,6 +240,7 @@ export default class Download extends React.Component {
 						        	<MenuItem value = {4} primaryText = "Обработанные интересные" />
 						        	<MenuItem value = {5} primaryText = "Обработанные не интересные" />
 						        	<MenuItem value = {8} primaryText = "Обработанные не утвержденные" />
+						        	<MenuItem value = {11} primaryText = "Обработанные перезвон" />
 						        	<Divider/>
 						        	<MenuItem value = {6} primaryText = "Необработанные в работе" />
 						        </SelectField>
