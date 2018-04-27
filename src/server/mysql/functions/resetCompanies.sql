@@ -8,7 +8,7 @@ BEGIN
 	SELECT connection_api_id, user_id INTO connectionApiID, userID FROM users_connections_view WHERE connection_hash = connectionHash;
 	IF connectionValid
 		THEN BEGIN
-			UPDATE companies SET type_id = 10 AND user_id = NULL WHERE user_id = userID AND type_id = typeID;
+			UPDATE companies SET type_id = 10 AND user_id = NULL WHERE user_id = userID AND type_id = typeID AND DATE(company_date_create) = DATE(NOW());
 			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
 				"type", "merge",
 				"data", JSON_OBJECT(
