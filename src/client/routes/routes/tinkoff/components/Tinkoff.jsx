@@ -14,6 +14,7 @@ import FlatButton from 'material-ui/FlatButton';
 import { Redirect } from 'react-router';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
+import DatePicker from 'material-ui/DatePicker';
 import {
   Table,
   TableBody,
@@ -23,6 +24,10 @@ import {
   TableRow,
   TableRowColumn,
 } from 'material-ui/Table';
+const datePickerStyle = {
+	display: "inline-block",
+	verticalAlign: "bottom"
+};
 export default class Tinkoff extends React.Component {
 	constructor(props){
 		super(props);
@@ -98,6 +103,11 @@ export default class Tinkoff extends React.Component {
 		});
 	}
 	setDistributionFilter(filters){
+		let filterName = Object.keys(filters)[0];
+		if (filters[filterName].type == 6 && !filters[filterName].hasOwnProperty("dateStart") && !filters[filterName].hasOwnProperty("endStart")){
+			filters[filterName].dateStart = this.props.state.distribution[filterName].dateStart;
+			filters[filterName].dateEnd = this.props.state.distribution[filterName].dateEnd;
+		}
 		this.props.dispatch({
 			type: "query",
 			socket: true,
@@ -116,6 +126,7 @@ export default class Tinkoff extends React.Component {
 	}
 	render(){
 		localStorage.removeItem("hash");
+		console.log(this.props.state.distribution);
 		return (this.state.hash == "/" || this.state.hash == "/tinkoff" || !this.state.hash) && <div>
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
@@ -167,6 +178,77 @@ export default class Tinkoff extends React.Component {
 		              	</span>
 		              	<div style = {{float: "right"}}>
 		              		{
+		              			this.props.state.distribution && 
+		              			this.props.state.distribution[
+              						this.state.selectedIndex == 1 && "invalidate" ||
+              						this.state.selectedIndex == 2 && "api" ||
+              						this.state.selectedIndex == 3 && "callBack"
+              					] && this.props.state.distribution[
+              						this.state.selectedIndex == 1 && "invalidate" ||
+              						this.state.selectedIndex == 2 && "api" ||
+              						this.state.selectedIndex == 3 && "callBack"
+              					].type == 6 && [
+	              					<DatePicker 
+	              						key = {0}
+	              						floatingLabelText="Начальная дата"
+	              						style = {datePickerStyle}
+	              						defaultDate = {
+	              							new Date(this.props.state.distribution[
+	              								this.state.selectedIndex == 1 && "invalidate" ||
+	              								this.state.selectedIndex == 2 && "api" ||
+	              								this.state.selectedIndex == 3 && "callBack"
+	              							].dateStart)
+	              						}
+	              						onChange = {(eny, date) => {
+	              							this.setDistributionFilter({
+	              								[
+	              									this.state.selectedIndex == 1 && "invalidate" ||
+	              									this.state.selectedIndex == 2 && "api" ||
+	              									this.state.selectedIndex == 3 && "callBack"
+	              								]: {
+	              									dateStart: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
+	              									dateEnd: this.props.state.distribution[
+			              								this.state.selectedIndex == 1 && "invalidate" ||
+			              								this.state.selectedIndex == 2 && "api" ||
+			              								this.state.selectedIndex == 3 && "callBack"
+			              							].dateEnd,
+	              									type: 6
+	              								}
+	              							});
+	              						}}
+	              					/>,
+	              					<DatePicker
+	              						key = {1} 
+	              						floatingLabelText="Конечная дата"
+	              						style = {datePickerStyle}
+	              						defaultDate = {
+	              							new Date(this.props.state.distribution[
+	              								this.state.selectedIndex == 1 && "invalidate" ||
+	              								this.state.selectedIndex == 2 && "api" ||
+	              								this.state.selectedIndex == 3 && "callBack"
+	              							].dateEnd)
+	              						}
+	              						onChange = {(eny, date) => {
+	              							this.setDistributionFilter({
+	              								[
+	              									this.state.selectedIndex == 1 && "invalidate" ||
+	              									this.state.selectedIndex == 2 && "api" ||
+	              									this.state.selectedIndex == 3 && "callBack"
+	              								]: {
+	              									dateEnd: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
+	              									dateStart: this.props.state.distribution[
+			              								this.state.selectedIndex == 1 && "invalidate" ||
+			              								this.state.selectedIndex == 2 && "api" ||
+			              								this.state.selectedIndex == 3 && "callBack"
+			              							].dateStart,
+	              									type: 6
+	              								}
+	              							});
+	              						}}
+	              					/>
+	              				]
+		              		}
+		              		{
 		              			(this.state.selectedIndex == 1 || this.state.selectedIndex == 2 || this.state.selectedIndex == 3) &&
 		              			<SelectField
 		              				floatingLabelText = "Период"
@@ -199,6 +281,7 @@ export default class Tinkoff extends React.Component {
 		              				<MenuItem value = {2} primaryText = "Месяц"/>
 		              				<MenuItem value = {3} primaryText = "Год"/>
 		              				<MenuItem value = {4} primaryText = "Все время"/>
+		              				<MenuItem value = {6} primaryText = "Собственный период"/>
 		              			</SelectField>
 		              		}
 			              	{

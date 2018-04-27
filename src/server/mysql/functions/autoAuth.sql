@@ -48,9 +48,9 @@ BEGIN
             ));
             IF typeID = 1 OR typeID = 18 
                 THEN BEGIN
-                    SET activeCompanies = getActiveBankUserCompanies(userID);
+                    SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
-                    SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
+                    SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
                     IF activeCompaniesLength > 0
                         THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
                             "type", "sendToSocket",
@@ -62,6 +62,18 @@ BEGIN
                                         "companies", activeCompanies,
                                         "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength)
+                                    )
+                                ))
+                            )
+                        ));
+                        ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                            "type", "sendToSocket",
+                            "data", JSON_OBJECT(
+                                "socketID", connectionApiID,
+                                "data", JSON_ARRAY(JSON_OBJECT(
+                                    "type", "merge",
+                                    "data", JSON_OBJECT(
+                                        "distribution", distributionFilters
                                     )
                                 ))
                             )

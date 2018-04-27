@@ -1,18 +1,29 @@
 BEGIN
-	DECLARE company, responce JSON;
-	DECLARE done TINYINT(1);
-	DECLARE companiesCursor CURSOR FOR SELECT DISTINCT company_json FROM companies WHERE user_id = userID AND DATE(company_date_create) = DATE(NOW());
-	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+	DECLARE userID INT(11);
+	DECLARE dateEnd, dateStart VARCHAR(19);
+	DECLARE responce, distributionFilters, types JSON;
 	SET responce = JSON_ARRAY();
-	OPEN companiesCursor;
-		companiesLoop: LOOP
-			FETCH companiesCursor INTO company;
-			IF done
-				THEN LEAVE companiesLoop;
-			END IF;
-			SET responce = JSON_MERGE(responce, company);
-			ITERATE companiesLoop;
-		END LOOP;
-	CLOSE companiesCursor;
+	SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
+	IF distributionFilters IS NOT NULL
+		THEN BEGIN
+			SELECT user_id INTO userID FROM connections WHERE connection_id = connectionID;
+			SET types = JSON_ARRAY(15,16,17); 
+			SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.api.dateStart"));
+			SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.api.dateEnd"));
+			SET responce = getFilterCompaniesForUser(userID, types, dateStart, dateEnd);
+			SET types = JSON_ARRAY(14);
+			SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateStart"));
+			SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateEnd"));
+			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, dateStart, dateEnd));
+			SET types = JSON_ARRAY(23);
+			SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.callBack.dateStart"));
+			SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.callBack.dateEnd"));
+			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, dateStart, dateEnd));
+			SET types = JSON_ARRAY(9);
+			SELECT MIN(DATE(company_date_create)) INTO dateStart FROM companies WHERE user_id = 1 AND type_id = 9;
+			SET dateEnd = DATE(NOW());
+			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, dateStart, dateEnd));
+		END;
+	END IF;
 	RETURN responce;
 END

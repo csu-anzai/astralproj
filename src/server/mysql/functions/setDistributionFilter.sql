@@ -24,6 +24,7 @@ BEGIN
 			END LOOP;
 			SET userFilters = JSON_MERGE(userFilters, filters);
 			UPDATE states SET state_json = JSON_SET(state_json, "$.distribution", userFilters) WHERE state_id = stateID;
+			SELECT state_json ->> "$.distribution" INTO userFilters FROM states WHERE state_id = stateID;
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "sendToSocket",
 				"data", JSON_OBJECT(
@@ -32,7 +33,8 @@ BEGIN
 						JSON_OBJECT(
 							"type", "merge",
 							"data", JSON_OBJECT(
-								"distribution", userFilters
+								"distribution", userFilters,
+								"companies", getActiveBankUserCompanies(connectionID)
 							)
 						)
 					)

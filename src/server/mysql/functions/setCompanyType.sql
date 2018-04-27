@@ -1,40 +1,37 @@
 BEGIN
-	DECLARE userID, bankID INT(11);
+	DECLARE userID, bankID, connectionID INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE responce JSON;
 	SET connectionValid = checkConnection(connectionHash);
-	SELECT connection_api_id, user_id, bank_id INTO connectionApiID, userID, bankID FROM users_connections_view WHERE connection_hash = connectionHash;
+	SELECT connection_api_id, user_id, bank_id, connection_id INTO connectionApiID, userID, bankID, connectionID FROM users_connections_view WHERE connection_hash = connectionHash;
 	SET responce = JSON_ARRAY();
 	IF connectionValid
 		THEN BEGIN
 			UPDATE companies SET type_id = typeID WHERE company_id = companyID AND user_id = userID;
-			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
+			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+			SET responce = JSON_MERGE(responce, JSON_ARRAY(
 				JSON_OBJECT(
-					"type", "updateArray",
+					"type", "sendToSocket",
 					"data", JSON_OBJECT(
-						"name", "companies",
-						"search", JSON_OBJECT(
-							"company_id", companyID
-						), 
-						"values", JSON_OBJECT(
-							"type_id", typeID
+						"socketID", connectionApiID,
+						"data", JSON_ARRAY(
+							JSON_OBJECT(
+								"type", "merge",
+								"data", JSON_OBJECT(
+									"message", ""
+								)
+							)
 						)
 					)
 				),
 				JSON_OBJECT(
-					"type", "merge",
+					"type", "procedure",
 					"data", JSON_OBJECT(
-						"message", ""
-					)
-				)
-			)));
-			SET responce = JSON_MERGE(responce, JSON_OBJECT(
-				"type", "procedure",
-				"data", JSON_OBJECT(
-					"query", "refreshBankSupervisors",
-					"values", JSON_ARRAY(
-						bankID
+						"query", "refreshBankSupervisors",
+						"values", JSON_ARRAY(
+							bankID
+						)
 					)
 				)
 			));
