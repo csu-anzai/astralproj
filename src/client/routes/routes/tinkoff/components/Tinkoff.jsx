@@ -15,6 +15,8 @@ import { Redirect } from 'react-router';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 import DatePicker from 'material-ui/DatePicker';
+import Dialog from 'material-ui/Dialog';
+import TextField from 'material-ui/TextField';
 import {
   Table,
   TableBody,
@@ -34,10 +36,17 @@ export default class Tinkoff extends React.Component {
 		this.state = {
 			selectedIndex: 0,
 			limit: 10,
-			hash: localStorage.getItem("hash")
+			hash: localStorage.getItem("hash"),
+			companyID: 0,
+			dialog: false,
+			comment: "",
+			companyOrganization: ""
 		};
 		this.refresh = this.refresh.bind(this);
 		this.setDistributionFilter = this.setDistributionFilter.bind(this);
+		this.closeDialog = this.closeDialog.bind(this);
+		this.sendToApi = this.sendToApi.bind(this);
+		this.comment = this.comment.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -73,7 +82,7 @@ export default class Tinkoff extends React.Component {
 			}
 		});
 	}
-	sendToApi(company_id){
+	sendToApi(){
 		this.props.dispatch({
 			type: "query",
 			socket: true,
@@ -82,7 +91,8 @@ export default class Tinkoff extends React.Component {
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
-					JSON.stringify([company_id])
+					JSON.stringify(this.state.companyID),
+					this.state.comment
 				]
 			}
 		});
@@ -123,6 +133,26 @@ export default class Tinkoff extends React.Component {
 	componentDidMount(){
 		let component = document.querySelector("#app > div > div:nth-child(2) > div > div:nth-child(2) > div");
 		component && (component.style.overflow = "auto");
+	}
+	companyCheck(companyID, organizationName){
+		this.setState({
+			companyID: companyID,
+			dialog: true,
+			companyOrganization: organizationName
+		});
+	}
+	closeDialog(){
+		this.setState({
+			dialog: false,
+			comment: "",
+			companyID: 0,
+			companyOrganization: ""
+		});
+	}
+	comment(text){
+		this.setState({
+			comment: text
+		});
 	}
 	render(){
 		localStorage.removeItem("hash");
@@ -347,7 +377,7 @@ export default class Tinkoff extends React.Component {
 		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 1 || this.state.selectedIndex == 3) &&
 				                	<IconButton
 				                		title="Оформить заявку"
-				                		onClick = {this.sendToApi.bind(this, company.company_id)}
+				                		onClick = {this.companyCheck.bind(this, company.company_id, company.company_organization_name)}
 				                	>
 				                		<Check color = "#a4c639"/>
 				                	</IconButton>
@@ -398,7 +428,36 @@ export default class Tinkoff extends React.Component {
 	          		</TableRow>
 	          	}
 	          </TableBody>
-          </Table>
+        </Table>
+        <Dialog
+          title={"Оформление заявки – " + this.state.companyOrganization}
+          actions={[
+			      <FlatButton
+			        label="Отменить"
+			        secondary
+			        onClick={this.closeDialog}
+			      />,
+			      <FlatButton
+			        label="Отправить"
+			        primary
+			        onClick={this.sendToApi}
+			      />,
+			    ]}
+          modal={false}
+          open={this.state.dialog}
+          onRequestClose={this.closeDialog}
+        >
+          <TextField
+			      floatingLabelText="Коментарий к заявке"
+			      multiLine={true}
+			      fullWidth={true}
+			      rows={5}
+			      rowsMax={10}
+			     	onChange = {(event, text) => {
+			     		this.comment(text)
+			     	}}
+			    />
+        </Dialog>
 			</Paper>
 		</div> ||
 		<Redirect to = {this.state.hash} />
