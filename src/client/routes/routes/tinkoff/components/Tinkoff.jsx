@@ -12,6 +12,9 @@ import RaisedButton from 'material-ui/RaisedButton';
 import IconButton from 'material-ui/IconButton';
 import FlatButton from 'material-ui/FlatButton';
 import { Redirect } from 'react-router';
+import SelectField from 'material-ui/SelectField';
+import MenuItem from 'material-ui/MenuItem';
+import DatePicker from 'material-ui/DatePicker';
 import {
   Table,
   TableBody,
@@ -21,6 +24,10 @@ import {
   TableRow,
   TableRowColumn,
 } from 'material-ui/Table';
+const datePickerStyle = {
+	display: "inline-block",
+	verticalAlign: "bottom"
+};
 export default class Tinkoff extends React.Component {
 	constructor(props){
 		super(props);
@@ -30,6 +37,7 @@ export default class Tinkoff extends React.Component {
 			hash: localStorage.getItem("hash")
 		};
 		this.refresh = this.refresh.bind(this);
+		this.setDistributionFilter = this.setDistributionFilter.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -94,12 +102,31 @@ export default class Tinkoff extends React.Component {
 			}
 		});
 	}
+	setDistributionFilter(filters){
+		let filterName = Object.keys(filters)[0];
+		if (filters[filterName].type == 6 && !filters[filterName].hasOwnProperty("dateStart") && !filters[filterName].hasOwnProperty("endStart")){
+			filters[filterName].dateStart = this.props.state.distribution[filterName].dateStart;
+			filters[filterName].dateEnd = this.props.state.distribution[filterName].dateEnd;
+		}
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setDistributionFilter",
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify(filters)
+				]
+			}
+		});
+	}
 	componentDidMount(){
 		let component = document.querySelector("#app > div > div:nth-child(2) > div > div:nth-child(2) > div");
 		component && (component.style.overflow = "auto");
 	}
 	render(){
 		localStorage.removeItem("hash");
+		console.log(this.props.state.distribution);
 		return (this.state.hash == "/" || this.state.hash == "/tinkoff" || !this.state.hash) && <div>
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
@@ -142,7 +169,7 @@ export default class Tinkoff extends React.Component {
 		              	<span style = {{
 		              		display: "inline-block",
 		              		height: "36px",
-		              		lineHeight: "36px",
+		              		lineHeight: this.state.selectedIndex == 0 ? "36px" : "100px",
 		              		fontWeight: "bold",
 		              		fontSize: "14px",
 		              		color: this.props.state.messageType == "success" ? "#789a0a" : this.props.state.messageType == "error" ? "#ff4081" : "inherit"
@@ -150,6 +177,113 @@ export default class Tinkoff extends React.Component {
 		              		{ this.props.state.message }
 		              	</span>
 		              	<div style = {{float: "right"}}>
+		              		{
+		              			this.props.state.distribution && 
+		              			this.props.state.distribution[
+              						this.state.selectedIndex == 1 && "invalidate" ||
+              						this.state.selectedIndex == 2 && "api" ||
+              						this.state.selectedIndex == 3 && "callBack"
+              					] && this.props.state.distribution[
+              						this.state.selectedIndex == 1 && "invalidate" ||
+              						this.state.selectedIndex == 2 && "api" ||
+              						this.state.selectedIndex == 3 && "callBack"
+              					].type == 6 && [
+	              					<DatePicker 
+	              						key = {0}
+	              						floatingLabelText="Начальная дата"
+	              						style = {datePickerStyle}
+	              						defaultDate = {
+	              							new Date(this.props.state.distribution[
+	              								this.state.selectedIndex == 1 && "invalidate" ||
+	              								this.state.selectedIndex == 2 && "api" ||
+	              								this.state.selectedIndex == 3 && "callBack"
+	              							].dateStart)
+	              						}
+	              						onChange = {(eny, date) => {
+	              							this.setDistributionFilter({
+	              								[
+	              									this.state.selectedIndex == 1 && "invalidate" ||
+	              									this.state.selectedIndex == 2 && "api" ||
+	              									this.state.selectedIndex == 3 && "callBack"
+	              								]: {
+	              									dateStart: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
+	              									dateEnd: this.props.state.distribution[
+			              								this.state.selectedIndex == 1 && "invalidate" ||
+			              								this.state.selectedIndex == 2 && "api" ||
+			              								this.state.selectedIndex == 3 && "callBack"
+			              							].dateEnd,
+	              									type: 6
+	              								}
+	              							});
+	              						}}
+	              					/>,
+	              					<DatePicker
+	              						key = {1} 
+	              						floatingLabelText="Конечная дата"
+	              						style = {datePickerStyle}
+	              						defaultDate = {
+	              							new Date(this.props.state.distribution[
+	              								this.state.selectedIndex == 1 && "invalidate" ||
+	              								this.state.selectedIndex == 2 && "api" ||
+	              								this.state.selectedIndex == 3 && "callBack"
+	              							].dateEnd)
+	              						}
+	              						onChange = {(eny, date) => {
+	              							this.setDistributionFilter({
+	              								[
+	              									this.state.selectedIndex == 1 && "invalidate" ||
+	              									this.state.selectedIndex == 2 && "api" ||
+	              									this.state.selectedIndex == 3 && "callBack"
+	              								]: {
+	              									dateEnd: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
+	              									dateStart: this.props.state.distribution[
+			              								this.state.selectedIndex == 1 && "invalidate" ||
+			              								this.state.selectedIndex == 2 && "api" ||
+			              								this.state.selectedIndex == 3 && "callBack"
+			              							].dateStart,
+	              									type: 6
+	              								}
+	              							});
+	              						}}
+	              					/>
+	              				]
+		              		}
+		              		{
+		              			(this.state.selectedIndex == 1 || this.state.selectedIndex == 2 || this.state.selectedIndex == 3) &&
+		              			<SelectField
+		              				floatingLabelText = "Период"
+		              				value = {
+		              					this.props.state.distribution && 
+		              					this.props.state.distribution[
+		              						this.state.selectedIndex == 1 && "invalidate" ||
+		              						this.state.selectedIndex == 2 && "api" ||
+		              						this.state.selectedIndex == 3 && "callBack"
+		              					].type
+		              				}
+		              				style = {{
+		              					verticalAlign: "bottom"
+		              				}}
+		              				onChange = {(e, k, data) => {
+		              					this.setDistributionFilter({
+		              						[
+		              							this.state.selectedIndex == 1 && "invalidate" ||
+			              						this.state.selectedIndex == 2 && "api" ||
+			              						this.state.selectedIndex == 3 && "callBack"
+		              						]: {
+		              							type: data
+		              						}
+		              					});
+		              				}}
+		              			>
+		              				<MenuItem value = {0} primaryText = "Сегодня"/>
+		              				<MenuItem value = {5} primaryText = "Вчера"/>
+		              				<MenuItem value = {1} primaryText = "Неделя"/>
+		              				<MenuItem value = {2} primaryText = "Месяц"/>
+		              				<MenuItem value = {3} primaryText = "Год"/>
+		              				<MenuItem value = {4} primaryText = "Все время"/>
+		              				<MenuItem value = {6} primaryText = "Собственный период"/>
+		              			</SelectField>
+		              		}
 			              	{
 			              		this.state.selectedIndex == 0 &&
 				                <RaisedButton 
@@ -165,6 +299,9 @@ export default class Tinkoff extends React.Component {
 				                	label = "Сбросить список"
 				                	primary
 				                	onClick = {this.reset.bind(this, this.state.selectedIndex == 1 ? 14 : 23)}
+				                	style = {{
+				                		marginBottom: "8px"
+				                	}}
 				                />
 				              }
 		              	</div>

@@ -3,7 +3,7 @@ BEGIN
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userID, connectionID, activeCompaniesLength, typeID INT(11);
     DECLARE connectionEnd TINYINT(1);
-    DECLARE responce, activeCompanies, downloadFilters JSON;
+    DECLARE responce, activeCompanies, downloadFilters, distributionFilters JSON;
     SET responce = JSON_ARRAY();
     SET activeCompanies = JSON_ARRAY();
     SELECT user_id, type_id INTO userID, typeID FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
@@ -39,8 +39,9 @@ BEGIN
             );
             IF typeID = 1 OR typeID = 18 
                 THEN BEGIN
-                    SET activeCompanies = getActiveBankUserCompanies(userID);
+                    SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+                    SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
                     IF activeCompaniesLength > 0
                         THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
                             "type", "sendToSocket",
@@ -50,7 +51,20 @@ BEGIN
                                     "type", "merge",
                                     "data", JSON_OBJECT(
                                         "companies", activeCompanies,
+                                        "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength)
+                                    )
+                                ))
+                            )
+                        ));
+                        ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                            "type", "sendToSocket",
+                            "data", JSON_OBJECT(
+                                "socketID", connectionApiID,
+                                "data", JSON_ARRAY(JSON_OBJECT(
+                                    "type", "merge",
+                                    "data", JSON_OBJECT(
+                                        "distribution", distributionFilters
                                     )
                                 ))
                             )
