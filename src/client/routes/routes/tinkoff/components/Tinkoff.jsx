@@ -96,6 +96,7 @@ export default class Tinkoff extends React.Component {
 				]
 			}
 		});
+		this.closeDialog();
 	}
 	changeType(company_id, type_id){
 		this.props.dispatch({
@@ -194,7 +195,7 @@ export default class Tinkoff extends React.Component {
 	            enableSelectAll={false}
 	          >
 	            <TableRow>
-	              <TableHeaderColumn colSpan="8">
+	              <TableHeaderColumn colSpan={this.state.selectedIndex == 2 ? "9" : "8"}>
 	              	<div>
 		              	<span style = {{
 		              		display: "inline-block",
@@ -346,6 +347,10 @@ export default class Tinkoff extends React.Component {
 	              <TableHeaderColumn>Город</TableHeaderColumn>
 	              <TableHeaderColumn>Название компании</TableHeaderColumn>
 	              <TableHeaderColumn>Ф.И.О</TableHeaderColumn>
+	              {
+	              	this.state.selectedIndex == 2 &&
+	              	<TableHeaderColumn>Коментарий</TableHeaderColumn>
+	              }
               	<TableHeaderColumn>{this.state.selectedIndex != 2 ? "Действия" : "Статус обработки"}</TableHeaderColumn>
 	            </TableRow>
 	          </TableHeader>
@@ -371,6 +376,10 @@ export default class Tinkoff extends React.Component {
 		                <TableRowColumn>{company.city_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{company.company_organization_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{`${company.company_person_name} ${company.company_person_surname} ${company.company_person_patronymic}`.split("null").join("")}</TableRowColumn>
+		                {
+		                	this.state.selectedIndex == 2 &&
+		                	<TableRowColumn style={{whiteSpace: "normal"}}>{company.company_comment || "–"}</TableRowColumn>
+		                }
 		                { 
 		                	<TableRowColumn>
 		                		{
