@@ -7,7 +7,7 @@ BEGIN
 	IF distributionFilters IS NOT NULL
 		THEN BEGIN
 			SELECT user_id INTO userID FROM connections WHERE connection_id = connectionID;
-			SET types = JSON_ARRAY(15,16,17); 
+			SET types = JSON_ARRAY(15,16,17,24,25,26,27,28,29,30,31,32); 
 			SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.api.dateStart"));
 			SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.api.dateEnd"));
 			SET responce = getFilterCompaniesForUser(userID, types, dateStart, dateEnd);

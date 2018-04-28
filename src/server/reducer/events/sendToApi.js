@@ -10,12 +10,12 @@ module.exports = modules => (resolve, reject, data) => {
 			companyName: data.companyOrganizationName, 
 			innOrOgrn: data.companyInn || data.companyOgrn,
 			comment: data.companyComment
-		}, modules.env.tinkoff);
+		}, modules.env.tinkoff.body);
 		let options = {
 			method: 'post',
 			body: body,
 			json: true,
-			url: modules.env.tinkoff.url
+			url: modules.env.tinkoff.applicationUrl
 		};
 		request(options, (err, res, body) => {
 			if(err){
@@ -30,6 +30,10 @@ module.exports = modules => (resolve, reject, data) => {
 						query: "setApiResponce",
 						values: [
 							data.companyID,
+							(body.hasOwnProperty("result") && body.result.hasOwnProperty("applicationId")) ?
+								body.result.applicationId :
+								"false",
+							body.requestId,
 							body.success ? 1 : 0
 						]
 					}

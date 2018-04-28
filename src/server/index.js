@@ -25,3 +25,36 @@ reducer.dispatch({
 		values: []
 	}
 });
+setTimeout(() => {
+	let nowDate = new Date(),
+			nowHours = nowDate.getHours(),
+			nowMinutes = nowDate.getMinutes(),
+			nowSeconds = nowDate.getSeconds(),
+			nowMilleseconds = nowDate.getMilliseconds(),
+			envMilliseconds = (env.check.hours * 60 * 60 * 1000) + (env.check.minutes * 60 * 1000) + (env.check.seconds * 1000) + env.check.milliseconds,
+			timeoutMilliseconds = 0;
+	nowMilleseconds = (nowHours * 60 * 60 * 1000) + (nowMinutes * 60 * 1000) + (nowSeconds * 1000) + nowMilleseconds;
+	if(nowMilleseconds < envMilliseconds){
+		timeoutMilliseconds = envMilliseconds - nowMilleseconds;
+	} else {
+		timeoutMilliseconds = 86400000 - nowMilleseconds + envMilliseconds;
+	}
+	setTimeout(() => {
+		reducer.dispatch({
+			type: "checkCompaniesStatus",
+			data: [
+
+			]
+		}).then(responce => {
+			setInterval(() => {
+				reducer.dispatch({
+					type: "checkCompaniesStatus",
+					data: [
+
+					]
+				}).then(then).catch(err);
+			}, 86400000);
+			then(responce);
+		}).catch(err);
+	}, timeoutMilliseconds);
+});

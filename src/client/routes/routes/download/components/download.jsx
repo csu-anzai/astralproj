@@ -232,9 +232,18 @@ export default class Download extends React.Component {
 						        	<MenuItem value = {10} primaryText = "Свободные" />
 						        	<Divider/>
 						        	<MenuItem value = {7} primaryText = "Утвержденные все" />
-						        	<MenuItem value = {1} primaryText = "Утвержденные с ошибкой" />
 						        	<MenuItem value = {2} primaryText = "Утвержденные в обработке" />
-						        	<MenuItem value = {3} primaryText = "Утвержденные успешные" />
+						        	<MenuItem value = {1} primaryText = "Утвержденные с ошибкой все" />
+						        	<MenuItem value = {21} primaryText = "Утвержденные с ошибкой запросе" />
+						        	<MenuItem value = {12} primaryText = "Утвержденные дубликаты" />
+						        	<MenuItem value = {3} primaryText = "Утвержденные успешные все" />
+						        	<MenuItem value = {22} primaryText = "Утвержденные с успехом в запросе" />
+						        	<MenuItem value = {13} primaryText = "Утвержденные со сбором документов" />
+						        	<MenuItem value = {14} primaryText = "Утвержденные с обработкой комплекта" />
+						        	<MenuItem value = {15} primaryText = "Утвержденные с назначением встречи" />
+						        	<MenuItem value = {16} primaryText = "Утвержденные с назначенной встречей" />
+						        	<MenuItem value = {17} primaryText = "Утвержденные в постобработке" />
+						        	<MenuItem value = {18} primaryText = "Утвержденные с открытым счетом" />
 						        	<Divider/>
 						        	<MenuItem value = {9} primaryText = "Обработанные все" />
 						        	<MenuItem value = {4} primaryText = "Обработанные интересные" />

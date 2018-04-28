@@ -144,15 +144,26 @@ export default class Supervisor extends React.Component {
         	<MenuItem value = {0} primaryText = "Все" />
         	<Divider/>
         	<MenuItem value = {7} primaryText = "Утвержденные все" />
-        	<MenuItem value = {1} primaryText = "Утвержденные с ошибкой" />
         	<MenuItem value = {2} primaryText = "Утвержденные в обработке" />
-        	<MenuItem value = {3} primaryText = "Утвержденные успешные" />
+        	<MenuItem value = {1} primaryText = "Утвержденные с ошибкой все" />
+        	<MenuItem value = {20} primaryText = "Утвержденные с ошибкой запросе" />
+        	<MenuItem value = {11} primaryText = "Утвержденные дубликаты" />
+        	<MenuItem value = {18} primaryText = "Утвержденные с отказом банка" />
+        	<MenuItem value = {19} primaryText = "Утвержденные с отказом клиента" />
+        	<MenuItem value = {3} primaryText = "Утвержденные успешные все" />
+        	<MenuItem value = {21} primaryText = "Утвержденные с успехом в запросе" />
+        	<MenuItem value = {12} primaryText = "Утвержденные со сбором документов" />
+        	<MenuItem value = {13} primaryText = "Утвержденные с обработкой комплекта" />
+        	<MenuItem value = {14} primaryText = "Утвержденные с назначением встречи" />
+        	<MenuItem value = {15} primaryText = "Утвержденные с назначенной встречей" />
+        	<MenuItem value = {16} primaryText = "Утвержденные в постобработке" />
+        	<MenuItem value = {17} primaryText = "Утвержденные с открытым счетом" />
         	<Divider/>
         	<MenuItem value = {9} primaryText = "Обработанные все" />
         	<MenuItem value = {4} primaryText = "Обработанные интересные" />
         	<MenuItem value = {5} primaryText = "Обработанные не интересные" />
         	<MenuItem value = {8} primaryText = "Обработанные не утвержденные" />
-        	<MenuItem value = {10} primaryText = "Обработанные перезвон" />
+        	<MenuItem value = {10} primaryText = "Обработанные на перезвон" />
         	<Divider/>
         	<MenuItem value = {6} primaryText = "Необработанные в работе" />
         </SelectField>
