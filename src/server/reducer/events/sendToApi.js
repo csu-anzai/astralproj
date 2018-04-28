@@ -30,6 +30,10 @@ module.exports = modules => (resolve, reject, data) => {
 						query: "setApiResponce",
 						values: [
 							data.companyID,
+							(body.hasOwnProperty("result") && body.result.hasOwnProperty("applicationId")) ?
+								body.result.applicationId :
+								"false",
+							body.requestId,
 							body.success ? 1 : 0
 						]
 					}

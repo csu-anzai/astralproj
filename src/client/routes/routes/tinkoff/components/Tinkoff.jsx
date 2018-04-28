@@ -157,7 +157,6 @@ export default class Tinkoff extends React.Component {
 	}
 	render(){
 		localStorage.removeItem("hash");
-		console.log(this.props.state.distribution);
 		return (this.state.hash == "/" || this.state.hash == "/tinkoff" || !this.state.hash) && <div>
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
@@ -172,7 +171,7 @@ export default class Tinkoff extends React.Component {
             onClick={() => this.select(1)}
           />
           <BottomNavigationItem
-            label={"УТВЕРЖДЕНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 15 || i.type_id == 16 || i.type_id == 17).length || 0)+")"}
+            label={"УТВЕРЖДЕНО ("+(this.props.state.companies && this.props.state.companies.filter(i => [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(i.type_id) > -1).length || 0)+")"}
             icon={<CheckCircle/>}
             onClick={() => this.select(2)}
           />
@@ -365,7 +364,7 @@ export default class Tinkoff extends React.Component {
 		              (
 		              	(this.state.selectedIndex == 0 && (company.type_id == 10 || company.type_id == 9)) || 
 		              	(this.state.selectedIndex == 1 && company.type_id == 14) || 
-		              	(this.state.selectedIndex == 2 && (company.type_id == 15 || company.type_id == 16 || company.type_id == 17)) ||
+		              	(this.state.selectedIndex == 2 && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(company.type_id) > -1) ||
 		              	(this.state.selectedIndex == 3 && company.type_id == 23)
 		              ) &&
 		              <TableRow key = {key}>
@@ -412,12 +411,21 @@ export default class Tinkoff extends React.Component {
 		                		{
 		                			this.state.selectedIndex == 2 &&
 		                			<span style = {{
-		                				color: company.type_id == 15 ? "inherit" : company.type_id == 16 ? "green" : company.type_id == 17 && "red"
+		                				color: company.type_id == 15 ? "inherit" : [16,25,26,27,28,29,30].indexOf(company.type_id) > -1 ? "green" : [17,24,31,32].indexOf(company.type_id) > -1 && "red"
 		                			}}>
 		                				{
 				                			company.type_id == 15 ? "В процессе" :
 				                			company.type_id == 16 ? "Успешно" :
-				                			company.type_id == 17 && "Ошибка"
+				                			company.type_id == 17 ? "Ошибка" :
+				                			company.type_id == 24 ? "Дубликат" :
+				                			company.type_id == 25 ? "Сбор документов" :
+				                			company.type_id == 26 ? "Обработка комплекта" :
+				                			company.type_id == 27 ? "Назначение встречи" :
+				                			company.type_id == 28 ? "Встреча назначена" :
+				                			company.type_id == 29 ? "Постобработка" :
+				                			company.type_id == 30 ? "Счет открыт" :
+				                			company.type_id == 31 ? "Отказ Банка" :
+				                			company.type_id == 32 && "Отказ клиента"
 		                				}
 		                			</span>
 		                		}
