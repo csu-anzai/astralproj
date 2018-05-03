@@ -4,6 +4,7 @@ import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 import Divider from 'material-ui/Divider';
 import Checkbox from 'material-ui/Checkbox';
+import DatePicker from 'material-ui/DatePicker';
 const partStyle = {
 	maxWidth: "800px",
 	margin: "0 auto 10px"
@@ -12,6 +13,12 @@ const headerStyle = {
 	textAlign: "center", 
 	fontFamily: "Roboto, sans-serif", 
 	fontWeight: "normal"
+};
+const datePickerStyle = {
+  display: "inline-block",
+  width: "99px",
+  overflowX: "hidden",
+  margin: "-18px 10px"
 };
 export default class Supervisor extends React.Component {
 	constructor(props){
@@ -35,6 +42,7 @@ export default class Supervisor extends React.Component {
 		this.changeDataPeriod = this.changeDataPeriod.bind(this);
 		this.changeBank = this.changeBank.bind(this);
 		this.changeDataFree = this.changeDataFree.bind(this);
+		this.changeDate = this.changeDate.bind(this);
 	}
 	changeTypeToView(event, key, payload) {
 		this.props.dispatch({
@@ -132,6 +140,23 @@ export default class Supervisor extends React.Component {
 			}
 		})
 	}
+	changeDate(date, dateStartBool){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				priority: true,
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						period: 6,
+						[dateStartBool ? "dateStart" : "dateEnd"]: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+					})
+				]
+			}
+		});
+	}
 	render(){
 		return <div>
 			<div style = {partStyle}>
@@ -178,6 +203,7 @@ export default class Supervisor extends React.Component {
         	<MenuItem value = {0} primaryText = "Неделя" />
         	<MenuItem value = {5} primaryText = "Вчера" />
         	<MenuItem value = {4} primaryText = "Сегодня" />
+        	<MenuItem value = {6} primaryText = "Собственный" />
         </SelectField>
         <SelectField
           floatingLabelText="Сотрудники"
@@ -201,10 +227,37 @@ export default class Supervisor extends React.Component {
         	}
         	{" компаний за период: "}
         	{
-        		this.props.state.statistic && 
+        		(this.props.state.statistic && this.props.state.statistic.period != 6) ?
         		(this.props.state.statistic.dateStart == this.props.state.statistic.dateEnd ? 
         			this.props.state.statistic.dateStart :
-        			`${this.props.state.statistic.dateStart} – ${this.props.state.statistic.dateEnd}`)
+        			`${this.props.state.statistic.dateStart} – ${this.props.state.statistic.dateEnd}`) :
+        		[<DatePicker 
+  						key = {0}
+  						floatingLabelText="Начальная дата"
+  						style = {datePickerStyle}
+  						defaultDate = {
+  							this.props.state.statistic ? 
+  								new Date(this.props.state.statistic.dateStart) :
+  								new Date()
+  						}
+  						onChange = {(eny, date) => {
+  							this.changeDate(date, 1);
+  						}}
+  					/>, 
+  					" — ",
+  					<DatePicker 
+  						key = {1}
+  						floatingLabelText="Конечная дата"
+  						style = {datePickerStyle}
+  						defaultDate = {
+  							this.props.state.statistic ? 
+  								new Date(this.props.state.statistic.dateEnd) :
+  								new Date()
+  						}
+  						onChange = {(eny, date) => {
+  							this.changeDate(date, 0);
+  						}}
+  					/>]
         	}
         </div>
 				<Line data = {{
