@@ -120,7 +120,7 @@ export default class Tinkoff extends React.Component {
 					this.props.state.connectionHash,
 					company_id,
 					type_id,
-					(date && time) ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}` : null
+					(date && time) ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${time.getHours()}:${time.getMinutes()}:00` : null
 				]
 			}
 		});
