@@ -8,7 +8,10 @@ BEGIN
 	SET responce = JSON_ARRAY();
 	IF connectionValid
 		THEN BEGIN
-			UPDATE companies SET type_id = typeID WHERE company_id = companyID AND user_id = userID;
+			IF typeID = 23
+				THEN UPDATE companies SET type_id = typeID, company_date_call_back = dateParam WHERE company_id = companyID AND user_id = userID;
+				ELSE UPDATE companies SET type_id = typeID WHERE company_id = companyID AND user_id = userID;
+			END IF;
 			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 			SET responce = JSON_MERGE(responce, JSON_ARRAY(
 				JSON_OBJECT(

@@ -74,6 +74,7 @@ BEGIN
 		'company_doc_street_name', NEW.company_doc_street_name,
 		'company_doc_gifter', NEW.company_doc_gifter,
 		'company_doc_code', NEW.company_doc_code,
-		'company_doc_flat', NEW.company_doc_flat
+		'company_doc_flat', NEW.company_doc_flat,
+		"company_date_call_back", NEW.company_date_call_back
 	);
 END
