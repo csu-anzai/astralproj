@@ -170,6 +170,7 @@ export default class Download extends React.Component {
 						          multiple = {true}
 						          onChange = {this.changeMultipleFilter.bind(this, "banks")}
 						          style = {{textAlign: "left"}}
+						          autoWidth = {true}
 						        >
 						        	<MenuItem value = {0} primaryText = "Не учитывать" /> 
 						        	<MenuItem value = {null} primaryText = "Без банка" />
@@ -185,6 +186,7 @@ export default class Download extends React.Component {
 						          multiple = {true}
 						          onChange = {this.changeMultipleFilter.bind(this, "regions")}
 						          style = {selectorsStyle}
+						          autoWidth = {true}
 						        >
 						        	<MenuItem value = {0} primaryText = "Не учитывать" /> 
 						        	<MenuItem value = {null} primaryText = "Без региона" />
@@ -200,6 +202,7 @@ export default class Download extends React.Component {
 						          multiple = {true}
 						          onChange = {this.changeMultipleFilter.bind(this, "nullColumns")}
 						          style = {selectorsStyle}
+						          autoWidth = {true}
 						        >
 						        	<MenuItem value = {0} primaryText = "Не учитывать" />
 						        	{
@@ -214,6 +217,7 @@ export default class Download extends React.Component {
 						          multiple = {true}
 						          onChange = {this.changeMultipleFilter.bind(this, "notNullColumns")}
 						          style = {selectorsStyle}
+						          autoWidth = {true}
 						        >
 						        	<MenuItem value = {0} primaryText = "Не учитывать" />
 						        	{
@@ -227,6 +231,7 @@ export default class Download extends React.Component {
 						          value = {this.props.state.download && this.props.state.download.type || 0}
 						          style = {selectorsStyle}
 						          onChange = {this.changeSingleFilter.bind(this, "type")}
+						          autoWidth = {true}
 						        >
 						        	<MenuItem value = {0} primaryText = "Все" />
 						        	<MenuItem value = {10} primaryText = "Свободные" />

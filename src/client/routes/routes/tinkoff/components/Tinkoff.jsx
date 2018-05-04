@@ -304,6 +304,7 @@ export default class Tinkoff extends React.Component {
 		              						}
 		              					});
 		              				}}
+		              				autoWidth = {true}
 		              			>
 		              				<MenuItem value = {0} primaryText = "Сегодня"/>
 		              				<MenuItem value = {5} primaryText = "Вчера"/>
