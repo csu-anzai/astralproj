@@ -187,7 +187,11 @@ CREATE TABLE `companies` (
   `file_id` int(11) DEFAULT NULL,
   `company_comment` text COLLATE utf8_bin,
   `company_api_request_id` varchar(128) COLLATE utf8_bin DEFAULT NULL,
-  `company_application_id` varchar(128) COLLATE utf8_bin DEFAULT NULL
+  `company_application_id` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `company_date_call_back` varchar(19) COLLATE utf8_bin DEFAULT NULL,
+  `company_region_code` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `company_house_block` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `company_apartment` varchar(128) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
@@ -266,7 +270,8 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
     'company_doc_street_name', NEW.company_doc_street_name,
     'company_doc_gifter', NEW.company_doc_gifter,
     'company_doc_code', NEW.company_doc_code,
-    'company_doc_flat', NEW.company_doc_flat
+    'company_doc_flat', NEW.company_doc_flat,
+    "company_date_call_back", NEW.company_date_call_back
   );
 END
 $$
@@ -277,7 +282,8 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
   SET NEW.company_json = JSON_SET(NEW.company_json,
     "$.type_id", NEW.type_id,
     "$.company_date_update", NEW.company_date_update,
-    "$.company_comment", NEW.company_comment
+    "$.company_comment", NEW.company_comment,
+    "$.company_date_call_back", NEW.company_date_call_back
   );
 END
 $$
@@ -582,6 +588,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         END;
         WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.statistic.dataDateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
         WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(NOW()), "$.statistic.dataDateEnd", DATE(NOW()));
+        WHEN 6 THEN BEGIN END;
       END CASE;
     END;
   END IF;
@@ -800,6 +807,8 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (10, 'free'),
 (4, 'get'),
 (14, 'invalidate'),
+(33, 'no_answer'),
+(34, 'not_realized'),
 (5, 'post'),
 (6, 'purchase'),
 (9, 'reservation'),

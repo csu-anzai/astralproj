@@ -157,6 +157,23 @@ export default class Supervisor extends React.Component {
 			}
 		});
 	}
+	changeDataDate(date, dateStartBool){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				priority: true,
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						dataPeriod: 6,
+						[dateStartBool ? "dataDateStart" : "dataDateEnd"]: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+					})
+				]
+			}
+		});
+	}
 	render(){
 		return <div>
 			<div style = {partStyle}>
@@ -165,6 +182,7 @@ export default class Supervisor extends React.Component {
           floatingLabelText="Тип компаний"
           value={this.props.state.statistic && this.props.state.statistic.typeToView != undefined ? this.props.state.statistic.typeToView : this.state.typeToView}
           onChange={this.changeTypeToView}
+          autoWidth = {true}
         >
         	<MenuItem value = {0} primaryText = "Все" />
         	<Divider/>
@@ -196,6 +214,7 @@ export default class Supervisor extends React.Component {
           floatingLabelText="Период"
           value={this.props.state.statistic && this.props.state.statistic.period != undefined ? this.props.state.statistic.period : this.state.period}
           onChange={this.changePeriod}
+          autoWidth = {true}
         >
         	<MenuItem value = {3} primaryText = "Все время" />
         	<MenuItem value = {2} primaryText = "Год" />
@@ -209,6 +228,7 @@ export default class Supervisor extends React.Component {
           floatingLabelText="Сотрудники"
           value={this.props.state.statistic && this.props.state.statistic.user != undefined ? this.props.state.statistic.user : this.state.user}
           onChange={this.changeUser}
+          autoWidth = {true}
         >
         	<MenuItem value = {0} primaryText = "Все сотрудники"/>
         	{
@@ -293,6 +313,7 @@ export default class Supervisor extends React.Component {
           floatingLabelText="Период"
           value={this.props.state.statistic && this.props.state.statistic.dataPeriod != undefined ? this.props.state.statistic.dataPeriod : this.state.dataPeriod}
           onChange={this.changeDataPeriod}
+          autoWidth = {true}
         >
         	<MenuItem value = {3} primaryText = "Все время" />
         	<MenuItem value = {2} primaryText = "Год" />
@@ -300,6 +321,7 @@ export default class Supervisor extends React.Component {
         	<MenuItem value = {0} primaryText = "Неделя" />
         	<MenuItem value = {4} primaryText = "Вчера" />
         	<MenuItem value = {5} primaryText = "Сегодня" />
+        	<MenuItem value = {6} primaryText = "Собственный" />
         </SelectField>
         <Checkbox 
         	label = "Подходящие для Банка"
@@ -335,10 +357,37 @@ export default class Supervisor extends React.Component {
         	}
         	{" компаний за период: "}
         	{
-        		this.props.state.statistic && 
+        		(this.props.state.statistic && this.props.state.statistic.dataPeriod != 6) ?
         		(this.props.state.statistic.dataDateStart == this.props.state.statistic.dataDateEnd ? 
         			this.props.state.statistic.dataDateStart :
-        			`${this.props.state.statistic.dataDateStart} – ${this.props.state.statistic.dataDateEnd}`)
+        			`${this.props.state.statistic.dataDateStart} – ${this.props.state.statistic.dataDateEnd}`) :
+        		[<DatePicker 
+  						key = {0}
+  						floatingLabelText="Начальная дата"
+  						style = {datePickerStyle}
+  						defaultDate = {
+  							this.props.state.statistic ? 
+  								new Date(this.props.state.statistic.dataDateStart) :
+  								new Date()
+  						}
+  						onChange = {(eny, date) => {
+  							this.changeDataDate(date, 1);
+  						}}
+  					/>, 
+  					" — ",
+  					<DatePicker 
+  						key = {1}
+  						floatingLabelText="Конечная дата"
+  						style = {datePickerStyle}
+  						defaultDate = {
+  							this.props.state.statistic ? 
+  								new Date(this.props.state.statistic.dataDateEnd) :
+  								new Date()
+  						}
+  						onChange = {(eny, date) => {
+  							this.changeDataDate(date, 0);
+  						}}
+  					/>]
         	}
         </div>
 				<Bar data = {{
