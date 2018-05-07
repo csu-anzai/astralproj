@@ -108,7 +108,7 @@ BEGIN
 				WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.invalidate.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.invalidate.dateEnd", DATE(NOW()));
 				WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.invalidate.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.invalidate.dateEnd", DATE(NOW()));
 				WHEN 4 THEN BEGIN 
-					SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 14 AND bank_id = bankID ORDER BY company_date_update LIMIT 1;
+					SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 14 AND bank_id = bankID ORDER BY company_date_create LIMIT 1;
 					IF firstDate IS NULL
 						THEN SET firstDate = DATE(NOW());
 					END IF;
@@ -126,7 +126,7 @@ BEGIN
 				WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.callBack.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.callBack.dateEnd", DATE(NOW()));
 				WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.callBack.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.callBack.dateEnd", DATE(NOW()));
 				WHEN 4 THEN BEGIN 
-					SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 23 AND bank_id = bankID ORDER BY company_date_update LIMIT 1;
+					SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 23 AND bank_id = bankID ORDER BY company_date_create LIMIT 1;
 					IF firstDate IS NULL
 						THEN SET firstDate = DATE(NOW());
 					END IF;
@@ -144,7 +144,7 @@ BEGIN
 				WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.api.dateEnd", DATE(NOW()));
 				WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.api.dateEnd", DATE(NOW()));
 				WHEN 4 THEN BEGIN 
-					SELECT company_date_create INTO firstDate FROM companies WHERE type_id IN (15, 16, 17) AND bank_id = bankID ORDER BY company_date_update LIMIT 1;
+					SELECT company_date_create INTO firstDate FROM companies WHERE type_id IN (15, 16, 17) AND bank_id = bankID ORDER BY company_date_create LIMIT 1;
 					IF firstDate IS NULL
 						THEN SET firstDate = DATE(NOW());
 					END IF;

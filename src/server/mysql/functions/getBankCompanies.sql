@@ -5,7 +5,7 @@ BEGIN
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE responce, companiesArray, company JSON;
 	DECLARE done, connectionValid TINYINT(1);
-	DECLARE companiesCursor CURSOR FOR SELECT company_json, company_id FROM bank_cities_time_priority_companies_view WHERE bank_id = bankID AND date(company_date_create) = date(now()) AND time_id = timeID AND user_id IS NULL LIMIT rows;
+	DECLARE companiesCursor CURSOR FOR SELECT company_json, company_id FROM bank_cities_time_priority_companies_view where type_id = 10 and old_type_id = 36 and weekday(company_date_update) = weekday(now()) and time_id = timeID AND bank_id = bankID UNION SELECT company_json, company_id FROM bank_cities_time_priority_companies_view WHERE bank_id = bankID AND date(company_date_create) = date(now()) AND time_id = timeID AND user_id IS NULL LIMIT rows;
 	DECLARE userCompaniesCursor CURSOR FOR SELECT company_json FROM companies WHERE bank_id = bankID AND user_id = userID AND date(company_date_create) = date(now()) AND type_id != 9;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET connectionValid = checkConnection(connectionHash);
@@ -14,7 +14,7 @@ BEGIN
 	IF connectionValid
 		THEN BEGIN
 			SET companiesArray = JSON_ARRAY();
-			UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id = 9;
+			UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35);
 			SET done = 0;
 			OPEN companiesCursor;
 				companiesLoop: LOOP

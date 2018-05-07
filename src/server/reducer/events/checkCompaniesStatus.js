@@ -59,6 +59,7 @@ module.exports = modules => (resolve, reject, data) => {
 					}
 				}
 			});
+			console.log(`Отправлено на уточнение статуса ${companies.length} компаний`);
 		}
 	}).catch(reject);
 }

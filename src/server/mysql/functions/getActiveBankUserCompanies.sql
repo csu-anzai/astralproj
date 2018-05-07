@@ -21,9 +21,11 @@ BEGIN
 			UPDATE companies SET type_id = 9, company_date_call_back = NULL WHERE user_id = userID AND type_id = 23 AND NOW() >= company_date_call_back;
 			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, dateStart, dateEnd));
 			SET types = JSON_ARRAY(9);
-			SELECT MIN(DATE(company_date_create)) INTO dateStart FROM companies WHERE user_id = 1 AND type_id = 9;
-			SET dateEnd = DATE(NOW());
-			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, dateStart, dateEnd));
+			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, NULL, NULL));
+			SET types = JSON_ARRAY(35);
+			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, NULL, NULL));
+			SET types = JSON_ARRAY(36);
+			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(NULL, types, NULL, NULL));
 		END;
 	END IF;
 	RETURN responce;

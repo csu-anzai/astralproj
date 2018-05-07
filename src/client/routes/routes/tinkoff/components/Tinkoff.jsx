@@ -8,6 +8,8 @@ import DeleteForever from 'material-ui/svg-icons/action/delete-forever';
 import CheckCircle from 'material-ui/svg-icons/action/check-circle';
 import Info from 'material-ui/svg-icons/action/info';
 import Phone from 'material-ui/svg-icons/communication/phone';
+import CallEnd from 'material-ui/svg-icons/communication/call-end';
+import History from 'material-ui/svg-icons/action/history';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
 import IconButton from 'material-ui/IconButton';
@@ -184,7 +186,7 @@ export default class Tinkoff extends React.Component {
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
 					<BottomNavigationItem
-            label={"В РАБОТЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 10 || i.type_id == 9).length || 0)+")"}
+            label={"В РАБОТЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 35 || i.type_id == 9).length || 0)+")"}
             icon={<Restore/>}
             onClick={() => this.select(0)}
           />
@@ -202,6 +204,11 @@ export default class Tinkoff extends React.Component {
             label={"ПЕРЕЗВОНИТЬ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 23).length || 0)+")"}
             icon={<Phone/>}
             onClick={() => this.select(3)}
+          />
+          <BottomNavigationItem
+            label={"НЕТ СВЯЗИ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 36).length || 0)+")"}
+            icon={<CallEnd/>}
+            onClick={() => this.select(4)}
           />
 				</BottomNavigation>
 				<Table
@@ -390,10 +397,11 @@ export default class Tinkoff extends React.Component {
 	          	{
 	          		this.props.state.companies && this.props.state.companies.length > 0 && this.props.state.companies.map((company, key) => (
 		              (
-		              	(this.state.selectedIndex == 0 && (company.type_id == 10 || company.type_id == 9)) || 
+		              	(this.state.selectedIndex == 0 && [10, 9, 35].indexOf(company.type_id) > -1) || 
 		              	(this.state.selectedIndex == 1 && company.type_id == 14) || 
 		              	(this.state.selectedIndex == 2 && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(company.type_id) > -1) ||
-		              	(this.state.selectedIndex == 3 && company.type_id == 23)
+		              	(this.state.selectedIndex == 3 && company.type_id == 23) ||
+		              	(this.state.selectedIndex == 4 && company.type_id == 36)
 		              ) &&
 		              <TableRow key = {key}>
 		                <TableRowColumn>{company.company_phone || "–"}</TableRowColumn>
@@ -414,7 +422,7 @@ export default class Tinkoff extends React.Component {
 		                { 
 		                	<TableRowColumn>
 		                		{
-		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 1 || this.state.selectedIndex == 3) &&
+		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 1 || this.state.selectedIndex == 3 || this.state.selectedIndex == 4) &&
 				                	<IconButton
 				                		title="Оформить заявку"
 				                		onClick = {this.companyCheck.bind(this, company.company_id, company.company_organization_name, 0)}
@@ -423,7 +431,7 @@ export default class Tinkoff extends React.Component {
 				                	</IconButton>
 		                		}
 		                		{
-		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 1) && 
+		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 1 || this.state.selectedIndex == 4) && 
 		                			<IconButton
 		                				title="Перезвонить"
 				                		onClick = {this.companyCheck.bind(this, company.company_id, company.company_organization_name, 1)}
@@ -432,7 +440,20 @@ export default class Tinkoff extends React.Component {
 				                	</IconButton>
 		                		}
 		                		{
-		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 3) &&
+		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 1 || this.state.selectedIndex == 4) && 
+		                			<IconButton
+		                				title={company.type_id == 35 ? "Нет связи" : "Переместить в конец рабочего списка"}
+				                		onClick = {this.changeType.bind(this, company.company_id, company.type_id == 35 ? 36 : 35)}
+				                	>
+				                		{
+				                			company.type_id == 35 ?
+				                			<CallEnd color = "#C51162"/> :
+				                			<History color = "#283593"/>
+				                		}
+				                	</IconButton>
+		                		}
+		                		{
+		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 3 || this.state.selectedIndex == 4) &&
 				                	<IconButton
 				                		title="Не интересно"
 				                		onClick = {this.changeType.bind(this, company.company_id, 14)}

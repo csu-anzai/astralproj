@@ -6,4 +6,7 @@ BEGIN
 		"$.company_comment", NEW.company_comment,
 		"$.company_date_call_back", NEW.company_date_call_back
 	);
+	IF NEW.type_id != OLD.type_id 
+		THEN SET NEW.old_type_id = OLD.type_id;
+	END IF;
 END
