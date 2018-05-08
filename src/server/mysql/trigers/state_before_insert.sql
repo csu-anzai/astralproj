@@ -69,6 +69,11 @@ BEGIN
 							"dateStart", DATE(NOW()),
 							"dateEnd", DATE(NOW()),
 							"type", 0
+						),
+						"difficult", JSON_OBJECT(
+							"dateStart", DATE(NOW()),
+							"dateEnd", DATE(NOW()),
+							"type", 0
 						)
 					)
 				);

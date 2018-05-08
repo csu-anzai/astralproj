@@ -255,6 +255,9 @@ export default class Download extends React.Component {
 						        	<MenuItem value = {5} primaryText = "Обработанные не интересные" />
 						        	<MenuItem value = {8} primaryText = "Обработанные не утвержденные" />
 						        	<MenuItem value = {11} primaryText = "Обработанные перезвон" />
+						        	<MenuItem value = {23} primaryText = "Обработанные на первичном недозвоне" />
+						        	<MenuItem value = {24} primaryText = "Обработанные на вторичном недозвоне" />
+						        	<MenuItem value = {25} primaryText = "Обработанные сложные" />
 						        	<Divider/>
 						        	<MenuItem value = {6} primaryText = "Необработанные в работе" />
 						        </SelectField>
@@ -341,7 +344,7 @@ export default class Download extends React.Component {
 	          				{
 	          					Object.keys(company).map((paramName, columnKey) => (
 	          						<TableRowColumn key = {columnKey}>
-	          							{ company[paramName] }
+	          							{ company[paramName] || "—" }
 	          						</TableRowColumn>
 	          					))
 	          				}

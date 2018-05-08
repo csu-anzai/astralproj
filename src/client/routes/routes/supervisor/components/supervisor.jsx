@@ -207,6 +207,9 @@ export default class Supervisor extends React.Component {
         	<MenuItem value = {5} primaryText = "Обработанные не интересные" />
         	<MenuItem value = {8} primaryText = "Обработанные не утвержденные" />
         	<MenuItem value = {10} primaryText = "Обработанные на перезвон" />
+        	<MenuItem value = {22} primaryText = "Обработанные на первичном недозвоне" />
+        	<MenuItem value = {23} primaryText = "Обработанные на вторичном недозвоне" />
+        	<MenuItem value = {24} primaryText = "Обработанные сложные" />
         	<Divider/>
         	<MenuItem value = {6} primaryText = "Необработанные в работе" />
         </SelectField>
