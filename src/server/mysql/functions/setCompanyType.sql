@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE userID, bankID, connectionID INT(11);
+	DECLARE userID, bankID, connectionID, lastTypeID INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE responce JSON;
@@ -8,8 +8,15 @@ BEGIN
 	SET responce = JSON_ARRAY();
 	IF connectionValid
 		THEN BEGIN
-			UPDATE companies SET type_id = typeID WHERE company_id = companyID AND user_id = userID;
-			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+			SELECT type_id INTO lastTypeID FROM companies WHERE company_id = companyID;
+			IF typeID = 23
+				THEN UPDATE companies SET type_id = typeID, company_date_call_back = dateParam, user_id = userID WHERE company_id = companyID;
+				ELSE UPDATE companies SET type_id = typeID, user_id = userID WHERE company_id = companyID;
+			END IF;
+			IF typeID = 36 OR lastTypeID = 36 
+				THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+				ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+			END IF;
 			SET responce = JSON_MERGE(responce, JSON_ARRAY(
 				JSON_OBJECT(
 					"type", "sendToSocket",
@@ -22,15 +29,6 @@ BEGIN
 									"message", ""
 								)
 							)
-						)
-					)
-				),
-				JSON_OBJECT(
-					"type", "procedure",
-					"data", JSON_OBJECT(
-						"query", "refreshBankSupervisors",
-						"values", JSON_ARRAY(
-							bankID
 						)
 					)
 				)

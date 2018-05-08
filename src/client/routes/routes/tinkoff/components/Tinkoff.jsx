@@ -6,7 +6,11 @@ import HighlightOff from 'material-ui/svg-icons/action/highlight-off';
 import Check from 'material-ui/svg-icons/navigation/check';
 import DeleteForever from 'material-ui/svg-icons/action/delete-forever';
 import CheckCircle from 'material-ui/svg-icons/action/check-circle';
+import Info from 'material-ui/svg-icons/action/info';
 import Phone from 'material-ui/svg-icons/communication/phone';
+import CallEnd from 'material-ui/svg-icons/communication/call-end';
+import SadFace from 'material-ui/svg-icons/social/sentiment-dissatisfied';
+import History from 'material-ui/svg-icons/action/history';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
 import IconButton from 'material-ui/IconButton';
@@ -15,6 +19,7 @@ import { Redirect } from 'react-router';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 import DatePicker from 'material-ui/DatePicker';
+import TimePicker from 'material-ui/TimePicker';
 import Dialog from 'material-ui/Dialog';
 import TextField from 'material-ui/TextField';
 import {
@@ -33,6 +38,7 @@ const datePickerStyle = {
 export default class Tinkoff extends React.Component {
 	constructor(props){
 		super(props);
+		const date = new Date();
 		this.state = {
 			selectedIndex: 0,
 			limit: 10,
@@ -40,7 +46,10 @@ export default class Tinkoff extends React.Component {
 			companyID: 0,
 			dialog: false,
 			comment: "",
-			companyOrganization: ""
+			companyOrganization: "",
+			dialogType: 1,
+			dateCallBack: new Date(),
+			timeCallBack: new Date()
 		};
 		this.refresh = this.refresh.bind(this);
 		this.setDistributionFilter = this.setDistributionFilter.bind(this);
@@ -98,7 +107,12 @@ export default class Tinkoff extends React.Component {
 		});
 		this.closeDialog();
 	}
-	changeType(company_id, type_id){
+	changeType(company_id, type_id, dateArr){
+		let date, time;
+		if (dateArr && dateArr instanceof Array){
+			date = dateArr[0];
+			time = dateArr[1];
+		}
 		this.props.dispatch({
 			type: "query",
 			socket: true,
@@ -108,10 +122,14 @@ export default class Tinkoff extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					company_id,
-					type_id
+					type_id,
+					(date && time) ? `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${time.getHours()}:${time.getMinutes()}:00` : null
 				]
 			}
 		});
+		if(type_id == 23){
+			this.closeDialog();
+		}
 	}
 	setDistributionFilter(filters){
 		let filterName = Object.keys(filters)[0];
@@ -135,10 +153,18 @@ export default class Tinkoff extends React.Component {
 		let component = document.querySelector("#app > div > div:nth-child(2) > div > div:nth-child(2) > div");
 		component && (component.style.overflow = "auto");
 	}
-	companyCheck(companyID, organizationName){
+	companyCheck(companyID, organizationName, dialogType){
+		if (dialogType == 1){
+			const date = new Date();
+			this.setState({
+				dateCallBack: date,
+				timeCallBack: date
+			});
+		}
 		this.setState({
 			companyID: companyID,
 			dialog: true,
+			dialogType,
 			companyOrganization: organizationName
 		});
 	}
@@ -161,7 +187,7 @@ export default class Tinkoff extends React.Component {
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
 					<BottomNavigationItem
-            label={"В РАБОТЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 10 || i.type_id == 9).length || 0)+")"}
+            label={"В РАБОТЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => [35,9].indexOf(i.type_id) > -1).length || 0)+")"}
             icon={<Restore/>}
             onClick={() => this.select(0)}
           />
@@ -180,6 +206,16 @@ export default class Tinkoff extends React.Component {
             icon={<Phone/>}
             onClick={() => this.select(3)}
           />
+          <BottomNavigationItem
+            label={"НЕТ СВЯЗИ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 36).length || 0)+")"}
+            icon={<CallEnd/>}
+            onClick={() => this.select(4)}
+          />
+          <BottomNavigationItem
+            label={"СЛОЖНЫЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 37).length || 0)+")"}
+            icon={<SadFace/>}
+            onClick={() => this.select(5)}
+          />
 				</BottomNavigation>
 				<Table
           fixedHeader={false}
@@ -194,7 +230,7 @@ export default class Tinkoff extends React.Component {
 	            enableSelectAll={false}
 	          >
 	            <TableRow>
-	              <TableHeaderColumn colSpan={this.state.selectedIndex == 2 ? "9" : "8"}>
+	              <TableHeaderColumn colSpan={[2,3].indexOf(this.state.selectedIndex) != -1 ? "9" : "8"}>
 	              	<div>
 		              	<span style = {{
 		              		display: "inline-block",
@@ -212,11 +248,15 @@ export default class Tinkoff extends React.Component {
 		              			this.props.state.distribution[
               						this.state.selectedIndex == 1 && "invalidate" ||
               						this.state.selectedIndex == 2 && "api" ||
-              						this.state.selectedIndex == 3 && "callBack"
+              						this.state.selectedIndex == 3 && "callBack" ||
+              						this.state.selectedIndex == 4 && "notDial" ||
+              						this.state.selectedIndex == 5 && "difficult" 
               					] && this.props.state.distribution[
               						this.state.selectedIndex == 1 && "invalidate" ||
               						this.state.selectedIndex == 2 && "api" ||
-              						this.state.selectedIndex == 3 && "callBack"
+              						this.state.selectedIndex == 3 && "callBack" ||
+              						this.state.selectedIndex == 4 && "notDial" ||
+              						this.state.selectedIndex == 5 && "difficult" 
               					].type == 6 && [
 	              					<DatePicker 
 	              						key = {0}
@@ -226,7 +266,9 @@ export default class Tinkoff extends React.Component {
 	              							new Date(this.props.state.distribution[
 	              								this.state.selectedIndex == 1 && "invalidate" ||
 	              								this.state.selectedIndex == 2 && "api" ||
-	              								this.state.selectedIndex == 3 && "callBack"
+	              								this.state.selectedIndex == 3 && "callBack" ||
+	              								this.state.selectedIndex == 4 && "notDial" ||
+	              								this.state.selectedIndex == 5 && "difficult" 
 	              							].dateStart)
 	              						}
 	              						onChange = {(eny, date) => {
@@ -234,13 +276,17 @@ export default class Tinkoff extends React.Component {
 	              								[
 	              									this.state.selectedIndex == 1 && "invalidate" ||
 	              									this.state.selectedIndex == 2 && "api" ||
-	              									this.state.selectedIndex == 3 && "callBack"
+	              									this.state.selectedIndex == 3 && "callBack" ||
+	              									this.state.selectedIndex == 4 && "notDial" ||
+	              									this.state.selectedIndex == 5 && "difficult" 
 	              								]: {
 	              									dateStart: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
 	              									dateEnd: this.props.state.distribution[
 			              								this.state.selectedIndex == 1 && "invalidate" ||
 			              								this.state.selectedIndex == 2 && "api" ||
-			              								this.state.selectedIndex == 3 && "callBack"
+			              								this.state.selectedIndex == 3 && "callBack" ||
+			              								this.state.selectedIndex == 4 && "notDial" ||
+			              								this.state.selectedIndex == 5 && "difficult" 
 			              							].dateEnd,
 	              									type: 6
 	              								}
@@ -255,7 +301,9 @@ export default class Tinkoff extends React.Component {
 	              							new Date(this.props.state.distribution[
 	              								this.state.selectedIndex == 1 && "invalidate" ||
 	              								this.state.selectedIndex == 2 && "api" ||
-	              								this.state.selectedIndex == 3 && "callBack"
+	              								this.state.selectedIndex == 3 && "callBack" ||
+	              								this.state.selectedIndex == 4 && "notDial" ||
+	              								this.state.selectedIndex == 5 && "difficult" 
 	              							].dateEnd)
 	              						}
 	              						onChange = {(eny, date) => {
@@ -263,13 +311,17 @@ export default class Tinkoff extends React.Component {
 	              								[
 	              									this.state.selectedIndex == 1 && "invalidate" ||
 	              									this.state.selectedIndex == 2 && "api" ||
-	              									this.state.selectedIndex == 3 && "callBack"
+	              									this.state.selectedIndex == 3 && "callBack" ||
+	              									this.state.selectedIndex == 4 && "notDial" ||
+	              									this.state.selectedIndex == 5 && "difficult" 
 	              								]: {
 	              									dateEnd: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
 	              									dateStart: this.props.state.distribution[
 			              								this.state.selectedIndex == 1 && "invalidate" ||
 			              								this.state.selectedIndex == 2 && "api" ||
-			              								this.state.selectedIndex == 3 && "callBack"
+			              								this.state.selectedIndex == 3 && "callBack" ||
+			              								this.state.selectedIndex == 4 && "notDial" ||
+			              								this.state.selectedIndex == 5 && "difficult" 
 			              							].dateStart,
 	              									type: 6
 	              								}
@@ -279,7 +331,7 @@ export default class Tinkoff extends React.Component {
 	              				]
 		              		}
 		              		{
-		              			(this.state.selectedIndex == 1 || this.state.selectedIndex == 2 || this.state.selectedIndex == 3) &&
+		              			[1,2,3,4,5].indexOf(this.state.selectedIndex) != -1 &&
 		              			<SelectField
 		              				floatingLabelText = "Период"
 		              				value = {
@@ -287,7 +339,9 @@ export default class Tinkoff extends React.Component {
 		              					this.props.state.distribution[
 		              						this.state.selectedIndex == 1 && "invalidate" ||
 		              						this.state.selectedIndex == 2 && "api" ||
-		              						this.state.selectedIndex == 3 && "callBack"
+		              						this.state.selectedIndex == 3 && "callBack" ||
+		              						this.state.selectedIndex == 4 && "notDial" ||
+		              						this.state.selectedIndex == 5 && "difficult" 
 		              					].type
 		              				}
 		              				style = {{
@@ -298,7 +352,9 @@ export default class Tinkoff extends React.Component {
 		              						[
 		              							this.state.selectedIndex == 1 && "invalidate" ||
 			              						this.state.selectedIndex == 2 && "api" ||
-			              						this.state.selectedIndex == 3 && "callBack"
+			              						this.state.selectedIndex == 3 && "callBack" ||
+			              						this.state.selectedIndex == 4 && "notDial" ||
+			              						this.state.selectedIndex == 5 && "difficult" 
 		              						]: {
 		              							type: data
 		              						}
@@ -351,6 +407,10 @@ export default class Tinkoff extends React.Component {
 	              	this.state.selectedIndex == 2 &&
 	              	<TableHeaderColumn>Коментарий</TableHeaderColumn>
 	              }
+	              {
+	              	this.state.selectedIndex == 3 && 
+	              	<TableHeaderColumn>Дата и Время</TableHeaderColumn>
+	              }
               	<TableHeaderColumn>{this.state.selectedIndex != 2 ? "Действия" : "Статус обработки"}</TableHeaderColumn>
 	            </TableRow>
 	          </TableHeader>
@@ -363,10 +423,12 @@ export default class Tinkoff extends React.Component {
 	          	{
 	          		this.props.state.companies && this.props.state.companies.length > 0 && this.props.state.companies.map((company, key) => (
 		              (
-		              	(this.state.selectedIndex == 0 && (company.type_id == 10 || company.type_id == 9)) || 
+		              	(this.state.selectedIndex == 0 && [9, 35].indexOf(company.type_id) > -1) || 
 		              	(this.state.selectedIndex == 1 && company.type_id == 14) || 
 		              	(this.state.selectedIndex == 2 && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(company.type_id) > -1) ||
-		              	(this.state.selectedIndex == 3 && company.type_id == 23)
+		              	(this.state.selectedIndex == 3 && company.type_id == 23) ||
+		              	(this.state.selectedIndex == 4 && company.type_id == 36) ||
+		              	(this.state.selectedIndex == 5 && company.type_id == 37)
 		              ) &&
 		              <TableRow key = {key}>
 		                <TableRowColumn>{company.company_phone || "–"}</TableRowColumn>
@@ -380,33 +442,59 @@ export default class Tinkoff extends React.Component {
 		                	this.state.selectedIndex == 2 &&
 		                	<TableRowColumn style={{whiteSpace: "normal"}}>{company.company_comment || "–"}</TableRowColumn>
 		                }
+		                {
+		                	this.state.selectedIndex == 3 &&
+		                	<TableRowColumn>{company.company_date_call_back || "–"}</TableRowColumn>
+		                }
 		                { 
 		                	<TableRowColumn>
 		                		{
-		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 1 || this.state.selectedIndex == 3) &&
+		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
 				                	<IconButton
 				                		title="Оформить заявку"
-				                		onClick = {this.companyCheck.bind(this, company.company_id, company.company_organization_name)}
+				                		onClick = {this.companyCheck.bind(this, company.company_id, company.company_organization_name, 0)}
 				                	>
 				                		<Check color = "#a4c639"/>
 				                	</IconButton>
 		                		}
 		                		{
-		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 1) && 
+		                			[0,1,4,5].indexOf(this.state.selectedIndex) > -1 && 
 		                			<IconButton
 		                				title="Перезвонить"
-				                		onClick = {this.changeType.bind(this, company.company_id, 23)}
+				                		onClick = {this.companyCheck.bind(this, company.company_id, company.company_organization_name, 1)}
 				                	>
 				                		<Phone color = "#EF6C00"/>
 				                	</IconButton>
 		                		}
 		                		{
-		                			(this.state.selectedIndex == 0 || this.state.selectedIndex == 3) &&
+		                			[0,1,4,5].indexOf(this.state.selectedIndex) > -1 && 
+		                			<IconButton
+		                				title={company.type_id == 35 ? "Нет связи" : "Переместить в конец рабочего списка"}
+				                		onClick = {this.changeType.bind(this, company.company_id, company.type_id == 35 ? 36 : 35)}
+				                	>
+				                		{
+				                			company.type_id == 35 ?
+				                			<CallEnd color = "#C51162"/> :
+				                			<History color = "#283593"/>
+				                		}
+				                	</IconButton>
+		                		}
+		                		{
+		                			[0,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
 				                	<IconButton
 				                		title="Не интересно"
 				                		onClick = {this.changeType.bind(this, company.company_id, 14)}
 				                	>
 				                		<DeleteForever color = "#E53935"/>
+				                	</IconButton>
+		                		}
+		                		{
+		                			[0,1,3,4].indexOf(this.state.selectedIndex) > -1 &&
+				                	<IconButton
+				                		title="Сложный клиент"
+				                		onClick = {this.changeType.bind(this, company.company_id, 37)}
+				                	>
+				                		<SadFace color = "#607D8B"/>
 				                	</IconButton>
 		                		}
 		                		{
@@ -448,7 +536,12 @@ export default class Tinkoff extends React.Component {
 	          </TableBody>
         </Table>
         <Dialog
-          title={"Оформление заявки – " + this.state.companyOrganization}
+          title={
+          	this.state.dialogType == 0 ? 
+          		`Оформление заявки – ${this.state.companyOrganization}` : 
+          		this.state.dialogType == 1 && 
+          			`Выбор даты и времени – ${this.state.companyOrganization}`
+          }
           actions={[
 			      <FlatButton
 			        label="Отменить"
@@ -458,23 +551,55 @@ export default class Tinkoff extends React.Component {
 			      <FlatButton
 			        label="Отправить"
 			        primary
-			        onClick={this.sendToApi}
+			        onClick={
+			        	this.state.dialogType == 0 ? 
+			        		this.sendToApi : 
+			        		this.changeType.bind(this, this.state.companyID, 23, [this.state.dateCallBack, this.state.timeCallBack])
+			        }
 			      />,
 			    ]}
           modal={false}
           open={this.state.dialog}
           onRequestClose={this.closeDialog}
         >
-          <TextField
-			      floatingLabelText="Коментарий к заявке"
-			      multiLine={true}
-			      fullWidth={true}
-			      rows={5}
-			      rowsMax={10}
-			     	onChange = {(event, text) => {
-			     		this.comment(text)
-			     	}}
-			    />
+        	{
+        		this.state.dialogType == 0 ?
+		          <TextField
+					      floatingLabelText="Коментарий к заявке"
+					      multiLine={true}
+					      fullWidth={true}
+					      rows={5}
+					      rowsMax={10}
+					     	onChange = {(event, text) => {
+					     		this.comment(text)
+					     	}}
+			    		/> :
+			    		this.state.dialogType == 1 &&
+			    			<div>
+				    			<DatePicker 
+				    				floatingLabelText="Выбор даты"
+				    				minDate={new Date()}
+				    				defaultDate={new Date()}
+				    				onChange = {(eny, date) => {
+							     		this.setState({
+							     			dateCallBack: date
+							     		});
+							     	}}
+				    			/>
+				    			<TimePicker
+							      hintText="Выбор времени"
+							      defaultTime={new Date()}
+							      onChange = {(event, date) => {
+							      	this.setState({
+							      		timeCallBack: date
+							      	});
+							      }}
+							    />
+							    <div style = {{fontSize: "12px"}}>
+							    		<Info style={{verticalAlign: "middle", width: "25px", color: "#e8a521"}}/> Время и дата не должны быть меньше текущих даты и времени
+							    </div>
+			    			</div>
+        	}
         </Dialog>
 			</Paper>
 		</div> ||

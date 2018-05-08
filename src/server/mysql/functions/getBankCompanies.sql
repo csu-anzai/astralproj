@@ -5,7 +5,7 @@ BEGIN
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE responce, companiesArray, company JSON;
 	DECLARE done, connectionValid TINYINT(1);
-	DECLARE companiesCursor CURSOR FOR SELECT company_json, company_id FROM bank_cities_time_priority_companies_view WHERE bank_id = bankID AND date(company_date_create) = date(now()) AND time_id = timeID AND user_id IS NULL LIMIT rows;
+	DECLARE companiesCursor CURSOR FOR SELECT company_json, company_id FROM (SELECT company_json, company_id FROM bank_cities_time_priority_companies_view WHERE type_id = 10 AND old_type_id = 36 AND weekday(company_date_update) = weekday(now()) AND time_id = timeID AND bank_id = bankID ORDER BY company_date_create DESC) dialing_companies UNION SELECT company_json, company_id FROM bank_cities_time_priority_companies_view WHERE bank_id = bankID AND date(company_date_create) = date(now()) AND time_id = timeID AND user_id IS NULL AND type_id = 10 AND (old_type_id IS NULL OR old_type_id != 36) LIMIT rows;
 	DECLARE userCompaniesCursor CURSOR FOR SELECT company_json FROM companies WHERE bank_id = bankID AND user_id = userID AND date(company_date_create) = date(now()) AND type_id != 9;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET connectionValid = checkConnection(connectionHash);
@@ -14,7 +14,7 @@ BEGIN
 	IF connectionValid
 		THEN BEGIN
 			SET companiesArray = JSON_ARRAY();
-			UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id = 9;
+			UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35);
 			SET done = 0;
 			OPEN companiesCursor;
 				companiesLoop: LOOP
@@ -22,8 +22,9 @@ BEGIN
 					IF done 
 						THEN LEAVE companiesLoop;
 					END IF;
-					SET companiesArray = JSON_MERGE(companiesArray, company);
 					UPDATE companies SET user_id = userID, type_id = 9 WHERE company_id = companyID;
+					SELECT company_json INTO company FROM companies WHERE company_id = companyID;
+					SET companiesArray = JSON_MERGE(companiesArray, company);
 					ITERATE companiesLoop;
 				END LOOP;
 			CLOSE companiesCursor;

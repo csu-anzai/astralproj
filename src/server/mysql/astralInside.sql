@@ -37,6 +37,7 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 ,`user_id` int(11)
 ,`company_date_create` varchar(19)
 ,`type_id` int(11)
+,`old_type_id` int(11)
 ,`company_date_update` varchar(19)
 ,`company_discount` int(11)
 ,`company_discount_percent` tinyint(1)
@@ -187,7 +188,12 @@ CREATE TABLE `companies` (
   `file_id` int(11) DEFAULT NULL,
   `company_comment` text COLLATE utf8_bin,
   `company_api_request_id` varchar(128) COLLATE utf8_bin DEFAULT NULL,
-  `company_application_id` varchar(128) COLLATE utf8_bin DEFAULT NULL
+  `company_application_id` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `company_date_call_back` varchar(19) COLLATE utf8_bin DEFAULT NULL,
+  `company_region_code` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `company_house_block` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `company_apartment` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `old_type_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
@@ -266,7 +272,8 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
     'company_doc_street_name', NEW.company_doc_street_name,
     'company_doc_gifter', NEW.company_doc_gifter,
     'company_doc_code', NEW.company_doc_code,
-    'company_doc_flat', NEW.company_doc_flat
+    'company_doc_flat', NEW.company_doc_flat,
+    "company_date_call_back", NEW.company_date_call_back
   );
 END
 $$
@@ -277,8 +284,12 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
   SET NEW.company_json = JSON_SET(NEW.company_json,
     "$.type_id", NEW.type_id,
     "$.company_date_update", NEW.company_date_update,
-    "$.company_comment", NEW.company_comment
+    "$.company_comment", NEW.company_comment,
+    "$.company_date_call_back", NEW.company_date_call_back
   );
+  IF NEW.type_id != OLD.type_id 
+    THEN SET NEW.old_type_id = OLD.type_id;
+  END IF;
 END
 $$
 DELIMITER ;
@@ -506,6 +517,16 @@ CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGI
               "dateStart", DATE(NOW()),
               "dateEnd", DATE(NOW()),
               "type", 0
+            ),
+            "notDial", JSON_OBJECT(
+              "dateStart", DATE(NOW()),
+              "dateEnd", DATE(NOW()),
+              "type", 0
+            ),
+            "difficult", JSON_OBJECT(
+              "dateStart", DATE(NOW()),
+              "dateEnd", DATE(NOW()),
+              "type", 0
             )
           )
         );
@@ -528,7 +549,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
       SET typeToView = JSON_EXTRACT(NEW.state_json, "$.statistic.typeToView");
       SET period = JSON_EXTRACT(NEW.state_json, "$.statistic.period");
       CASE typeToView
-        WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32));
+        WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
         WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(17, 24, 31, 32));
         WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(15));
         WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(16, 25, 26, 27, 28, 29, 30));
@@ -536,8 +557,8 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(14));
         WHEN 6 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9));
         WHEN 7 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32));
-        WHEN 8 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13, 14));
-        WHEN 9 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32));
+        WHEN 8 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13, 14, 23, 35, 36, 37));
+        WHEN 9 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
         WHEN 10 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(23));
         WHEN 11 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(24));
         WHEN 12 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(25));
@@ -550,7 +571,10 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         WHEN 19 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(32));
         WHEN 20 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(17));
         WHEN 21 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(16));
-        ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32));
+        WHEN 22 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(35));
+        WHEN 23 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(36));
+        WHEN 24 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(37));
+        ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
       END CASE;
       SET types = JSON_EXTRACT(NEW.state_json, "$.statistic.types");
       CASE period
@@ -582,6 +606,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         END;
         WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.statistic.dataDateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
         WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dataDateStart", DATE(NOW()), "$.statistic.dataDateEnd", DATE(NOW()));
+        WHEN 6 THEN BEGIN END;
       END CASE;
     END;
   END IF;
@@ -589,7 +614,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
     THEN BEGIN
       SET type = JSON_EXTRACT(NEW.state_json, "$.download.type");
       CASE type
-        WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 10, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32));
+        WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 10, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
         WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(17, 24, 31, 32));
         WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(15));
         WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(16, 25, 26, 27, 28, 29, 30));
@@ -597,8 +622,8 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(14));
         WHEN 6 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(9));
         WHEN 7 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32));
-        WHEN 8 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(13, 14));
-        WHEN 9 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32));
+        WHEN 8 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(13, 14, 23, 35, 36, 37));
+        WHEN 9 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
         WHEN 10 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(10));
         WHEN 11 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(23));
         WHEN 12 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(24));
@@ -612,7 +637,10 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         WHEN 20 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(32));
         WHEN 21 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(17));
         WHEN 22 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(16));
-        ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 10, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32));
+        WHEN 23 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(35));
+        WHEN 24 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(36));
+        WHEN 25 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(37));
+        ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.download.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 10, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
       END CASE;
     END;
   END IF;
@@ -625,7 +653,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.invalidate.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.invalidate.dateEnd", DATE(NOW()));
         WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.invalidate.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.invalidate.dateEnd", DATE(NOW()));
         WHEN 4 THEN BEGIN 
-          SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 14 AND bank_id = bankID ORDER BY company_date_update LIMIT 1;
+          SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 14 AND bank_id = bankID ORDER BY company_date_create LIMIT 1;
           IF firstDate IS NULL
             THEN SET firstDate = DATE(NOW());
           END IF;
@@ -643,7 +671,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.callBack.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.callBack.dateEnd", DATE(NOW()));
         WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.callBack.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.callBack.dateEnd", DATE(NOW()));
         WHEN 4 THEN BEGIN 
-          SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 23 AND bank_id = bankID ORDER BY company_date_update LIMIT 1;
+          SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 23 AND bank_id = bankID ORDER BY company_date_create LIMIT 1;
           IF firstDate IS NULL
             THEN SET firstDate = DATE(NOW());
           END IF;
@@ -661,7 +689,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.api.dateEnd", DATE(NOW()));
         WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.api.dateEnd", DATE(NOW()));
         WHEN 4 THEN BEGIN 
-          SELECT company_date_create INTO firstDate FROM companies WHERE type_id IN (15, 16, 17) AND bank_id = bankID ORDER BY company_date_update LIMIT 1;
+          SELECT company_date_create INTO firstDate FROM companies WHERE type_id IN (15, 16, 17) AND bank_id = bankID ORDER BY company_date_create LIMIT 1;
           IF firstDate IS NULL
             THEN SET firstDate = DATE(NOW());
           END IF;
@@ -671,6 +699,42 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
         WHEN 6 THEN BEGIN
         END;
         ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(NOW()), "$.distribution.api.dateEnd", DATE(NOW()));
+      END CASE;
+      SET type = JSON_EXTRACT(NEW.state_json, "$.distribution.notDial.type");
+      CASE type
+        WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(NOW()), "$.distribution.notDial.dateEnd", DATE(NOW()));
+        WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.notDial.dateEnd", DATE(NOW()));
+        WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.notDial.dateEnd", DATE(NOW()));
+        WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.notDial.dateEnd", DATE(NOW()));
+        WHEN 4 THEN BEGIN 
+          SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 36 AND bank_id = bankID ORDER BY company_date_create LIMIT 1;
+          IF firstDate IS NULL
+            THEN SET firstDate = DATE(NOW());
+          END IF;
+          SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(firstDate), "$.distribution.notDial.dateEnd", DATE(NOW()));
+        END;
+        WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.distribution.notDial.dateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
+        WHEN 6 THEN BEGIN
+        END;
+        ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(NOW()), "$.distribution.notDial.dateEnd", DATE(NOW()));
+      END CASE;
+      SET type = JSON_EXTRACT(NEW.state_json, "$.distribution.difficult.type");
+      CASE type
+        WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(NOW()), "$.distribution.difficult.dateEnd", DATE(NOW()));
+        WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.difficult.dateEnd", DATE(NOW()));
+        WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.difficult.dateEnd", DATE(NOW()));
+        WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.difficult.dateEnd", DATE(NOW()));
+        WHEN 4 THEN BEGIN 
+          SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 37 AND bank_id = bankID ORDER BY company_date_create LIMIT 1;
+          IF firstDate IS NULL
+            THEN SET firstDate = DATE(NOW());
+          END IF;
+          SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(firstDate), "$.distribution.difficult.dateEnd", DATE(NOW()));
+        END;
+        WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.distribution.difficult.dateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
+        WHEN 6 THEN BEGIN
+        END;
+        ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(NOW()), "$.distribution.difficult.dateEnd", DATE(NOW()));
       END CASE;
     END;
   END IF;
@@ -794,12 +858,17 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (18, 'bank_user'),
 (23, 'call_back'),
 (7, 'deposit'),
+(37, 'difficult'),
 (21, 'file_created'),
 (22, 'file_process'),
 (20, 'file_reservation'),
 (10, 'free'),
 (4, 'get'),
 (14, 'invalidate'),
+(33, 'no_answer'),
+(36, 'not_dial_all'),
+(35, 'not_dial_user'),
+(34, 'not_realized'),
 (5, 'post'),
 (6, 'purchase'),
 (9, 'reservation'),
@@ -892,7 +961,7 @@ CREATE TABLE `users_connections_view` (
 );
 DROP TABLE IF EXISTS `bank_cities_time_priority_companies_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_cities_time_priority_companies_view`  AS  select `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`priority` AS `priority`,`r`.`region_name` AS `region_name`,`ci`.`city_name` AS `city_name`,`c`.`company_id` AS `company_id`,`c`.`user_id` AS `user_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`type_id` AS `type_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_discount` AS `company_discount`,`c`.`company_discount_percent` AS `company_discount_percent`,`c`.`company_ogrn` AS `company_ogrn`,`c`.`company_ogrn_date` AS `company_ogrn_date`,`c`.`company_person_name` AS `company_person_name`,`c`.`company_person_surname` AS `company_person_surname`,`c`.`company_person_patronymic` AS `company_person_patronymic`,`c`.`company_person_birthday` AS `company_person_birthday`,`c`.`company_person_birthplace` AS `company_person_birthplace`,`c`.`company_inn` AS `company_inn`,`c`.`company_address` AS `company_address`,`c`.`company_doc_number` AS `company_doc_number`,`c`.`company_doc_date` AS `company_doc_date`,`c`.`company_organization_name` AS `company_organization_name`,`c`.`company_organization_code` AS `company_organization_code`,`c`.`company_phone` AS `company_phone`,`c`.`company_email` AS `company_email`,`c`.`company_okved_code` AS `company_okved_code`,`c`.`company_okved_name` AS `company_okved_name`,`c`.`purchase_id` AS `purchase_id`,`c`.`template_id` AS `template_id`,`c`.`company_kpp` AS `company_kpp`,`c`.`company_index` AS `company_index`,`c`.`company_house` AS `company_house`,`c`.`company_region_type` AS `company_region_type`,`c`.`company_region_name` AS `company_region_name`,`c`.`company_area_type` AS `company_area_type`,`c`.`company_area_name` AS `company_area_name`,`c`.`company_locality_type` AS `company_locality_type`,`c`.`company_locality_name` AS `company_locality_name`,`c`.`company_street_type` AS `company_street_type`,`c`.`company_street_name` AS `company_street_name`,`c`.`company_innfl` AS `company_innfl`,`c`.`company_person_position_type` AS `company_person_position_type`,`c`.`company_person_position_name` AS `company_person_position_name`,`c`.`company_doc_name` AS `company_doc_name`,`c`.`company_doc_gifter` AS `company_doc_gifter`,`c`.`company_doc_code` AS `company_doc_code`,`c`.`company_doc_house` AS `company_doc_house`,`c`.`company_doc_flat` AS `company_doc_flat`,`c`.`company_doc_region_type` AS `company_doc_region_type`,`c`.`company_doc_region_name` AS `company_doc_region_name`,`c`.`company_doc_area_type` AS `company_doc_area_type`,`c`.`company_doc_area_name` AS `company_doc_area_name`,`c`.`company_doc_locality_type` AS `company_doc_locality_type`,`c`.`company_doc_locality_name` AS `company_doc_locality_name`,`c`.`company_doc_street_type` AS `company_doc_street_type`,`c`.`company_doc_street_name` AS `company_doc_street_name`,`c`.`city_id` AS `city_id`,`c`.`region_id` AS `region_id`,`c`.`bank_id` AS `bank_id`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`company_person_sex` AS `company_person_sex`,`c`.`company_ip_type` AS `company_ip_type`,`c`.`company_json` AS `company_json` from ((((`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`companies` `c` on(((`c`.`city_id` = `b`.`city_id`) and (`c`.`bank_id` = `b`.`bank_id`) and (json_unquote(json_extract(`c`.`company_json`,'$.company_id')) = `c`.`company_id`)))) join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) join `astralinside`.`cities` `ci` on((`ci`.`city_id` = `b`.`city_id`))) join `astralinside`.`regions` `r` on((`r`.`region_id` = `c`.`region_id`))) order by `b`.`time_id`,`b`.`priority` ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_cities_time_priority_companies_view`  AS  select `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`priority` AS `priority`,`r`.`region_name` AS `region_name`,`ci`.`city_name` AS `city_name`,`c`.`company_id` AS `company_id`,`c`.`user_id` AS `user_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`type_id` AS `type_id`,`c`.`old_type_id` AS `old_type_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_discount` AS `company_discount`,`c`.`company_discount_percent` AS `company_discount_percent`,`c`.`company_ogrn` AS `company_ogrn`,`c`.`company_ogrn_date` AS `company_ogrn_date`,`c`.`company_person_name` AS `company_person_name`,`c`.`company_person_surname` AS `company_person_surname`,`c`.`company_person_patronymic` AS `company_person_patronymic`,`c`.`company_person_birthday` AS `company_person_birthday`,`c`.`company_person_birthplace` AS `company_person_birthplace`,`c`.`company_inn` AS `company_inn`,`c`.`company_address` AS `company_address`,`c`.`company_doc_number` AS `company_doc_number`,`c`.`company_doc_date` AS `company_doc_date`,`c`.`company_organization_name` AS `company_organization_name`,`c`.`company_organization_code` AS `company_organization_code`,`c`.`company_phone` AS `company_phone`,`c`.`company_email` AS `company_email`,`c`.`company_okved_code` AS `company_okved_code`,`c`.`company_okved_name` AS `company_okved_name`,`c`.`purchase_id` AS `purchase_id`,`c`.`template_id` AS `template_id`,`c`.`company_kpp` AS `company_kpp`,`c`.`company_index` AS `company_index`,`c`.`company_house` AS `company_house`,`c`.`company_region_type` AS `company_region_type`,`c`.`company_region_name` AS `company_region_name`,`c`.`company_area_type` AS `company_area_type`,`c`.`company_area_name` AS `company_area_name`,`c`.`company_locality_type` AS `company_locality_type`,`c`.`company_locality_name` AS `company_locality_name`,`c`.`company_street_type` AS `company_street_type`,`c`.`company_street_name` AS `company_street_name`,`c`.`company_innfl` AS `company_innfl`,`c`.`company_person_position_type` AS `company_person_position_type`,`c`.`company_person_position_name` AS `company_person_position_name`,`c`.`company_doc_name` AS `company_doc_name`,`c`.`company_doc_gifter` AS `company_doc_gifter`,`c`.`company_doc_code` AS `company_doc_code`,`c`.`company_doc_house` AS `company_doc_house`,`c`.`company_doc_flat` AS `company_doc_flat`,`c`.`company_doc_region_type` AS `company_doc_region_type`,`c`.`company_doc_region_name` AS `company_doc_region_name`,`c`.`company_doc_area_type` AS `company_doc_area_type`,`c`.`company_doc_area_name` AS `company_doc_area_name`,`c`.`company_doc_locality_type` AS `company_doc_locality_type`,`c`.`company_doc_locality_name` AS `company_doc_locality_name`,`c`.`company_doc_street_type` AS `company_doc_street_type`,`c`.`company_doc_street_name` AS `company_doc_street_name`,`c`.`city_id` AS `city_id`,`c`.`region_id` AS `region_id`,`c`.`bank_id` AS `bank_id`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`company_person_sex` AS `company_person_sex`,`c`.`company_ip_type` AS `company_ip_type`,`c`.`company_json` AS `company_json` from ((((`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`companies` `c` on(((`c`.`city_id` = `b`.`city_id`) and (`c`.`bank_id` = `b`.`bank_id`) and (json_unquote(json_extract(`c`.`company_json`,'$.company_id')) = `c`.`company_id`)))) join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) join `astralinside`.`cities` `ci` on((`ci`.`city_id` = `b`.`city_id`))) join `astralinside`.`regions` `r` on((`r`.`region_id` = `c`.`region_id`))) order by `b`.`time_id`,`b`.`priority` ;
 DROP TABLE IF EXISTS `bank_times_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `astralinside`.`bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`astralinside`.`bank_cities_time_priority` `b` join `astralinside`.`times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
@@ -953,7 +1022,8 @@ ALTER TABLE `companies`
   ADD KEY `city_id` (`city_id`),
   ADD KEY `region_id` (`region_id`),
   ADD KEY `bank_id` (`bank_id`),
-  ADD KEY `file_id` (`file_id`);
+  ADD KEY `file_id` (`file_id`),
+  ADD KEY `old_type_id` (`old_type_id`);
 
 ALTER TABLE `connections`
   ADD PRIMARY KEY (`connection_id`),
@@ -1100,7 +1170,8 @@ ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_5` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_6` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_7` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `companies_ibfk_8` FOREIGN KEY (`file_id`) REFERENCES `files` (`file_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `companies_ibfk_8` FOREIGN KEY (`file_id`) REFERENCES `files` (`file_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `companies_ibfk_9` FOREIGN KEY (`old_type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `connections`
   ADD CONSTRAINT `connections_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
