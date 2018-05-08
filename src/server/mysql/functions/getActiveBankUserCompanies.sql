@@ -15,6 +15,10 @@ BEGIN
 			SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateStart"));
 			SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateEnd"));
 			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, dateStart, dateEnd));
+			SET types = JSON_ARRAY(36);
+			SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.notDial.dateStart"));
+			SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.notDial.dateEnd"));
+			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(NULL, types, dateStart, dateEnd));
 			SET types = JSON_ARRAY(23);
 			SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.callBack.dateStart"));
 			SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.callBack.dateEnd"));
@@ -24,8 +28,6 @@ BEGIN
 			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, NULL, NULL));
 			SET types = JSON_ARRAY(35);
 			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(userID, types, NULL, NULL));
-			SET types = JSON_ARRAY(36);
-			SET responce = JSON_MERGE(responce, getFilterCompaniesForUser(NULL, types, NULL, NULL));
 		END;
 	END IF;
 	RETURN responce;

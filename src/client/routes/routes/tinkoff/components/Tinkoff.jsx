@@ -224,7 +224,7 @@ export default class Tinkoff extends React.Component {
 	            enableSelectAll={false}
 	          >
 	            <TableRow>
-	              <TableHeaderColumn colSpan={this.state.selectedIndex == 2 ? "9" : "8"}>
+	              <TableHeaderColumn colSpan={[2,3].indexOf(this.state.selectedIndex) != -1 ? "9" : "8"}>
 	              	<div>
 		              	<span style = {{
 		              		display: "inline-block",
@@ -242,11 +242,13 @@ export default class Tinkoff extends React.Component {
 		              			this.props.state.distribution[
               						this.state.selectedIndex == 1 && "invalidate" ||
               						this.state.selectedIndex == 2 && "api" ||
-              						this.state.selectedIndex == 3 && "callBack"
+              						this.state.selectedIndex == 3 && "callBack" ||
+              						this.state.selectedIndex == 4 && "notDial" 
               					] && this.props.state.distribution[
               						this.state.selectedIndex == 1 && "invalidate" ||
               						this.state.selectedIndex == 2 && "api" ||
-              						this.state.selectedIndex == 3 && "callBack"
+              						this.state.selectedIndex == 3 && "callBack" ||
+              						this.state.selectedIndex == 4 && "notDial" 
               					].type == 6 && [
 	              					<DatePicker 
 	              						key = {0}
@@ -256,7 +258,8 @@ export default class Tinkoff extends React.Component {
 	              							new Date(this.props.state.distribution[
 	              								this.state.selectedIndex == 1 && "invalidate" ||
 	              								this.state.selectedIndex == 2 && "api" ||
-	              								this.state.selectedIndex == 3 && "callBack"
+	              								this.state.selectedIndex == 3 && "callBack" ||
+	              								this.state.selectedIndex == 4 && "notDial" 
 	              							].dateStart)
 	              						}
 	              						onChange = {(eny, date) => {
@@ -264,13 +267,15 @@ export default class Tinkoff extends React.Component {
 	              								[
 	              									this.state.selectedIndex == 1 && "invalidate" ||
 	              									this.state.selectedIndex == 2 && "api" ||
-	              									this.state.selectedIndex == 3 && "callBack"
+	              									this.state.selectedIndex == 3 && "callBack" ||
+	              									this.state.selectedIndex == 4 && "notDial" 
 	              								]: {
 	              									dateStart: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
 	              									dateEnd: this.props.state.distribution[
 			              								this.state.selectedIndex == 1 && "invalidate" ||
 			              								this.state.selectedIndex == 2 && "api" ||
-			              								this.state.selectedIndex == 3 && "callBack"
+			              								this.state.selectedIndex == 3 && "callBack" ||
+			              								this.state.selectedIndex == 4 && "notDial" 
 			              							].dateEnd,
 	              									type: 6
 	              								}
@@ -285,7 +290,8 @@ export default class Tinkoff extends React.Component {
 	              							new Date(this.props.state.distribution[
 	              								this.state.selectedIndex == 1 && "invalidate" ||
 	              								this.state.selectedIndex == 2 && "api" ||
-	              								this.state.selectedIndex == 3 && "callBack"
+	              								this.state.selectedIndex == 3 && "callBack" ||
+	              								this.state.selectedIndex == 4 && "notDial" 
 	              							].dateEnd)
 	              						}
 	              						onChange = {(eny, date) => {
@@ -293,13 +299,15 @@ export default class Tinkoff extends React.Component {
 	              								[
 	              									this.state.selectedIndex == 1 && "invalidate" ||
 	              									this.state.selectedIndex == 2 && "api" ||
-	              									this.state.selectedIndex == 3 && "callBack"
+	              									this.state.selectedIndex == 3 && "callBack" ||
+	              									this.state.selectedIndex == 4 && "notDial" 
 	              								]: {
 	              									dateEnd: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
 	              									dateStart: this.props.state.distribution[
 			              								this.state.selectedIndex == 1 && "invalidate" ||
 			              								this.state.selectedIndex == 2 && "api" ||
-			              								this.state.selectedIndex == 3 && "callBack"
+			              								this.state.selectedIndex == 3 && "callBack" ||
+			              								this.state.selectedIndex == 4 && "notDial" 
 			              							].dateStart,
 	              									type: 6
 	              								}
@@ -309,7 +317,7 @@ export default class Tinkoff extends React.Component {
 	              				]
 		              		}
 		              		{
-		              			(this.state.selectedIndex == 1 || this.state.selectedIndex == 2 || this.state.selectedIndex == 3) &&
+		              			[1,2,3,4].indexOf(this.state.selectedIndex) != -1 &&
 		              			<SelectField
 		              				floatingLabelText = "Период"
 		              				value = {
@@ -317,7 +325,8 @@ export default class Tinkoff extends React.Component {
 		              					this.props.state.distribution[
 		              						this.state.selectedIndex == 1 && "invalidate" ||
 		              						this.state.selectedIndex == 2 && "api" ||
-		              						this.state.selectedIndex == 3 && "callBack"
+		              						this.state.selectedIndex == 3 && "callBack" ||
+		              						this.state.selectedIndex == 4 && "notDial" 
 		              					].type
 		              				}
 		              				style = {{
@@ -328,7 +337,8 @@ export default class Tinkoff extends React.Component {
 		              						[
 		              							this.state.selectedIndex == 1 && "invalidate" ||
 			              						this.state.selectedIndex == 2 && "api" ||
-			              						this.state.selectedIndex == 3 && "callBack"
+			              						this.state.selectedIndex == 3 && "callBack" ||
+			              						this.state.selectedIndex == 4 && "notDial" 
 		              						]: {
 		              							type: data
 		              						}
