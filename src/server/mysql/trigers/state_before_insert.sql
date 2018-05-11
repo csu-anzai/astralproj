@@ -50,30 +50,44 @@ BEGIN
 			IF typeID = 1 OR typeID = 18
 				THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution", 
 					JSON_OBJECT(
+						"work", JSON_OBJECT(
+							"rowStart", 1,
+							"rowLimit", 10
+						),
 						"invalidate", JSON_OBJECT(
 							"dateStart", DATE(NOW()),
 							"dateEnd", DATE(NOW()),
-							"type", 0
+							"type", 0,
+							"rowStart", 1,
+							"rowLimit", 10
 						),
 						"callBack", JSON_OBJECT(
 							"dateStart", DATE(NOW()),
 							"dateEnd", DATE(NOW()),
-							"type", 0
+							"type", 0,
+							"rowStart", 1,
+							"rowLimit", 10
 						),
 						"api", JSON_OBJECT(
 							"dateStart", DATE(NOW()),
 							"dateEnd", DATE(NOW()),
-							"type", 0
+							"type", 0,
+							"rowStart", 1,
+							"rowLimit", 10
 						),
 						"notDial", JSON_OBJECT(
 							"dateStart", DATE(NOW()),
 							"dateEnd", DATE(NOW()),
-							"type", 0
+							"type", 0,
+							"rowStart", 1,
+							"rowLimit", 10
 						),
 						"difficult", JSON_OBJECT(
 							"dateStart", DATE(NOW()),
 							"dateEnd", DATE(NOW()),
-							"type", 0
+							"type", 0,
+							"rowStart", 1,
+							"rowLimit", 10
 						)
 					)
 				);
