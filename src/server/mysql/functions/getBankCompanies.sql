@@ -1,51 +1,24 @@
 BEGIN
-	DECLARE companyID, companiesLength INT(11);
-	DECLARE userID INT(11) DEFAULT (SELECT user_id FROM users_connections_view WHERE connection_hash = connectionHash);
-	DECLARE timeID INT(11) DEFAULT getTimeID(1);
+	DECLARE companyID, companiesLength, connectionID, userID, timeID INT(11);
+	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
-	DECLARE responce, companiesArray, company JSON;
-	DECLARE done, connectionValid TINYINT(1);
-	DECLARE companiesCursor CURSOR FOR SELECT company_json, company_id FROM (SELECT company_json, company_id FROM bank_cities_time_priority_companies_view WHERE type_id = 10 AND old_type_id = 36 AND weekday(company_date_update) = weekday(now()) AND time_id = timeID AND bank_id = bankID ORDER BY company_date_create DESC) dialing_companies UNION SELECT company_json, company_id FROM bank_cities_time_priority_companies_view WHERE bank_id = bankID AND date(company_date_create) = date(now()) AND time_id = timeID AND user_id IS NULL AND type_id = 10 AND (old_type_id IS NULL OR old_type_id != 36) LIMIT rows;
-	DECLARE userCompaniesCursor CURSOR FOR SELECT company_json FROM companies WHERE bank_id = bankID AND user_id = userID AND date(company_date_create) = date(now()) AND type_id != 9;
-	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+	DECLARE responce, companiesArray JSON;
 	SET connectionValid = checkConnection(connectionHash);
-	SELECT connection_api_id INTO connectionApiID FROM users_connections_view WHERE connection_hash = connectionHash;
+	SELECT connection_api_id, connection_id, user_id INTO connectionApiID, connectionID, userID FROM users_connections_view WHERE connection_hash = connectionHash;
 	SET responce = JSON_ARRAY();
 	IF connectionValid
 		THEN BEGIN
-			SET companiesArray = JSON_ARRAY();
+			SET timeID = getTimeID(bankID);
 			UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35);
-			SET done = 0;
-			OPEN companiesCursor;
-				companiesLoop: LOOP
-					FETCH companiesCursor INTO company, companyID;
-					IF done 
-						THEN LEAVE companiesLoop;
-					END IF;
-					UPDATE companies SET user_id = userID, type_id = 9 WHERE company_id = companyID;
-					SELECT company_json INTO company FROM companies WHERE company_id = companyID;
-					SET companiesArray = JSON_MERGE(companiesArray, company);
-					ITERATE companiesLoop;
-				END LOOP;
-			CLOSE companiesCursor;
-			SET done = 0;
+			UPDATE companies c JOIN (SELECT company_id FROM (SELECT company_id FROM bank_cities_time_priority_companies_view WHERE type_id = 10 AND old_type_id = 36 AND weekday(company_date_update) = weekday(now()) AND time_id = timeID AND bank_id = bankID ORDER BY company_date_create DESC) dialing_companies UNION SELECT company_id FROM bank_cities_time_priority_companies_view WHERE bank_id = bankID AND date(company_date_create) = date(now()) AND time_id = timeID AND user_id IS NULL AND type_id = 10 AND (old_type_id IS NULL OR old_type_id != 36) LIMIT rows) bc on bc.company_id = c.company_id SET c.user_id = userID, c.type_id = 9;
+			SET companiesArray = getActiveBankUserCompanies(connectionID);
 			SET companiesLength = JSON_LENGTH(companiesArray);
-			OPEN userCompaniesCursor;
-				userCompaniesLoop: LOOP
-					FETCH userCompaniesCursor INTO company;
-					IF done 
-						THEN LEAVE userCompaniesLoop;
-					END IF;
-					SET companiesArray = JSON_MERGE(companiesArray, company);
-					ITERATE userCompaniesLoop;
-				END LOOP;
-			CLOSE userCompaniesCursor;
 			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
 				"type", "merge",
 				"data", JSON_OBJECT(
 					"companies", companiesArray,
 					"messageType", IF(companiesLength > 0, "success", "error"),
-					"message", IF(companiesLength > 0, CONCAT("Загружено компаний для сортировки: ", companiesLength), CONCAT("Не удалось найти ни одной компании для сортировки на данное время"))
+					"message", IF(companiesLength > 0, CONCAT("Загружено компаний: ", companiesLength), CONCAT("Не удалось найти ни одной компании для сортировки на данное время"))
 				)
 			))));
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
