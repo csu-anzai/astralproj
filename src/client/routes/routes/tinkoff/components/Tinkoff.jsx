@@ -11,6 +11,8 @@ import Phone from 'material-ui/svg-icons/communication/phone';
 import CallEnd from 'material-ui/svg-icons/communication/call-end';
 import SadFace from 'material-ui/svg-icons/social/sentiment-dissatisfied';
 import History from 'material-ui/svg-icons/action/history';
+import ArrowBack from 'material-ui/svg-icons/navigation/arrow-back';
+import ArrowForward from 'material-ui/svg-icons/navigation/arrow-forward';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
 import IconButton from 'material-ui/IconButton';
@@ -35,6 +37,22 @@ const datePickerStyle = {
 	display: "inline-block",
 	verticalAlign: "bottom"
 };
+const categories = [
+	"work",
+	"invalidate",
+	"api",
+	"callBack",
+	"notDial",
+	"difficult"
+];
+const categoriesTypes = [
+	[35,9],
+	[14],
+	[15,16,17,24,25,26,27,28,29,30,31,32],
+	[23],
+	[36],
+	[37]
+];
 export default class Tinkoff extends React.Component {
 	constructor(props){
 		super(props);
@@ -183,6 +201,11 @@ export default class Tinkoff extends React.Component {
 	}
 	render(){
 		localStorage.removeItem("hash");
+		console.log((this.props.state.distribution && this.props.state.distribution[
+			categories[this.state.selectedIndex]
+		].rowLimit) + (this.props.state.distribution && this.props.state.distribution[
+			categories[this.state.selectedIndex]
+		].rowStart));
 		return (this.state.hash == "/" || this.state.hash == "/tinkoff" || !this.state.hash) && <div>
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
@@ -246,17 +269,9 @@ export default class Tinkoff extends React.Component {
 		              		{
 		              			this.props.state.distribution && 
 		              			this.props.state.distribution[
-              						this.state.selectedIndex == 1 && "invalidate" ||
-              						this.state.selectedIndex == 2 && "api" ||
-              						this.state.selectedIndex == 3 && "callBack" ||
-              						this.state.selectedIndex == 4 && "notDial" ||
-              						this.state.selectedIndex == 5 && "difficult" 
+              						categories[this.state.selectedIndex]
               					] && this.props.state.distribution[
-              						this.state.selectedIndex == 1 && "invalidate" ||
-              						this.state.selectedIndex == 2 && "api" ||
-              						this.state.selectedIndex == 3 && "callBack" ||
-              						this.state.selectedIndex == 4 && "notDial" ||
-              						this.state.selectedIndex == 5 && "difficult" 
+              						categories[this.state.selectedIndex]
               					].type == 6 && [
 	              					<DatePicker 
 	              						key = {0}
@@ -264,31 +279,25 @@ export default class Tinkoff extends React.Component {
 	              						style = {datePickerStyle}
 	              						defaultDate = {
 	              							new Date(this.props.state.distribution[
-	              								this.state.selectedIndex == 1 && "invalidate" ||
-	              								this.state.selectedIndex == 2 && "api" ||
-	              								this.state.selectedIndex == 3 && "callBack" ||
-	              								this.state.selectedIndex == 4 && "notDial" ||
-	              								this.state.selectedIndex == 5 && "difficult" 
+	              								categories[this.state.selectedIndex]
 	              							].dateStart)
 	              						}
 	              						onChange = {(eny, date) => {
 	              							this.setDistributionFilter({
 	              								[
-	              									this.state.selectedIndex == 1 && "invalidate" ||
-	              									this.state.selectedIndex == 2 && "api" ||
-	              									this.state.selectedIndex == 3 && "callBack" ||
-	              									this.state.selectedIndex == 4 && "notDial" ||
-	              									this.state.selectedIndex == 5 && "difficult" 
+	              									categories[this.state.selectedIndex]
 	              								]: {
 	              									dateStart: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
-	              									dateEnd: this.props.state.distribution[
-			              								this.state.selectedIndex == 1 && "invalidate" ||
-			              								this.state.selectedIndex == 2 && "api" ||
-			              								this.state.selectedIndex == 3 && "callBack" ||
-			              								this.state.selectedIndex == 4 && "notDial" ||
-			              								this.state.selectedIndex == 5 && "difficult" 
+	              									dateEnd: this.props.state.distribution && this.props.state.distribution[
+			              								categories[this.state.selectedIndex]
 			              							].dateEnd,
-	              									type: 6
+	              									type: 6,
+	              									rowLimit: this.props.state.distribution && this.props.state.distribution[
+					              						categories[this.state.selectedIndex]
+					              					].rowLimit,
+					              					rowStart: this.props.state.distribution && this.props.state.distribution[
+					              						categories[this.state.selectedIndex]
+					              					].rowStart
 	              								}
 	              							});
 	              						}}
@@ -299,31 +308,25 @@ export default class Tinkoff extends React.Component {
 	              						style = {datePickerStyle}
 	              						defaultDate = {
 	              							new Date(this.props.state.distribution[
-	              								this.state.selectedIndex == 1 && "invalidate" ||
-	              								this.state.selectedIndex == 2 && "api" ||
-	              								this.state.selectedIndex == 3 && "callBack" ||
-	              								this.state.selectedIndex == 4 && "notDial" ||
-	              								this.state.selectedIndex == 5 && "difficult" 
+	              								categories[this.state.selectedIndex]
 	              							].dateEnd)
 	              						}
 	              						onChange = {(eny, date) => {
 	              							this.setDistributionFilter({
 	              								[
-	              									this.state.selectedIndex == 1 && "invalidate" ||
-	              									this.state.selectedIndex == 2 && "api" ||
-	              									this.state.selectedIndex == 3 && "callBack" ||
-	              									this.state.selectedIndex == 4 && "notDial" ||
-	              									this.state.selectedIndex == 5 && "difficult" 
+	              									categories[this.state.selectedIndex]
 	              								]: {
 	              									dateEnd: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
-	              									dateStart: this.props.state.distribution[
-			              								this.state.selectedIndex == 1 && "invalidate" ||
-			              								this.state.selectedIndex == 2 && "api" ||
-			              								this.state.selectedIndex == 3 && "callBack" ||
-			              								this.state.selectedIndex == 4 && "notDial" ||
-			              								this.state.selectedIndex == 5 && "difficult" 
+	              									dateStart: this.props.state.distribution && this.props.state.distribution[
+			              								categories[this.state.selectedIndex]
 			              							].dateStart,
-	              									type: 6
+	              									type: 6,
+	              									rowLimit: this.props.state.distribution && this.props.state.distribution[
+					              						categories[this.state.selectedIndex]
+					              					].rowLimit,
+					              					rowStart: this.props.state.distribution && this.props.state.distribution[
+					              						categories[this.state.selectedIndex]
+					              					].rowStart
 	              								}
 	              							});
 	              						}}
@@ -337,11 +340,7 @@ export default class Tinkoff extends React.Component {
 		              				value = {
 		              					this.props.state.distribution && 
 		              					this.props.state.distribution[
-		              						this.state.selectedIndex == 1 && "invalidate" ||
-		              						this.state.selectedIndex == 2 && "api" ||
-		              						this.state.selectedIndex == 3 && "callBack" ||
-		              						this.state.selectedIndex == 4 && "notDial" ||
-		              						this.state.selectedIndex == 5 && "difficult" 
+		              						categories[this.state.selectedIndex]
 		              					].type
 		              				}
 		              				style = {{
@@ -350,13 +349,15 @@ export default class Tinkoff extends React.Component {
 		              				onChange = {(e, k, data) => {
 		              					this.setDistributionFilter({
 		              						[
-		              							this.state.selectedIndex == 1 && "invalidate" ||
-			              						this.state.selectedIndex == 2 && "api" ||
-			              						this.state.selectedIndex == 3 && "callBack" ||
-			              						this.state.selectedIndex == 4 && "notDial" ||
-			              						this.state.selectedIndex == 5 && "difficult" 
+		              							categories[this.state.selectedIndex]
 		              						]: {
-		              							type: data
+		              							type: data,
+		              							rowLimit: this.props.state.distribution && this.props.state.distribution[
+				              						categories[this.state.selectedIndex]
+				              					].rowLimit,
+				              					rowStart: this.props.state.distribution[
+				              						categories[this.state.selectedIndex]
+				              					].rowStart
 		              						}
 		              					});
 		              				}}
@@ -533,6 +534,112 @@ export default class Tinkoff extends React.Component {
 	          			</TableRowColumn>
 	          		</TableRow>
 	          	}
+	          	<TableRow>
+	            	<TableHeaderColumn colSpan={[2,3].indexOf(this.state.selectedIndex) != -1 ? "9" : "8"} style = {{textAlign: "right"}}>
+	            		<IconButton 
+	            			title = "сюда"
+	            			disabled = {
+	            				this.props.state.distribution &&
+	            				this.props.state.distribution[
+        								categories[this.state.selectedIndex]
+        							] &&
+	            				!(this.props.state.distribution[
+        								categories[this.state.selectedIndex]
+        							].rowStart == 1) ? false : true
+	            			}
+	            			onClick = {
+	            				this.setDistributionFilter.bind(this, {
+	            					[categories[this.state.selectedIndex]]: {
+	            						rowLimit: this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit,
+	              					rowStart: (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowStart) - (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit) - 1 >= 0 ? (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowStart) - (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit) - 1 || 1 : 1,
+	              					type: this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].type,
+	              					dateStart: this.props.state.distribution && this.props.state.distribution[
+            								categories[this.state.selectedIndex]
+            							].dateStart,
+            							dateEnd: this.props.state.distribution && this.props.state.distribution[
+            								categories[this.state.selectedIndex]
+            							].dateEnd
+	            					}
+	            				})
+	            			}
+            			>
+            				<ArrowBack/>
+	            		</IconButton>
+	            		<div style = {{
+	            			display: "inline-block",
+	            			lineHeight: "48px",
+	            			verticalAlign: "top"
+	            		}}>
+	            			{
+	            				this.props.state.distribution && 
+	            				this.props.state.companies &&
+	            				`с ${this.props.state.distribution[
+            						categories[this.state.selectedIndex]
+            					].rowStart} по ${this.props.state.distribution[
+            						categories[this.state.selectedIndex]
+            					].rowStart + this.props.state.companies.filter(c => categoriesTypes.findIndex(ct => ct.indexOf(c.type_id) > -1) == this.state.selectedIndex).length - 1 }`
+	            			}
+	            		</div>
+	            		<IconButton 
+	            			title = "туда"
+	            			disabled = {
+	            				(this.props.state.companies &&
+	            				this.props.state.distribution &&
+	            				this.props.state.distribution[
+        								categories[this.state.selectedIndex]
+        							] &&
+	            				this.props.state.companies.length > 0 &&
+	            				this.props.state.companies.filter(company => (
+	            					this.state.selectedIndex == 0 ? [9, 35] :
+	            					this.state.selectedIndex == 1 ? [14] :
+	            					this.state.selectedIndex == 2 ? [15,16,17,24,25,26,27,28,29,30,31,32] :
+	            					this.state.selectedIndex == 3 ? [23] :
+	            					this.state.selectedIndex == 4 ? [36] :
+	            					this.state.selectedIndex == 5 && [37]
+            					).indexOf(company.type_id) != -1).length == this.props.state.distribution[
+        								categories[this.state.selectedIndex]
+        							].rowLimit) ? false : true
+	            			}
+	            			onClick = {()=>{
+	            				this.setDistributionFilter.call(this, {
+	            					[categories[this.state.selectedIndex]]: {
+	            						rowLimit: this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit,
+	              					rowStart: (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowStart) + (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit) + 1,
+	              					type: this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].type,
+	              					dateStart: this.props.state.distribution && this.props.state.distribution[
+            								categories[this.state.selectedIndex]
+            							].dateStart,
+            							dateEnd: this.props.state.distribution && this.props.state.distribution[
+            								categories[this.state.selectedIndex]
+            							].dateEnd
+	            					}
+	            				});
+	            			}}
+            			>
+            				<ArrowForward/>
+	            		</IconButton>
+	            	</TableHeaderColumn>
+	            </TableRow>
 	          </TableBody>
         </Table>
         <Dialog
