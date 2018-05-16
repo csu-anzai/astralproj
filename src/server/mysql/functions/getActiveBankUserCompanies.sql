@@ -29,7 +29,7 @@ BEGIN
 					) AND user_id = userID
 				) OR 
 				(type_id = 36 AND DATE(company_date_create) BETWEEN DATE(@dialDateStart) AND DATE(@dialDateEnd))
-			ORDER BY type_id
+			ORDER BY type_id ASC, company_date_registration DESC
 		) c
 		WHERE 
 			(apiCount BETWEEN @apiRowStart AND @apiRowLimit AND type_id IN (15,16,17,24,25,26,27,28,29,30,31,32)) OR
