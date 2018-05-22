@@ -55,7 +55,7 @@ BEGIN
 					@apiDateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.api.dateEnd")),
 					@invalidateRowStart = JSON_EXTRACT(distributionFilters, "$.invalidate.rowStart"),
 					@invalidateRowLimit = JSON_EXTRACT(distributionFilters, "$.invalidate.rowLimit"),
-					@invalidateDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateEnd")),
+					@invalidateDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateStart")),
 					@invalidateDateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateEnd")),
 					@difficultRowStart = JSON_EXTRACT(distributionFilters, "$.difficult.rowStart"),
 					@difficultRowLimit = JSON_EXTRACT(distributionFilters, "$.difficult.rowLimit"),
