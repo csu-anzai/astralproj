@@ -9,6 +9,7 @@ import CheckCircle from 'material-ui/svg-icons/action/check-circle';
 import Info from 'material-ui/svg-icons/action/info';
 import Phone from 'material-ui/svg-icons/communication/phone';
 import CallEnd from 'material-ui/svg-icons/communication/call-end';
+import DialerSip from 'material-ui/svg-icons/communication/dialer-sip';
 import SadFace from 'material-ui/svg-icons/social/sentiment-dissatisfied';
 import History from 'material-ui/svg-icons/action/history';
 import ArrowBack from 'material-ui/svg-icons/navigation/arrow-back';
@@ -199,13 +200,22 @@ export default class Tinkoff extends React.Component {
 			comment: text
 		});
 	}
+	call(company_id){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "callRequest",
+				priority: true,
+				values: [
+					this.props.state.connectionHash,
+					company_id
+				]
+			}
+		})
+	}
 	render(){
 		localStorage.removeItem("hash");
-		console.log((this.props.state.distribution && this.props.state.distribution[
-			categories[this.state.selectedIndex]
-		].rowLimit) + (this.props.state.distribution && this.props.state.distribution[
-			categories[this.state.selectedIndex]
-		].rowStart));
 		return (this.state.hash == "/" || this.state.hash == "/tinkoff" || !this.state.hash) && <div>
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
@@ -449,6 +459,15 @@ export default class Tinkoff extends React.Component {
 		                }
 		                { 
 		                	<TableRowColumn>
+		                		{
+		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
+			                		<IconButton
+				                		title="Позвонить"
+				                		onClick = {this.call.bind(this, company.company_id)}
+				                	>
+				                		<DialerSip color = "#00BFA5"/>
+				                	</IconButton>
+		                		}
 		                		{
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
 				                	<IconButton

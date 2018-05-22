@@ -945,6 +945,48 @@ BEGIN
     RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `callRequest` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11)) RETURNS JSON NO SQL
+BEGIN
+  DECLARE userID INT(11);
+  DECLARE connectionValid TINYINT(1);
+  DECLARE userSip VARCHAR(20);
+  DECLARE companyPhone VARCHAR(120);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SET connectionValid = checkConnection(connectionHash);
+  IF connectionValid
+    THEN BEGIN
+      SELECT user_sip INTO userSip FROM users_connections_view WHERE connection_hash = connectionHash;
+      SELECT company_phone INTO companyPhone FROM companies WHERE company_id = companyID;
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "type", "sendToZadarma",
+        "data", JSON_OBJECT(
+          "options", JSON_OBJECT(
+            "from", userSip,
+            "to", companyPhone
+          ),
+          "method", "request/callback",
+          "type", "GET"
+        )
+      ));
+    END;
+    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToSocket",
+      "data", JSON_OBJECT(
+        "socketID", connectionApiID,
+        "data", JSON_ARRAY(JSON_OBJECT(
+          "type", "merge",
+          "data", JSON_OBJECT(
+            "auth", 0,
+            "loginMessage", "Требуется ручной вход в систему"
+          )
+        ))
+      )
+    ));
+  END IF;
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `checkConnection` (`connectionHash` VARCHAR(32) CHARSET utf8) RETURNS TINYINT(1) NO SQL
 BEGIN
   DECLARE userID, userAuth INT(11);
@@ -1226,7 +1268,7 @@ BEGIN
           @apiDateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.api.dateEnd")),
           @invalidateRowStart = JSON_EXTRACT(distributionFilters, "$.invalidate.rowStart"),
           @invalidateRowLimit = JSON_EXTRACT(distributionFilters, "$.invalidate.rowLimit"),
-          @invalidateDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateEnd")),
+          @invalidateDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateStart")),
           @invalidateDateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.invalidate.dateEnd")),
           @difficultRowStart = JSON_EXTRACT(distributionFilters, "$.difficult.rowStart"),
           @difficultRowLimit = JSON_EXTRACT(distributionFilters, "$.difficult.rowLimit"),
@@ -3111,7 +3153,8 @@ CREATE TABLE `users` (
   `user_online` tinyint(1) NOT NULL DEFAULT '0',
   `user_hash` varchar(32) COLLATE utf8_bin DEFAULT NULL,
   `user_connections_count` int(11) NOT NULL DEFAULT '0',
-  `bank_id` int(11) DEFAULT NULL
+  `bank_id` int(11) DEFAULT NULL,
+  `user_sip` varchar(20) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
@@ -3176,6 +3219,7 @@ CREATE TABLE `users_connections_view` (
 ,`user_online` tinyint(1)
 ,`user_email` varchar(512)
 ,`bank_id` int(11)
+,`user_sip` varchar(20)
 );
 DROP TABLE IF EXISTS `bank_cities_time_priority_companies_view`;
 
@@ -3200,7 +3244,7 @@ DROP TABLE IF EXISTS `template_columns_view`;
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `template_columns_view`  AS  select `t`.`template_id` AS `template_id`,`tc`.`template_column_id` AS `template_column_id`,`c`.`column_id` AS `column_id`,`c`.`column_name` AS `column_name`,`c`.`column_price` AS `column_price`,`c`.`column_blocked` AS `column_blocked`,`tc`.`template_column_letters` AS `template_column_letters`,`tc`.`template_column_name` AS `template_column_name`,`ts`.`type_id` AS `type_id`,`ts`.`type_name` AS `type_name`,`tc`.`template_column_duplicate` AS `template_column_duplicate` from (((`template_columns` `tc` join `templates` `t` on((`t`.`template_id` = `tc`.`template_id`))) join `columns` `c` on((`c`.`column_id` = `tc`.`column_id`))) join `types` `ts` on((`ts`.`type_id` = `t`.`type_id`))) ;
 DROP TABLE IF EXISTS `users_connections_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`c`.`connection_api_id` AS `connection_api_id`,`c`.`type_id` AS `connection_type_id`,`tt`.`type_name` AS `connection_type_name`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online`,`u`.`user_email` AS `user_email`,`u`.`bank_id` AS `bank_id` from (((`connections` `c` left join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `types` `t` on((`t`.`type_id` = `u`.`type_id`))) left join `types` `tt` on((`tt`.`type_id` = `c`.`type_id`))) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`c`.`connection_api_id` AS `connection_api_id`,`c`.`type_id` AS `connection_type_id`,`tt`.`type_name` AS `connection_type_name`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online`,`u`.`user_email` AS `user_email`,`u`.`bank_id` AS `bank_id`,`u`.`user_sip` AS `user_sip` from (((`connections` `c` left join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `types` `t` on((`t`.`type_id` = `u`.`type_id`))) left join `types` `tt` on((`tt`.`type_id` = `c`.`type_id`))) ;
 
 
 ALTER TABLE `banks`
