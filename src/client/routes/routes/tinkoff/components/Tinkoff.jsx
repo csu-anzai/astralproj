@@ -25,6 +25,8 @@ import DatePicker from 'material-ui/DatePicker';
 import TimePicker from 'material-ui/TimePicker';
 import Dialog from 'material-ui/Dialog';
 import TextField from 'material-ui/TextField';
+import CircularProgress from 'material-ui/CircularProgress';
+import Badge from 'material-ui/Badge';
 import {
   Table,
   TableBody,
@@ -441,7 +443,7 @@ export default class Tinkoff extends React.Component {
 		              	(this.state.selectedIndex == 4 && company.type_id == 36) ||
 		              	(this.state.selectedIndex == 5 && company.type_id == 37)
 		              ) &&
-		              <TableRow key = {key}>
+		              <TableRow key = {key} style = {{background: company.call_type == 33 ? "#E8F5E9" : "inherit"}}>
 		                <TableRowColumn>{company.company_phone || "–"}</TableRowColumn>
 		                <TableRowColumn>{company.template_id == 1 ? "ИП" : "ООО"}</TableRowColumn>
 		                <TableRowColumn>{company.company_inn || "–"}</TableRowColumn>
@@ -461,11 +463,20 @@ export default class Tinkoff extends React.Component {
 		                	<TableRowColumn>
 		                		{
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
+		                			company.call_type == 33 ?
+				                	<CircularProgress 
+				                		size = {24} 
+				                		color = "#00BFA5" 
+				                		title = "Соединение" 
+				                		style = {{
+				                			padding: "0 12px"
+				                		}}
+				                	/> :
 			                		<IconButton
-				                		title="Позвонить"
 				                		onClick = {this.call.bind(this, company.company_id)}
+				                		title = "Позвонить"
 				                	>
-				                		<DialerSip color = "#00BFA5"/>
+		                				<DialerSip color = "#00BFA5"/>
 				                	</IconButton>
 		                		}
 		                		{
