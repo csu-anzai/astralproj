@@ -72,7 +72,8 @@ BEGIN
 				"$.company_id",
 				"$.template_id",
 				"$.company_comment",
-				"$.company_date_call_back"
+				"$.company_date_call_back",
+				"$.call_type"
 			);
 			SET companies = JSON_MERGE(companies, company);
 			ITERATE companiesLoop;

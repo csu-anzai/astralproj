@@ -12,6 +12,12 @@ BEGIN
 			SELECT company_phone INTO companyPhone FROM companies WHERE company_id = companyID;
 			INSERT INTO calls (user_id, company_id, type_id) VALUES (userID, companyID, 33);
 			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+				"type", "mergeDeep",
+				"data", JSON_OBJECT(
+					"message", CONCAT("соединение с ", companyPhone, " имеет статус: ожидание ответа от АТС")
+				)
+			))));
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "sendToZadarma",
 				"data", JSON_OBJECT(
