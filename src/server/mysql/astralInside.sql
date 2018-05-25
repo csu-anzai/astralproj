@@ -293,7 +293,8 @@ BEGIN
         "$.company_id",
         "$.template_id",
         "$.company_comment",
-        "$.company_date_call_back"
+        "$.company_date_call_back",
+        "$.call_type"
       );
       SET companies = JSON_MERGE(companies, company);
       ITERATE companiesLoop;
@@ -947,7 +948,7 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `callRequest` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11)) RETURNS JSON NO SQL
 BEGIN
-  DECLARE userID INT(11);
+  DECLARE userID, callID INT(11);
   DECLARE connectionValid TINYINT(1);
   DECLARE userSip VARCHAR(20);
   DECLARE companyPhone VARCHAR(120);
@@ -956,8 +957,16 @@ BEGIN
   SET connectionValid = checkConnection(connectionHash);
   IF connectionValid
     THEN BEGIN
-      SELECT user_sip INTO userSip FROM users_connections_view WHERE connection_hash = connectionHash;
+      SELECT user_sip, user_id INTO userSip, userID FROM users_connections_view WHERE connection_hash = connectionHash;
       SELECT company_phone INTO companyPhone FROM companies WHERE company_id = companyID;
+      INSERT INTO calls (user_id, company_id, type_id) VALUES (userID, companyID, 33);
+      SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+      SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+        "type", "mergeDeep",
+        "data", JSON_OBJECT(
+          "message", CONCAT("соединение с ", companyPhone, " имеет статус: ожидание ответа от АТС")
+        )
+      ))));
       SET responce = JSON_MERGE(responce, JSON_OBJECT(
         "type", "sendToZadarma",
         "data", JSON_OBJECT(
@@ -1979,6 +1988,26 @@ BEGIN
   RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `setCallStatus` (`userSip` VARCHAR(20) CHARSET utf8, `companyPhone` VARCHAR(120) CHARSET utf8, `typeID` INT) RETURNS JSON NO SQL
+BEGIN
+  DECLARE callID, userID INT(11);
+  DECLARE typeTranslate VARCHAR(128);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SELECT call_id, user_id INTO callID, userID FROM active_calls_view WHERE company_phone = companyPhone AND user_sip = userSip ORDER BY call_id DESC LIMIT 1;
+  SELECT tr.translate_to INTO typeTranslate FROM translates tr JOIN types t ON t.type_id = typeID AND t.type_name = tr.translate_from;
+  UPDATE calls SET type_id = typeID WHERE call_id = callID;
+  SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+  SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+    "type", "mergeDeep",
+    "data", JSON_OBJECT(
+      "message", CONCAT("соединение с ", companyPhone, " имеет статус: ", typeTranslate),
+      "messageType", IF(typeID NOT IN (40, 41, 42), "success", "error")
+    )
+  ))));
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `setCheckResponce` (`companies` JSON) RETURNS JSON NO SQL
 BEGIN
   DECLARE interator, companiesLength, userID, typeID, companyID, usersLength INT(11);
@@ -2254,6 +2283,14 @@ BEGIN
 END$$
 
 DELIMITER ;
+CREATE TABLE `active_calls_view` (
+`call_id` int(11)
+,`type_id` int(11)
+,`user_sip` varchar(20)
+,`company_phone` varchar(359)
+,`user_id` int(11)
+,`company_id` int(11)
+);
 
 CREATE TABLE `banks` (
   `bank_id` int(11) NOT NULL,
@@ -2347,6 +2384,42 @@ CREATE TABLE `bank_times_view` (
 ,`bank_id` int(11)
 );
 
+CREATE TABLE `calls` (
+  `call_id` int(11) NOT NULL,
+  `type_id` int(11) DEFAULT NULL,
+  `company_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `call_date_create` varchar(19) COLLATE utf8_bin NOT NULL,
+  `call_date_start` varchar(19) COLLATE utf8_bin DEFAULT NULL,
+  `call_date_end` varchar(19) COLLATE utf8_bin DEFAULT NULL,
+  `file_id` int(11) DEFAULT NULL,
+  `call_api_id_1` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `call_end_by_user` tinyint(1) DEFAULT NULL,
+  `call_api_id_2` varchar(128) COLLATE utf8_bin DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+DELIMITER $$
+CREATE TRIGGER `calls_after_insert` AFTER INSERT ON `calls` FOR EACH ROW BEGIN
+  IF NEW.company_id IS NOT NULL
+    THEN UPDATE companies SET call_id = NEW.call_id WHERE company_id = NEW.company_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `calls_after_update` AFTER UPDATE ON `calls` FOR EACH ROW BEGIN
+  IF NEW.company_id IS NOT NULL
+    THEN UPDATE companies SET call_id = NEW.call_id WHERE company_id = NEW.company_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `calls_before_insert` BEFORE INSERT ON `calls` FOR EACH ROW BEGIN
+  SET NEW.call_date_create = NOW();
+END
+$$
+DELIMITER ;
+
 CREATE TABLE `cities` (
   `city_id` int(11) NOT NULL,
   `city_name` varchar(60) COLLATE utf8_bin NOT NULL
@@ -2439,7 +2512,8 @@ CREATE TABLE `companies` (
   `company_house_block` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `company_apartment` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `company_date_call_back` varchar(19) COLLATE utf8_bin DEFAULT NULL,
-  `old_type_id` int(11) DEFAULT NULL
+  `old_type_id` int(11) DEFAULT NULL,
+  `call_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
@@ -2526,12 +2600,19 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH ROW BEGIN
+  DECLARE callType INT(11);
+  IF NEW.call_id IS NOT NULL
+    THEN BEGIN
+      SELECT type_id INTO callType FROM calls WHERE call_id = NEW.call_id;
+    END;
+  END IF;
   SET NEW.company_date_update = NOW();
   SET NEW.company_json = JSON_SET(NEW.company_json,
     "$.type_id", NEW.type_id,
     "$.company_date_update", NEW.company_date_update,
     "$.company_comment", NEW.company_comment,
-    "$.company_date_call_back", NEW.company_date_call_back
+    "$.company_date_call_back", NEW.company_date_call_back,
+    "$.call_type", callType
   );
   IF NEW.type_id != OLD.type_id 
     THEN SET NEW.old_type_id = OLD.type_id;
@@ -3117,6 +3198,14 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (19, 'bank_supervisor'),
 (18, 'bank_user'),
 (23, 'call_back'),
+(39, 'call_during'),
+(41, 'call_end_client'),
+(40, 'call_end_sip'),
+(42, 'call_error'),
+(43, 'call_success'),
+(38, 'call_to_client'),
+(34, 'call_to_sip'),
+(33, 'call_waiting'),
 (7, 'deposit'),
 (37, 'difficult'),
 (21, 'file_created'),
@@ -3125,10 +3214,8 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (10, 'free'),
 (4, 'get'),
 (14, 'invalidate'),
-(33, 'no_answer'),
 (36, 'not_dial_all'),
 (35, 'not_dial_user'),
-(34, 'not_realized'),
 (5, 'post'),
 (6, 'purchase'),
 (9, 'reservation'),
@@ -3221,6 +3308,9 @@ CREATE TABLE `users_connections_view` (
 ,`bank_id` int(11)
 ,`user_sip` varchar(20)
 );
+DROP TABLE IF EXISTS `active_calls_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `active_calls_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`type_id` AS `type_id`,`u`.`user_sip` AS `user_sip`,substr(`co`.`company_phone`,2) AS `company_phone`,`u`.`user_id` AS `user_id`,`co`.`company_id` AS `company_id` from ((`calls` `c` join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) join `companies` `co` on((`co`.`company_id` = `c`.`company_id`))) where (`c`.`type_id` not in (40,41,42)) ;
 DROP TABLE IF EXISTS `bank_cities_time_priority_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bank_cities_time_priority_companies_view`  AS  select `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`priority` AS `priority`,`r`.`region_name` AS `region_name`,`ci`.`city_name` AS `city_name`,`c`.`company_id` AS `company_id`,`c`.`user_id` AS `user_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`type_id` AS `type_id`,`c`.`old_type_id` AS `old_type_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_discount` AS `company_discount`,`c`.`company_discount_percent` AS `company_discount_percent`,`c`.`company_ogrn` AS `company_ogrn`,`c`.`company_ogrn_date` AS `company_ogrn_date`,`c`.`company_person_name` AS `company_person_name`,`c`.`company_person_surname` AS `company_person_surname`,`c`.`company_person_patronymic` AS `company_person_patronymic`,`c`.`company_person_birthday` AS `company_person_birthday`,`c`.`company_person_birthplace` AS `company_person_birthplace`,`c`.`company_inn` AS `company_inn`,`c`.`company_address` AS `company_address`,`c`.`company_doc_number` AS `company_doc_number`,`c`.`company_doc_date` AS `company_doc_date`,`c`.`company_organization_name` AS `company_organization_name`,`c`.`company_organization_code` AS `company_organization_code`,`c`.`company_phone` AS `company_phone`,`c`.`company_email` AS `company_email`,`c`.`company_okved_code` AS `company_okved_code`,`c`.`company_okved_name` AS `company_okved_name`,`c`.`purchase_id` AS `purchase_id`,`c`.`template_id` AS `template_id`,`c`.`company_kpp` AS `company_kpp`,`c`.`company_index` AS `company_index`,`c`.`company_house` AS `company_house`,`c`.`company_region_type` AS `company_region_type`,`c`.`company_region_name` AS `company_region_name`,`c`.`company_area_type` AS `company_area_type`,`c`.`company_area_name` AS `company_area_name`,`c`.`company_locality_type` AS `company_locality_type`,`c`.`company_locality_name` AS `company_locality_name`,`c`.`company_street_type` AS `company_street_type`,`c`.`company_street_name` AS `company_street_name`,`c`.`company_innfl` AS `company_innfl`,`c`.`company_person_position_type` AS `company_person_position_type`,`c`.`company_person_position_name` AS `company_person_position_name`,`c`.`company_doc_name` AS `company_doc_name`,`c`.`company_doc_gifter` AS `company_doc_gifter`,`c`.`company_doc_code` AS `company_doc_code`,`c`.`company_doc_house` AS `company_doc_house`,`c`.`company_doc_flat` AS `company_doc_flat`,`c`.`company_doc_region_type` AS `company_doc_region_type`,`c`.`company_doc_region_name` AS `company_doc_region_name`,`c`.`company_doc_area_type` AS `company_doc_area_type`,`c`.`company_doc_area_name` AS `company_doc_area_name`,`c`.`company_doc_locality_type` AS `company_doc_locality_type`,`c`.`company_doc_locality_name` AS `company_doc_locality_name`,`c`.`company_doc_street_type` AS `company_doc_street_type`,`c`.`company_doc_street_name` AS `company_doc_street_name`,`c`.`city_id` AS `city_id`,`c`.`region_id` AS `region_id`,`c`.`bank_id` AS `bank_id`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`company_person_sex` AS `company_person_sex`,`c`.`company_ip_type` AS `company_ip_type`,`c`.`company_json` AS `company_json` from ((((`bank_cities_time_priority` `b` join `companies` `c` on(((`c`.`city_id` = `b`.`city_id`) and (`c`.`bank_id` = `b`.`bank_id`) and (json_unquote(json_extract(`c`.`company_json`,'$.company_id')) = `c`.`company_id`)))) join `times` `t` on((`t`.`time_id` = `b`.`time_id`))) join `cities` `ci` on((`ci`.`city_id` = `b`.`city_id`))) join `regions` `r` on((`r`.`region_id` = `c`.`region_id`))) order by `b`.`time_id`,`b`.`priority` ;
@@ -3261,6 +3351,13 @@ ALTER TABLE `bank_cities_time_priority`
   ADD KEY `time_id` (`time_id`),
   ADD KEY `city_id` (`city_id`);
 
+ALTER TABLE `calls`
+  ADD PRIMARY KEY (`call_id`),
+  ADD KEY `type_id` (`type_id`),
+  ADD KEY `company_id` (`company_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `file_id` (`file_id`);
+
 ALTER TABLE `cities`
   ADD PRIMARY KEY (`city_id`);
 
@@ -3285,7 +3382,8 @@ ALTER TABLE `companies`
   ADD KEY `region_id` (`region_id`),
   ADD KEY `bank_id` (`bank_id`),
   ADD KEY `file_id` (`file_id`),
-  ADD KEY `old_type_id` (`old_type_id`);
+  ADD KEY `old_type_id` (`old_type_id`),
+  ADD KEY `call_id` (`call_id`);
 
 ALTER TABLE `connections`
   ADD PRIMARY KEY (`connection_id`),
@@ -3361,6 +3459,9 @@ ALTER TABLE `bank_cities`
 ALTER TABLE `bank_cities_time_priority`
   MODIFY `bank_city_time_priority_id` int(11) NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `calls`
+  MODIFY `call_id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `cities`
   MODIFY `city_id` int(11) NOT NULL AUTO_INCREMENT;
 
@@ -3422,11 +3523,18 @@ ALTER TABLE `bank_cities_time_priority`
   ADD CONSTRAINT `bank_cities_time_priority_ibfk_2` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `bank_cities_time_priority_ibfk_3` FOREIGN KEY (`time_id`) REFERENCES `times` (`time_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE `calls`
+  ADD CONSTRAINT `calls_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `calls_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`company_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `calls_ibfk_3` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `calls_ibfk_4` FOREIGN KEY (`file_id`) REFERENCES `files` (`file_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
 ALTER TABLE `codes`
   ADD CONSTRAINT `codes_ibfk_1` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `companies_ibfk_10` FOREIGN KEY (`call_id`) REFERENCES `calls` (`call_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_3` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`purchase_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_4` FOREIGN KEY (`template_id`) REFERENCES `templates` (`template_id`) ON DELETE SET NULL ON UPDATE CASCADE,
