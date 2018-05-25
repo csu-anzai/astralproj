@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE userID INT(11);
+	DECLARE userID, callID INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE userSip VARCHAR(20);
 	DECLARE companyPhone VARCHAR(120);
@@ -8,8 +8,16 @@ BEGIN
 	SET connectionValid = checkConnection(connectionHash);
 	IF connectionValid
 		THEN BEGIN
-			SELECT user_sip INTO userSip FROM users_connections_view WHERE connection_hash = connectionHash;
+			SELECT user_sip, user_id INTO userSip, userID FROM users_connections_view WHERE connection_hash = connectionHash;
 			SELECT company_phone INTO companyPhone FROM companies WHERE company_id = companyID;
+			INSERT INTO calls (user_id, company_id, type_id) VALUES (userID, companyID, 33);
+			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+				"type", "mergeDeep",
+				"data", JSON_OBJECT(
+					"message", CONCAT("соединение с ", companyPhone, " имеет статус: ожидание ответа от АТС")
+				)
+			))));
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "sendToZadarma",
 				"data", JSON_OBJECT(

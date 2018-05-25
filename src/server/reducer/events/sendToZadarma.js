@@ -15,9 +15,24 @@ module.exports = modules => (resolve, reject, data) => {
 			}
 		};
 		request(options, (error, response, body) => {
-			error ? 
-				console.log(error) :
-				console.log(body);
+			if(error){
+				reject(error);
+			} else {
+				typeof body == "string" && (body = JSON.parse(body));
+				if(data.method == "request/callback"){
+					modules.reducer.dispatch({
+						type: "query",
+						data: {
+							query: "setCallStatus",
+							values: [
+								data.options.from,
+								data.options.to.replace("+", ""),
+								body.status == 'success' ? 43 : 42
+							]
+						}
+					}).then(resolve).catch(reject);
+				}
+			}
 		});
 	}
 }

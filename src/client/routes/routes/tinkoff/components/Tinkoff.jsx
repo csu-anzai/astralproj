@@ -14,6 +14,9 @@ import SadFace from 'material-ui/svg-icons/social/sentiment-dissatisfied';
 import History from 'material-ui/svg-icons/action/history';
 import ArrowBack from 'material-ui/svg-icons/navigation/arrow-back';
 import ArrowForward from 'material-ui/svg-icons/navigation/arrow-forward';
+import PhoneForwarded from 'material-ui/svg-icons/notification/phone-forwarded';
+import PhoneInTalk from 'material-ui/svg-icons/notification/phone-in-talk';
+import SettingsPhone from 'material-ui/svg-icons/action/settings-phone';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
 import IconButton from 'material-ui/IconButton';
@@ -25,6 +28,8 @@ import DatePicker from 'material-ui/DatePicker';
 import TimePicker from 'material-ui/TimePicker';
 import Dialog from 'material-ui/Dialog';
 import TextField from 'material-ui/TextField';
+import CircularProgress from 'material-ui/CircularProgress';
+import Badge from 'material-ui/Badge';
 import {
   Table,
   TableBody,
@@ -441,7 +446,7 @@ export default class Tinkoff extends React.Component {
 		              	(this.state.selectedIndex == 4 && company.type_id == 36) ||
 		              	(this.state.selectedIndex == 5 && company.type_id == 37)
 		              ) &&
-		              <TableRow key = {key}>
+		              <TableRow key = {key} style = {{background: [33,34,43,38,39].indexOf(company.call_type) > -1 ? "#E8F5E9" : "inherit"}}>
 		                <TableRowColumn>{company.company_phone || "–"}</TableRowColumn>
 		                <TableRowColumn>{company.template_id == 1 ? "ИП" : "ООО"}</TableRowColumn>
 		                <TableRowColumn>{company.company_inn || "–"}</TableRowColumn>
@@ -461,11 +466,36 @@ export default class Tinkoff extends React.Component {
 		                	<TableRowColumn>
 		                		{
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
+		                			company.call_type == 33 ?
+				                	<CircularProgress 
+				                		size = {24} 
+				                		color = "#00BFA5" 
+				                		title = "Соединение" 
+				                		style = {{
+				                			padding: "0 12px"
+				                		}}
+				                	/> :
 			                		<IconButton
-				                		title="Позвонить"
 				                		onClick = {this.call.bind(this, company.company_id)}
+				                		title = "Позвонить"
+				                		disabled = {[43,34,38,39].indexOf(company.call_type) == -1 ? false : true}
 				                	>
-				                		<DialerSip color = "#00BFA5"/>
+				                		{
+				                			[43,34].indexOf(company.call_type) > -1 &&
+		                					<SettingsPhone color = "#00BFA5"/>
+				                		}
+				                		{
+				                			company.call_type == 38 &&
+		                					<PhoneForwarded color = "#00BFA5"/>
+				                		}
+				                		{
+				                			company.call_type == 39 &&
+				                			<PhoneInTalk color = "#00BFA5"/>
+				                		}
+				                		{
+				                			[43,34,38,39].indexOf(company.call_type) == -1 &&
+		                					<DialerSip color = "#00BFA5"/>
+				                		}
 				                	</IconButton>
 		                		}
 		                		{
