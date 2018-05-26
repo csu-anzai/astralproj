@@ -89,6 +89,7 @@ BEGIN
 							EXECUTE mysqlPrepare;
 							DEALLOCATE PREPARE mysqlPrepare;
 							DELETE LOW_PRIORITY c from companies c, empty_companies_view ecv where c.company_id = ecv.company_id;
+							SET responce = JSON_MERGE(responce, checkInn(insertCompaniesCount, NULL));
 							SELECT count(*) INTO insertCompaniesCount FROM companies WHERE company_id > insertCompaniesCount;
 							UPDATE LOW_PRIORITY companies SET company_json = JSON_SET(company_json, "$.company_id", company_id) WHERE company_json ->> "$.company_id" = 0;
 							SET message = CONCAT(
