@@ -38,15 +38,17 @@ module.exports = modules => (resolve, reject, data) => {
 	}))).then(responce => {
 		let keys = [];
 		responce.forEach((item, key) => {
-			console.log(item.result);
 			item.result != "Success" && keys.push(key);
 		});
-		const companies = keys.map(key => data.companies[key].company_id);
-		companies.length > 0 && modules.reducer.dispatch({
+		const companies = keys.length > 0 ? keys.map(key => data.companies[key].company_id) : keys;
+		modules.reducer.dispatch({
 			type: "query",
 			data: {
 				query: "setDuplicates",
-				data: companies
+				values: [
+					data.user_id,
+					JSON.stringify(companies)
+				]
 			}
 		}).then(resolve).catch(reject);
 	}).catch(reject);

@@ -96,7 +96,8 @@ export default class Tinkoff extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					1,
-					this.state.limit
+					this.state.limit,
+					1
 				]
 			}
 		});
@@ -466,7 +467,7 @@ export default class Tinkoff extends React.Component {
 		                	<TableRowColumn>
 		                		{
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
-		                			company.call_type == 33 ?
+		                			(company.call_type == 33 ?
 				                	<CircularProgress 
 				                		size = {24} 
 				                		color = "#00BFA5" 
@@ -496,7 +497,7 @@ export default class Tinkoff extends React.Component {
 				                			[43,34,38,39].indexOf(company.call_type) == -1 &&
 		                					<DialerSip color = "#00BFA5"/>
 				                		}
-				                	</IconButton>
+				                	</IconButton>)
 		                		}
 		                		{
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
@@ -671,7 +672,7 @@ export default class Tinkoff extends React.Component {
 	              						categories[this.state.selectedIndex]
 	              					].rowStart) + (this.props.state.distribution && this.props.state.distribution[
 	              						categories[this.state.selectedIndex]
-	              					].rowLimit) + 1,
+	              					].rowLimit),
 	              					type: this.props.state.distribution && this.props.state.distribution[
 	              						categories[this.state.selectedIndex]
 	              					].type,

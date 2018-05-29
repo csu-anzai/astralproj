@@ -3,7 +3,7 @@ BEGIN
 	DECLARE companyInn VARCHAR(12);
 	DECLARE responce, company, companies JSON;
 	DECLARE done TINYINT(1);
-	DECLARE companiesCursor CURSOR FOR SELECT company_id, company_inn FROM companies WHERE IF(endCompanyID IS NOT NULL, company_id BETWEEN startCompanyID AND endCompanyID, company_id > startCompanyID);
+	DECLARE companiesCursor CURSOR FOR SELECT company_id, company_inn FROM companies WHERE user_id = userID AND type_id = 44;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET responce = JSON_ARRAY();
 	SET companies = JSON_ARRAY();
@@ -25,7 +25,8 @@ BEGIN
 		THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "checkDuplicates",
 			"data", JSON_OBJECT(
-				"companies", companies
+				"companies", companies,
+				"user_id", userID
 			)
 		));
 	END IF;
