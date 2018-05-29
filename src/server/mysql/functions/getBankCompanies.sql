@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE companyID, companiesLength, connectionID, userID, timeID INT(11);
+	DECLARE companyID, companiesLength, connectionID, userID, timeID, companiesCount INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE responce, companiesArray JSON;
@@ -9,7 +9,9 @@ BEGIN
 	IF connectionValid
 		THEN BEGIN
 			SET timeID = getTimeID(bankID);
-			UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35);
+			IF clearWorkList 
+				THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35);
+			END IF;
 			UPDATE 
 				companies c 
 				JOIN (
@@ -43,26 +45,23 @@ BEGIN
 					ORDER BY company_date_registration DESC)
 					LIMIT rows
 				) bc ON bc.company_id = c.company_id 
-			SET c.user_id = userID, c.type_id = 9;
-			SET companiesArray = getActiveBankUserCompanies(connectionID);
-			SET companiesLength = JSON_LENGTH(companiesArray);
-			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-				"type", "merge",
-				"data", JSON_OBJECT(
-					"companies", companiesArray,
-					"messageType", IF(companiesLength > 0, "success", "error"),
-					"message", IF(companiesLength > 0, CONCAT("Загружено компаний: ", companiesLength), CONCAT("Не удалось найти ни одной компании для сортировки на данное время"))
-				)
-			))));
-			SET responce = JSON_MERGE(responce, JSON_OBJECT(
-				"type", "procedure",
-				"data", JSON_OBJECT(
-					"query", "refreshBankSupervisors",
-					"values", JSON_ARRAY(
-						bankID
-					)
-				)
-			));
+			SET c.user_id = userID, c.type_id = 44;
+			SELECT COUNT(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 44;
+			IF companiesCount > 0
+				THEN SET responce = JSON_MERGE(responce, checkCompaniesInn(userID));
+				ELSE BEGIN 
+					SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+					SET responce = JSON_MERGE(responce, JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
+						JSON_OBJECT(
+							"type", "merge",
+							"data", JSON_OBJECT(
+								"message", "Не удалось найти ни одной компании для сортировки на данное время",
+								"messageType", "error"
+							)
+						)
+					))));
+				END;
+			END IF;
 		END;
 		ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToSocket",

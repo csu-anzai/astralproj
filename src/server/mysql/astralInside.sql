@@ -996,6 +996,42 @@ BEGIN
   RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `checkCompaniesInn` (`userID` INT(11)) RETURNS JSON NO SQL
+BEGIN
+  DECLARE companyID INT(11);
+  DECLARE companyInn VARCHAR(12);
+  DECLARE responce, company, companies JSON;
+  DECLARE done TINYINT(1);
+  DECLARE companiesCursor CURSOR FOR SELECT company_id, company_inn FROM companies WHERE user_id = userID AND type_id = 44;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SET responce = JSON_ARRAY();
+  SET companies = JSON_ARRAY();
+  OPEN companiesCursor;
+    companiesLoop: LOOP
+      FETCH companiesCursor INTO companyID, companyInn;
+      IF done
+        THEN LEAVE companiesLoop;
+      END IF;
+      SET company = JSON_OBJECT(
+        "company_id", companyID,
+        "company_inn", companyInn
+      );
+      SET companies = JSON_MERGE(companies, company);
+      ITERATE companiesLoop;
+    END LOOP;
+  CLOSE companiesCursor;
+  IF JSON_LENGTH(companies) > 0
+    THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "checkDuplicates",
+      "data", JSON_OBJECT(
+        "companies", companies,
+        "user_id", userID
+      )
+    ));
+  END IF;
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `checkConnection` (`connectionHash` VARCHAR(32) CHARSET utf8) RETURNS TINYINT(1) NO SQL
 BEGIN
   DECLARE userID, userAuth INT(11);
@@ -1314,9 +1350,9 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `getBankCompanies` (`connectionHash` VARCHAR(32) CHARSET utf8, `bankID` INT(11), `rows` INT(11)) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `getBankCompanies` (`connectionHash` VARCHAR(32) CHARSET utf8, `bankID` INT(11), `rows` INT(11), `clearWorkList` BOOLEAN) RETURNS JSON NO SQL
 BEGIN
-  DECLARE companyID, companiesLength, connectionID, userID, timeID INT(11);
+  DECLARE companyID, companiesLength, connectionID, userID, timeID, companiesCount INT(11);
   DECLARE connectionValid TINYINT(1);
   DECLARE connectionApiID VARCHAR(128);
   DECLARE responce, companiesArray JSON;
@@ -1326,7 +1362,9 @@ BEGIN
   IF connectionValid
     THEN BEGIN
       SET timeID = getTimeID(bankID);
-      UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35);
+      IF clearWorkList 
+        THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35);
+      END IF;
       UPDATE 
         companies c 
         JOIN (
@@ -1360,26 +1398,23 @@ BEGIN
           ORDER BY company_date_registration DESC)
           LIMIT rows
         ) bc ON bc.company_id = c.company_id 
-      SET c.user_id = userID, c.type_id = 9;
-      SET companiesArray = getActiveBankUserCompanies(connectionID);
-      SET companiesLength = JSON_LENGTH(companiesArray);
-      SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-        "type", "merge",
-        "data", JSON_OBJECT(
-          "companies", companiesArray,
-          "messageType", IF(companiesLength > 0, "success", "error"),
-          "message", IF(companiesLength > 0, CONCAT("Загружено компаний: ", companiesLength), CONCAT("Не удалось найти ни одной компании для сортировки на данное время"))
-        )
-      ))));
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "type", "procedure",
-        "data", JSON_OBJECT(
-          "query", "refreshBankSupervisors",
-          "values", JSON_ARRAY(
-            bankID
-          )
-        )
-      ));
+      SET c.user_id = userID, c.type_id = 44;
+      SELECT COUNT(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 44;
+      IF companiesCount > 0
+        THEN SET responce = JSON_MERGE(responce, checkCompaniesInn(userID));
+        ELSE BEGIN 
+          SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+          SET responce = JSON_MERGE(responce, JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
+            JSON_OBJECT(
+              "type", "merge",
+              "data", JSON_OBJECT(
+                "message", "Не удалось найти ни одной компании для сортировки на данное время",
+                "messageType", "error"
+              )
+            )
+          ))));
+        END;
+      END IF;
     END;
     ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
       "type", "sendToSocket",
@@ -2229,6 +2264,44 @@ BEGIN
         ))
       )
     ));
+  END IF;
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `setDuplicates` (`userID` INT(11), `companiesArray` JSON) RETURNS JSON NO SQL
+BEGIN
+  DECLARE companiesLength, companiesCount, bankID INT(11);
+  DECLARE connectionHash VARCHAR(32);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SET companiesLength = JSON_LENGTH(companiesArray);
+  IF companiesLength > 0
+    THEN BEGIN
+      SELECT COUNT(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 44;
+      UPDATE companies SET type_id = 24 WHERE JSON_CONTAINS(companiesArray, CONCAT(company_id));
+      UPDATE companies SET type_id = 9 WHERE user_id = userID AND type_id = 44;
+      SET responce = JSON_MERGE(responce, JSON_ARRAY(
+        JSON_OBJECT(
+          "type", "print",
+          "data", JSON_OBJECT(
+            "message", CONCAT(companiesLength, "/", companiesCount, " дубликаты")
+          )
+        )
+      ));
+      SELECT bank_id, connection_hash INTO bankID, connectionHash FROM users_connections_view WHERE user_id = userID AND connection_end = 0 LIMIT 1;
+      SET responce = JSON_MERGE(responce, getBankCompanies(connectionHash, bankID, companiesLength, 0));
+    END;
+    ELSE BEGIN
+      UPDATE companies SET type_id = 9 WHERE user_id = userID AND type_id = 44;
+      SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+      SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+        "type", "merge",
+        "data", JSON_OBJECT(
+          "message", CONCAT("Рабочий список сброшен и обновлён."),
+          "messageType", "success"
+        )
+      ))));         
+    END;
   END IF;
   RETURN responce;
 END$$
@@ -3206,6 +3279,7 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (38, 'call_to_client'),
 (34, 'call_to_sip'),
 (33, 'call_waiting'),
+(44, 'check_inn'),
 (7, 'deposit'),
 (37, 'difficult'),
 (21, 'file_created'),
