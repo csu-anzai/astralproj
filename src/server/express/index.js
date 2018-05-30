@@ -35,7 +35,9 @@ module.exports = (env, reducer) => {
 						values: [
 							from,
 							to,
-							39
+							39,
+							req.body.pbx_call_id,
+							null
 						]
 					}
 				}).then(then).catch(err);
@@ -50,7 +52,9 @@ module.exports = (env, reducer) => {
 						values: [
 							from,
 							to,
-							req.body.internal.length == 3 ? 38 : 34
+							req.body.internal.length == 3 ? 38 : 34,
+							req.body.pbx_call_id,
+							null
 						]
 					}
 				}).then(then).catch(err);
@@ -63,12 +67,24 @@ module.exports = (env, reducer) => {
 						values: [
 							from,
 							to,
-							req.body.internal.length == 3 ? 41 : 40
+							req.body.internal.length == 3 ? 41 : 40,
+							req.body.pbx_call_id,
+							req.body.call_id_with_rec
 						]
 					}
 				}).then(then).catch(err);
 				break;
 			case "NOTIFY_RECORD":
+				reducer.dispatch({
+					type: "query",
+					data: {
+						query: "setCallRecord",
+						values: [
+							req.body.call_id_with_rec,
+							req.body.pbx_call_id
+						]
+					}
+				}).then(then).catch(err);
 				break;
 		}
 	});

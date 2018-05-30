@@ -2023,7 +2023,15 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `setCallStatus` (`userSip` VARCHAR(20) CHARSET utf8, `companyPhone` VARCHAR(120) CHARSET utf8, `typeID` INT) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `setCallRecord` (`callApiIDWithRec` VARCHAR(128) CHARSET utf8, `callApiID` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
+BEGIN
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  UPDATE calls SET call_record = 1 WHERE call_api_id_with_rec = callApiIDWithRec OR call_api_id_1 = callApiID OR call_api_id_2 = callApiID;
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `setCallStatus` (`userSip` VARCHAR(20) CHARSET utf8, `companyPhone` VARCHAR(120) CHARSET utf8, `typeID` INT, `callApiID` VARCHAR(128) CHARSET utf8, `callApiIDWithRec` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
   DECLARE callID, userID INT(11);
   DECLARE typeTranslate VARCHAR(128);
@@ -2031,7 +2039,12 @@ BEGIN
   SET responce = JSON_ARRAY();
   SELECT call_id, user_id INTO callID, userID FROM active_calls_view WHERE company_phone = companyPhone AND user_sip = userSip ORDER BY call_id DESC LIMIT 1;
   SELECT tr.translate_to INTO typeTranslate FROM translates tr JOIN types t ON t.type_id = typeID AND t.type_name = tr.translate_from;
-  UPDATE calls SET type_id = typeID WHERE call_id = callID;
+  UPDATE calls SET 
+    type_id = typeID, 
+    call_api_id_1 = IF(call_api_id_1 IS NULL AND (call_api_id_2 IS NULL OR call_api_id_2 != callApiID), callApiID, call_api_id_1), 
+    call_api_id_2 = IF(call_api_id_2 IS NULL AND (call_api_id_1 IS NULL OR call_api_id_1 != callApiID), callApiID, call_api_id_2),
+    call_api_id_with_rec = callApiIDWithRec
+  WHERE call_id = callID;
   SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
   SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
     "type", "mergeDeep",
@@ -2463,12 +2476,12 @@ CREATE TABLE `calls` (
   `company_id` int(11) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
   `call_date_create` varchar(19) COLLATE utf8_bin NOT NULL,
-  `call_date_start` varchar(19) COLLATE utf8_bin DEFAULT NULL,
-  `call_date_end` varchar(19) COLLATE utf8_bin DEFAULT NULL,
   `file_id` int(11) DEFAULT NULL,
+  `call_api_id_with_rec` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `call_date_update` varchar(19) COLLATE utf8_bin DEFAULT NULL,
   `call_api_id_1` varchar(128) COLLATE utf8_bin DEFAULT NULL,
-  `call_end_by_user` tinyint(1) DEFAULT NULL,
-  `call_api_id_2` varchar(128) COLLATE utf8_bin DEFAULT NULL
+  `call_api_id_2` varchar(128) COLLATE utf8_bin DEFAULT NULL,
+  `call_record` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `calls_after_insert` AFTER INSERT ON `calls` FOR EACH ROW BEGIN
@@ -2489,6 +2502,12 @@ DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `calls_before_insert` BEFORE INSERT ON `calls` FOR EACH ROW BEGIN
   SET NEW.call_date_create = NOW();
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `calls_before_update` BEFORE UPDATE ON `calls` FOR EACH ROW BEGIN
+  SET NEW.call_date_update = NOW();
 END
 $$
 DELIMITER ;
