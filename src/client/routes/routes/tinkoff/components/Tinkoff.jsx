@@ -215,7 +215,7 @@ export default class Tinkoff extends React.Component {
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
-					1//company_id
+					company_id
 				]
 			}
 		})
