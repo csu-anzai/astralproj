@@ -2319,6 +2319,28 @@ BEGIN
   RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `setRecordFile` (`userSip` VARCHAR(128) CHARSET utf8, `companyPhone` VARCHAR(128) CHARSET utf8, `fileName` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
+BEGIN
+  DECLARE callID, userID INT(11);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SELECT call_id, user_id INTO callID, userID FROM end_calls_view WHERE company_phone = companyPhone AND user_sip = userSip ORDER BY call_id DESC LIMIT 1;
+  IF callID IS NOT NULL
+    THEN BEGIN
+      INSERT INTO files (file_name, type_id, user_id) VALUES (fileName, 45, userID);
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "type", "moveFile",
+        "data", JSON_OBJECT(
+          "fileName", fileName,
+          "from", "attachments",
+          "to", "files"
+        )
+      ));
+    END;
+  END IF;
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `successCompaniesArray` () RETURNS JSON NO SQL
 BEGIN
   DECLARE done TINYINT(1);
@@ -2771,6 +2793,15 @@ DELIMITER ;
 CREATE TABLE `empty_companies_view` (
 `company_id` int(11)
 ,`company_date_create` varchar(19)
+);
+CREATE TABLE `end_calls_view` (
+`call_id` int(11)
+,`type_id` int(11)
+,`user_sip` varchar(20)
+,`company_phone` varchar(120)
+,`user_id` int(11)
+,`company_id` int(11)
+,`file_id` int(11)
 );
 
 CREATE TABLE `files` (
@@ -3294,6 +3325,7 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (41, 'call_end_client'),
 (40, 'call_end_sip'),
 (42, 'call_error'),
+(45, 'call_record_file'),
 (43, 'call_success'),
 (38, 'call_to_client'),
 (34, 'call_to_sip'),
@@ -3416,6 +3448,9 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `empty_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `empty_companies_view`  AS  select `companies`.`company_id` AS `company_id`,`companies`.`company_date_create` AS `company_date_create` from `companies` where (isnull(`companies`.`company_ogrn`) and isnull(`companies`.`company_ogrn_date`) and isnull(`companies`.`company_person_name`) and isnull(`companies`.`company_person_surname`) and isnull(`companies`.`company_person_patronymic`) and isnull(`companies`.`company_person_birthday`) and isnull(`companies`.`company_person_birthplace`) and isnull(`companies`.`company_inn`) and isnull(`companies`.`company_address`) and isnull(`companies`.`company_doc_number`) and isnull(`companies`.`company_doc_date`) and isnull(`companies`.`company_organization_name`) and isnull(`companies`.`company_organization_code`) and isnull(`companies`.`company_phone`) and isnull(`companies`.`company_email`) and isnull(`companies`.`company_okved_code`) and isnull(`companies`.`company_okved_name`) and isnull(`companies`.`company_kpp`) and isnull(`companies`.`company_index`) and isnull(`companies`.`company_house`) and isnull(`companies`.`company_region_type`) and isnull(`companies`.`company_region_name`) and isnull(`companies`.`company_area_type`) and isnull(`companies`.`company_area_name`) and isnull(`companies`.`company_locality_type`) and isnull(`companies`.`company_locality_name`) and isnull(`companies`.`company_street_type`) and isnull(`companies`.`company_street_name`) and isnull(`companies`.`company_innfl`) and isnull(`companies`.`company_person_position_type`) and isnull(`companies`.`company_person_position_name`) and isnull(`companies`.`company_doc_name`) and isnull(`companies`.`company_doc_gifter`) and isnull(`companies`.`company_doc_code`) and isnull(`companies`.`company_doc_house`) and isnull(`companies`.`company_doc_flat`) and isnull(`companies`.`company_doc_region_type`) and isnull(`companies`.`company_doc_region_name`) and isnull(`companies`.`company_doc_area_type`) and isnull(`companies`.`company_doc_area_name`) and isnull(`companies`.`company_doc_locality_type`) and isnull(`companies`.`company_doc_locality_name`) and isnull(`companies`.`company_doc_street_type`) and isnull(`companies`.`company_doc_street_name`) and isnull(`companies`.`company_date_registration`) and isnull(`companies`.`company_person_sex`) and isnull(`companies`.`company_ip_type`)) ;
+DROP TABLE IF EXISTS `end_calls_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `end_calls_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`type_id` AS `type_id`,`u`.`user_sip` AS `user_sip`,replace(`co`.`company_phone`,'+','') AS `company_phone`,`u`.`user_id` AS `user_id`,`co`.`company_id` AS `company_id`,`c`.`file_id` AS `file_id` from ((`calls` `c` join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) join `companies` `co` on((`co`.`company_id` = `c`.`company_id`))) where (`c`.`type_id` in (40,41)) ;
 DROP TABLE IF EXISTS `statistic_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `statistic_view`  AS  select `companies`.`bank_id` AS `bank_id`,cast(`companies`.`company_date_update` as date) AS `date`,cast(`companies`.`company_date_update` as time(6)) AS `time`,`companies`.`type_id` AS `type_id` from `companies` group by `companies`.`bank_id`,`date`,`time`,`companies`.`type_id` order by `companies`.`bank_id`,`date`,`time`,`companies`.`type_id` ;
