@@ -14,6 +14,7 @@ import SadFace from 'material-ui/svg-icons/social/sentiment-dissatisfied';
 import History from 'material-ui/svg-icons/action/history';
 import ArrowBack from 'material-ui/svg-icons/navigation/arrow-back';
 import ArrowForward from 'material-ui/svg-icons/navigation/arrow-forward';
+import Audiotrack from 'material-ui/svg-icons/image/audiotrack';
 import PhoneForwarded from 'material-ui/svg-icons/notification/phone-forwarded';
 import PhoneInTalk from 'material-ui/svg-icons/notification/phone-in-talk';
 import SettingsPhone from 'material-ui/svg-icons/action/settings-phone';
@@ -219,6 +220,9 @@ export default class Tinkoff extends React.Component {
 				]
 			}
 		})
+	}
+	openURL(url){
+		window.open(url, "_blank");
 	}
 	render(){
 		localStorage.removeItem("hash");
@@ -568,6 +572,16 @@ export default class Tinkoff extends React.Component {
 				                			company.type_id == 32 && "Отказ клиента"
 		                				}
 		                			</span>
+		                		}
+		                		{
+		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
+		                			company.file_name &&
+		                			<IconButton
+				                		title="Прослушать последнюю запись"
+				                		onClick={this.openURL.bind(this, company.file_name)}
+				                	>
+				                		<Audiotrack color = "#9575CD"/>
+				                	</IconButton>
 		                		}
 			                </TableRowColumn>
 		                }
