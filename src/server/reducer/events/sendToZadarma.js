@@ -27,7 +27,9 @@ module.exports = modules => (resolve, reject, data) => {
 							values: [
 								data.options.from,
 								data.options.to.replace("+", ""),
-								body.status == 'success' ? 43 : 42
+								body.status == 'success' ? 43 : 42,
+								null,
+								null
 							]
 						}
 					}).then(resolve).catch(reject);

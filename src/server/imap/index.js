@@ -23,8 +23,14 @@ module.exports = (env, reducer) => {
 		console.log("\nerror from imap connection: ", err, "\n");
 	});
 	imap.on("mail", (mail, seqno, attributes) => {
-		let titleNumbersArray = mail.subject.match(/\d+/g);
-		if(mail.attachments[0] && mail.attachments[0].contentType == "audio/mpeg" && titleNumbersArray.length == 2){
+		let titleNumbersArray = mail.subject.match(/\d+/g),
+				fileNameArray = [],
+				fileExt = "";
+		if(mail.attachments[0]){
+			fileNameArray = mail.attachments[0].fileName.split(".");
+			fileExt = fileNameArray[fileNameArray.length - 1];
+		}
+		if(fileExt == "mp3" && titleNumbersArray.length == 2){
 			let fileName = mail.attachments[0].fileName,
 					sipID = titleNumbersArray.find(number => number.length == 3),
 					phoneNum = titleNumbersArray.find(number => number != sipID);
