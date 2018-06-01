@@ -33,7 +33,8 @@ module.exports = (env, reducer) => {
 		if(fileExt == "mp3" && titleNumbersArray.length == 2){
 			let fileName = mail.attachments[0].fileName,
 					sipID = titleNumbersArray.find(number => number.length == 3),
-					phoneNum = titleNumbersArray.find(number => number != sipID);
+					phoneNum = titleNumbersArray.find(number => number != sipID),
+					filePath = `${env.ws.location}:${env.ws.port}/${fileName}`;
 			if(sipID && phoneNum && fileName){
 				reducer.dispatch({
 					type: "query",
@@ -42,7 +43,8 @@ module.exports = (env, reducer) => {
 						values: [
 							sipID,
 							phoneNum,
-							fileName
+							fileName,
+							filePath
 						]
 					}
 				}).then(then).catch(err);

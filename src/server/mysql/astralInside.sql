@@ -2319,7 +2319,7 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `setRecordFile` (`userSip` VARCHAR(128) CHARSET utf8, `companyPhone` VARCHAR(128) CHARSET utf8, `fileName` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `setRecordFile` (`userSip` VARCHAR(128) CHARSET utf8, `companyPhone` VARCHAR(128) CHARSET utf8, `fileName` VARCHAR(128) CHARSET utf8, `filePath` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
   DECLARE callID, userID, fileID INT(11);
   DECLARE responce JSON;
@@ -2327,7 +2327,7 @@ BEGIN
   SELECT call_id, user_id INTO callID, userID FROM end_calls_view WHERE company_phone = companyPhone AND user_sip = userSip ORDER BY call_id DESC LIMIT 1;
   IF callID IS NOT NULL
     THEN BEGIN
-      INSERT INTO files (file_name, type_id, user_id) VALUES (fileName, 45, userID);
+      INSERT INTO files (file_name, type_id, user_id) VALUES (filePath, 45, userID);
       SELECT file_id INTO fileID FROM files ORDER BY file_id DESC LIMIT 1;
       UPDATE calls SET file_id = fileID WHERE call_id = callID;
       SET responce = JSON_MERGE(responce, JSON_OBJECT(
