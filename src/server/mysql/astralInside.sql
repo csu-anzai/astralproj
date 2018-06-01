@@ -2535,6 +2535,11 @@ CREATE TRIGGER `calls_before_update` BEFORE UPDATE ON `calls` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+CREATE TABLE `calls_file_view` (
+`call_id` int(11)
+,`file_id` int(11)
+,`file_name` varchar(128)
+);
 
 CREATE TABLE `cities` (
   `city_id` int(11) NOT NULL,
@@ -2717,9 +2722,11 @@ DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH ROW BEGIN
   DECLARE callType INT(11);
+  DECLARE fileName VARCHAR(128);
   IF NEW.call_id IS NOT NULL
     THEN BEGIN
       SELECT type_id INTO callType FROM calls WHERE call_id = NEW.call_id;
+      SELECT file_name INTO fileName FROM calls_file_view WHERE call_id = NEW.call_id;
     END;
   END IF;
   SET NEW.company_date_update = NOW();
@@ -2728,7 +2735,8 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
     "$.company_date_update", NEW.company_date_update,
     "$.company_comment", NEW.company_comment,
     "$.company_date_call_back", NEW.company_date_call_back,
-    "$.call_type", callType
+    "$.call_type", callType,
+    "$.file_name", fileName
   );
   IF NEW.type_id != OLD.type_id 
     THEN SET NEW.old_type_id = OLD.type_id;
@@ -3444,6 +3452,9 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `bank_times_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`bank_cities_time_priority` `b` join `times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
+DROP TABLE IF EXISTS `calls_file_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `calls_file_view`  AS  select `c`.`call_id` AS `call_id`,`f`.`file_id` AS `file_id`,`f`.`file_name` AS `file_name` from (`calls` `c` join `files` `f` on((`f`.`file_id` = `c`.`file_id`))) where (`c`.`file_id` is not null) ;
 DROP TABLE IF EXISTS `columns_translates_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `columns_translates_view`  AS  select `c`.`column_id` AS `column_id`,if((`t`.`translate_to` is not null),`t`.`translate_to`,`c`.`column_name`) AS `translate_to`,`c`.`column_name` AS `column_name` from (`columns` `c` left join `translates` `t` on((`t`.`translate_from` = `c`.`column_name`))) ;
