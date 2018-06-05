@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE callID, userID INT(11);
+	DECLARE callID, userID, companyTypeID, bankID INT(11);
 	DECLARE typeTranslate VARCHAR(128);
 	DECLARE responce JSON;
 	SET responce = JSON_ARRAY();
@@ -11,7 +11,11 @@ BEGIN
 		call_api_id_2 = IF(call_api_id_2 IS NULL AND (call_api_id_1 IS NULL OR call_api_id_1 != callApiID), callApiID, call_api_id_2),
 		call_api_id_with_rec = callApiIDWithRec
 	WHERE call_id = callID;
-	SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+	SELECT type_id, bank_id INTO companyTypeID, bankID FROM companies WHERE call_id = callID;
+	IF companyTypeID = 36 AND bankID
+		THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+		ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+	END IF;
 	SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
 		"type", "mergeDeep",
 		"data", JSON_OBJECT(

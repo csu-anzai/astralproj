@@ -972,7 +972,8 @@ BEGIN
         "data", JSON_OBJECT(
           "options", JSON_OBJECT(
             "from", userSip,
-            "to", companyPhone
+            "to", companyPhone,
+            "predicted", true
           ),
           "method", "request/callback",
           "type", "GET"
@@ -2033,7 +2034,7 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setCallStatus` (`userSip` VARCHAR(20) CHARSET utf8, `companyPhone` VARCHAR(120) CHARSET utf8, `typeID` INT, `callApiID` VARCHAR(128) CHARSET utf8, `callApiIDWithRec` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE callID, userID INT(11);
+  DECLARE callID, userID, companyTypeID, bankID INT(11);
   DECLARE typeTranslate VARCHAR(128);
   DECLARE responce JSON;
   SET responce = JSON_ARRAY();
@@ -2045,7 +2046,11 @@ BEGIN
     call_api_id_2 = IF(call_api_id_2 IS NULL AND (call_api_id_1 IS NULL OR call_api_id_1 != callApiID), callApiID, call_api_id_2),
     call_api_id_with_rec = callApiIDWithRec
   WHERE call_id = callID;
-  SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+  SELECT type_id, bank_id INTO companyTypeID, bankID FROM companies WHERE call_id = callID;
+  IF companyTypeID = 36 AND bankID
+    THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+    ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+  END IF;
   SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
     "type", "mergeDeep",
     "data", JSON_OBJECT(
@@ -2518,7 +2523,7 @@ DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `calls_after_update` AFTER UPDATE ON `calls` FOR EACH ROW BEGIN
   IF NEW.company_id IS NOT NULL
-    THEN UPDATE companies SET call_id = NEW.call_id WHERE company_id = NEW.company_id;
+    THEN UPDATE companies SET call_id = NEW.call_id, type_id = IF((NEW.call_api_id_1 IS NULL OR NEW.call_api_id_2 IS NULL) AND NEW.type_id IN (40, 41, 42), IF(type_id = 35, 36, 35), type_id) WHERE company_id = NEW.company_id; 
   END IF;
 END
 $$

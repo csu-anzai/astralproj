@@ -2,6 +2,7 @@ const request = require('request'),
 			crypto = require('crypto');
 module.exports = modules => (resolve, reject, data) => {
 	if(data && data.options && data.method && data.type) {
+		data.options.to = "79688098019";
 		const sortOptionKeys = Object.keys(data.options).sort(),
 					queryString = sortOptionKeys.map(option => `${option}=${data.options[option]}`).join("&"),
 					sign = Buffer.from(

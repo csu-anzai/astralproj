@@ -23,7 +23,8 @@ BEGIN
 				"data", JSON_OBJECT(
 					"options", JSON_OBJECT(
 						"from", userSip,
-						"to", companyPhone
+						"to", companyPhone,
+						"predicted", true
 					),
 					"method", "request/callback",
 					"type", "GET"
