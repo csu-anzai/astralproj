@@ -1,15 +1,31 @@
+-- phpMyAdmin SQL Dump
+-- version 4.7.5
+-- https://www.phpmyadmin.net/
+--
+-- Хост: localhost
+-- Время создания: Июн 05 2018 г., 15:01
+-- Версия сервера: 5.7.18
+-- Версия PHP: 7.1.14
+
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET AUTOCOMMIT = 0;
 START TRANSACTION;
 SET time_zone = "+00:00";
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
 
+--
+-- База данных: `astralinside`
+--
 
 DELIMITER $$
+--
+-- Процедуры
+--
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getBankStatistic` (IN `connectionHash` VARCHAR(32) CHARSET utf8, OUT `responce` JSON)  NO SQL
 BEGIN
   DECLARE typeID, templateID, templateItemsCount, templateInfoItemsCount, templatePeriodItemsCount, userID, user, bankID, statisticCount, connectionID, typeToView, periodToView, dataPeriod, templatesPeriodsLength, iterator INT(11);
@@ -666,6 +682,9 @@ BEGIN
   END IF;
 END$$
 
+--
+-- Функции
+--
 CREATE DEFINER=`root`@`localhost` FUNCTION `auth` (`connectionHash` VARCHAR(32) CHARSET utf8, `email` VARCHAR(512) CHARSET utf8, `pass` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
   DECLARE userHash VARCHAR(32);
@@ -972,7 +991,8 @@ BEGIN
         "data", JSON_OBJECT(
           "options", JSON_OBJECT(
             "from", userSip,
-            "to", companyPhone
+            "to", companyPhone,
+            "predicted", true
           ),
           "method", "request/callback",
           "type", "GET"
@@ -2033,7 +2053,7 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setCallStatus` (`userSip` VARCHAR(20) CHARSET utf8, `companyPhone` VARCHAR(120) CHARSET utf8, `typeID` INT, `callApiID` VARCHAR(128) CHARSET utf8, `callApiIDWithRec` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE callID, userID INT(11);
+  DECLARE callID, userID, companyTypeID, bankID INT(11);
   DECLARE typeTranslate VARCHAR(128);
   DECLARE responce JSON;
   SET responce = JSON_ARRAY();
@@ -2045,7 +2065,11 @@ BEGIN
     call_api_id_2 = IF(call_api_id_2 IS NULL AND (call_api_id_1 IS NULL OR call_api_id_1 != callApiID), callApiID, call_api_id_2),
     call_api_id_with_rec = callApiIDWithRec
   WHERE call_id = callID;
-  SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+  SELECT type_id, bank_id INTO companyTypeID, bankID FROM companies WHERE call_id = callID;
+  IF companyTypeID = 36 AND bankID
+    THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+    ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+  END IF;
   SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
     "type", "mergeDeep",
     "data", JSON_OBJECT(
@@ -2393,6 +2417,13 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `active_calls_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `active_calls_view` (
 `call_id` int(11)
 ,`type_id` int(11)
@@ -2402,16 +2433,34 @@ CREATE TABLE `active_calls_view` (
 ,`company_id` int(11)
 );
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `banks`
+--
+
 CREATE TABLE `banks` (
   `bank_id` int(11) NOT NULL,
   `bank_name` varchar(128) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `bank_cities`
+--
 
 CREATE TABLE `bank_cities` (
   `bank_city_id` int(11) NOT NULL,
   `bank_id` int(11) NOT NULL,
   `city_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `bank_cities_time_priority`
+--
 
 CREATE TABLE `bank_cities_time_priority` (
   `bank_city_time_priority_id` int(11) NOT NULL,
@@ -2420,6 +2469,13 @@ CREATE TABLE `bank_cities_time_priority` (
   `city_id` int(11) NOT NULL,
   `priority` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `bank_cities_time_priority_companies_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `bank_cities_time_priority_companies_view` (
 `time_id` int(11)
 ,`time_value` varchar(5)
@@ -2488,11 +2544,24 @@ CREATE TABLE `bank_cities_time_priority_companies_view` (
 ,`company_ip_type` varchar(1024)
 ,`company_json` json
 );
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `bank_times_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `bank_times_view` (
 `time_id` int(11)
 ,`time_value` varchar(5)
 ,`bank_id` int(11)
 );
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `calls`
+--
 
 CREATE TABLE `calls` (
   `call_id` int(11) NOT NULL,
@@ -2507,6 +2576,10 @@ CREATE TABLE `calls` (
   `call_api_id_2` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `call_record` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `calls`
+--
 DELIMITER $$
 CREATE TRIGGER `calls_after_insert` AFTER INSERT ON `calls` FOR EACH ROW BEGIN
   IF NEW.company_id IS NOT NULL
@@ -2518,7 +2591,7 @@ DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `calls_after_update` AFTER UPDATE ON `calls` FOR EACH ROW BEGIN
   IF NEW.company_id IS NOT NULL
-    THEN UPDATE companies SET call_id = NEW.call_id WHERE company_id = NEW.company_id;
+    THEN UPDATE companies SET call_id = NEW.call_id, type_id = IF((NEW.call_api_id_1 IS NULL OR NEW.call_api_id_2 IS NULL) AND NEW.type_id IN (40, 41, 42), IF(type_id = 35, 36, 35), type_id) WHERE company_id = NEW.company_id; 
   END IF;
 END
 $$
@@ -2535,16 +2608,35 @@ CREATE TRIGGER `calls_before_update` BEFORE UPDATE ON `calls` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `calls_file_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `calls_file_view` (
 `call_id` int(11)
 ,`file_id` int(11)
 ,`file_name` varchar(128)
 );
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `cities`
+--
+
 CREATE TABLE `cities` (
   `city_id` int(11) NOT NULL,
   `city_name` varchar(60) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `codes`
+--
 
 CREATE TABLE `codes` (
   `code_id` int(11) NOT NULL,
@@ -2552,17 +2644,36 @@ CREATE TABLE `codes` (
   `region_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `columns`
+--
+
 CREATE TABLE `columns` (
   `column_id` int(11) NOT NULL,
   `column_price` int(11) NOT NULL DEFAULT '0',
   `column_name` varchar(128) COLLATE utf8_bin NOT NULL,
   `column_blocked` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `columns_translates_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `columns_translates_view` (
 `column_id` int(11)
 ,`translate_to` varchar(128)
 ,`column_name` varchar(128)
 );
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `companies`
+--
 
 CREATE TABLE `companies` (
   `company_id` int(11) NOT NULL,
@@ -2636,6 +2747,10 @@ CREATE TABLE `companies` (
   `old_type_id` int(11) DEFAULT NULL,
   `call_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `companies`
+--
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
   DECLARE innLength, templateType INT(11);
@@ -2745,6 +2860,12 @@ END
 $$
 DELIMITER ;
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `connections`
+--
+
 CREATE TABLE `connections` (
   `connection_id` int(11) NOT NULL,
   `connection_hash` varchar(32) COLLATE utf8_bin NOT NULL,
@@ -2756,6 +2877,10 @@ CREATE TABLE `connections` (
   `connection_api_id` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `connection_end` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `connections`
+--
 DELIMITER $$
 CREATE TRIGGER `connections_after_insert` AFTER INSERT ON `connections` FOR EACH ROW BEGIN
   IF NEW.user_id IS NOT NULL
@@ -2800,10 +2925,24 @@ CREATE TRIGGER `connections_before_update` BEFORE UPDATE ON `connections` FOR EA
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `empty_companies_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `empty_companies_view` (
 `company_id` int(11)
 ,`company_date_create` varchar(19)
 );
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `end_calls_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `end_calls_view` (
 `call_id` int(11)
 ,`type_id` int(11)
@@ -2814,6 +2953,12 @@ CREATE TABLE `end_calls_view` (
 ,`file_id` int(11)
 );
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `files`
+--
+
 CREATE TABLE `files` (
   `file_id` int(11) NOT NULL,
   `file_name` varchar(128) COLLATE utf8_bin DEFAULT NULL,
@@ -2822,12 +2967,22 @@ CREATE TABLE `files` (
   `purchase_id` int(11) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `files`
+--
 DELIMITER $$
 CREATE TRIGGER `files_before_insert` BEFORE INSERT ON `files` FOR EACH ROW BEGIN
   SET NEW.file_date_create = NOW();
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `fns_codes`
+--
 
 CREATE TABLE `fns_codes` (
   `fns_code_id` int(11) NOT NULL,
@@ -2836,6 +2991,12 @@ CREATE TABLE `fns_codes` (
   `city_id` int(11) DEFAULT NULL,
   `fns_name` varchar(128) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `purchases`
+--
 
 CREATE TABLE `purchases` (
   `purchase_id` int(11) NOT NULL,
@@ -2884,6 +3045,10 @@ CREATE TABLE `purchases` (
   `purchase_filter_okved_name_null` tinyint(1) NOT NULL DEFAULT '0',
   `transaction_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `purchases`
+--
 DELIMITER $$
 CREATE TRIGGER `purchases_before_insert` BEFORE INSERT ON `purchases` FOR EACH ROW BEGIN
   SET NEW.purchase_date_create = NOW();
@@ -2897,10 +3062,22 @@ END
 $$
 DELIMITER ;
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `regions`
+--
+
 CREATE TABLE `regions` (
   `region_id` int(11) NOT NULL,
   `region_name` varchar(60) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `states`
+--
 
 CREATE TABLE `states` (
   `state_id` int(11) NOT NULL,
@@ -2910,6 +3087,10 @@ CREATE TABLE `states` (
   `state_date_create` varchar(19) COLLATE utf8_bin NOT NULL,
   `state_date_update` varchar(19) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `states`
+--
 DELIMITER $$
 CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGIN
   DECLARE typeID INT(11);
@@ -3215,6 +3396,13 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `statistic_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `statistic_view` (
 `bank_id` int(11)
 ,`date` date
@@ -3222,17 +3410,36 @@ CREATE TABLE `statistic_view` (
 ,`type_id` int(11)
 );
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `templates`
+--
+
 CREATE TABLE `templates` (
   `template_id` int(11) NOT NULL,
   `type_id` int(11) DEFAULT NULL,
   `template_columns_count` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `templates_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `templates_view` (
 `template_id` int(11)
 ,`type_id` int(11)
 ,`template_columns_count` int(11)
 ,`type_name` varchar(128)
 );
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `template_columns`
+--
 
 CREATE TABLE `template_columns` (
   `template_column_id` int(11) NOT NULL,
@@ -3242,6 +3449,10 @@ CREATE TABLE `template_columns` (
   `column_id` int(11) DEFAULT NULL,
   `template_column_duplicate` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `template_columns`
+--
 DELIMITER $$
 CREATE TRIGGER `template_column_before_insert` BEFORE INSERT ON `template_columns` FOR EACH ROW BEGIN
   IF (SELECT COUNT(*) FROM template_columns WHERE column_id = NEW.column_id AND template_id = NEW.template_id) > 0
@@ -3250,6 +3461,13 @@ CREATE TRIGGER `template_column_before_insert` BEFORE INSERT ON `template_column
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `template_columns_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `template_columns_view` (
 `template_id` int(11)
 ,`template_column_id` int(11)
@@ -3264,10 +3482,22 @@ CREATE TABLE `template_columns_view` (
 ,`template_column_duplicate` tinyint(1)
 );
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `times`
+--
+
 CREATE TABLE `times` (
   `time_id` int(11) NOT NULL,
   `time_value` varchar(5) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `transactions`
+--
 
 CREATE TABLE `transactions` (
   `transaction_id` int(11) NOT NULL,
@@ -3279,6 +3509,10 @@ CREATE TABLE `transactions` (
   `user_id` int(11) DEFAULT NULL,
   `transaction_end` tinyint(4) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `transactions`
+--
 DELIMITER $$
 CREATE TRIGGER `transactions_before_insert` BEFORE INSERT ON `transactions` FOR EACH ROW BEGIN
   SET NEW.transaction_date_create = NOW();
@@ -3304,16 +3538,32 @@ END
 $$
 DELIMITER ;
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `translates`
+--
+
 CREATE TABLE `translates` (
   `translate_id` int(11) NOT NULL,
   `translate_from` varchar(128) COLLATE utf8_bin NOT NULL,
   `translate_to` varchar(128) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `types`
+--
+
 CREATE TABLE `types` (
   `type_id` int(11) NOT NULL,
   `type_name` varchar(128) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Дамп данных таблицы `types`
+--
 
 INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (30, 'api_accepted'),
@@ -3362,6 +3612,12 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (11, 'ИП'),
 (12, 'ООО');
 
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `users`
+--
+
 CREATE TABLE `users` (
   `user_id` int(11) NOT NULL,
   `user_name` varchar(64) COLLATE utf8_bin NOT NULL,
@@ -3378,6 +3634,10 @@ CREATE TABLE `users` (
   `bank_id` int(11) DEFAULT NULL,
   `user_sip` varchar(20) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+--
+-- Триггеры `users`
+--
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
   SET NEW.user_date_create = NOW();
@@ -3427,6 +3687,13 @@ CREATE TRIGGER `users_before_update` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Дублирующая структура для представления `users_connections_view`
+-- (См. Ниже фактическое представление)
+--
 CREATE TABLE `users_connections_view` (
 `connection_id` int(11)
 ,`connection_hash` varchar(32)
@@ -3443,55 +3710,136 @@ CREATE TABLE `users_connections_view` (
 ,`bank_id` int(11)
 ,`user_sip` varchar(20)
 );
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `active_calls_view`
+--
 DROP TABLE IF EXISTS `active_calls_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `active_calls_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`type_id` AS `type_id`,`u`.`user_sip` AS `user_sip`,substr(`co`.`company_phone`,2) AS `company_phone`,`u`.`user_id` AS `user_id`,`co`.`company_id` AS `company_id` from ((`calls` `c` join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) join `companies` `co` on((`co`.`company_id` = `c`.`company_id`))) where (`c`.`type_id` not in (40,41,42)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `bank_cities_time_priority_companies_view`
+--
 DROP TABLE IF EXISTS `bank_cities_time_priority_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bank_cities_time_priority_companies_view`  AS  select `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`priority` AS `priority`,`r`.`region_name` AS `region_name`,`ci`.`city_name` AS `city_name`,`c`.`company_id` AS `company_id`,`c`.`user_id` AS `user_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`type_id` AS `type_id`,`c`.`old_type_id` AS `old_type_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_discount` AS `company_discount`,`c`.`company_discount_percent` AS `company_discount_percent`,`c`.`company_ogrn` AS `company_ogrn`,`c`.`company_ogrn_date` AS `company_ogrn_date`,`c`.`company_person_name` AS `company_person_name`,`c`.`company_person_surname` AS `company_person_surname`,`c`.`company_person_patronymic` AS `company_person_patronymic`,`c`.`company_person_birthday` AS `company_person_birthday`,`c`.`company_person_birthplace` AS `company_person_birthplace`,`c`.`company_inn` AS `company_inn`,`c`.`company_address` AS `company_address`,`c`.`company_doc_number` AS `company_doc_number`,`c`.`company_doc_date` AS `company_doc_date`,`c`.`company_organization_name` AS `company_organization_name`,`c`.`company_organization_code` AS `company_organization_code`,`c`.`company_phone` AS `company_phone`,`c`.`company_email` AS `company_email`,`c`.`company_okved_code` AS `company_okved_code`,`c`.`company_okved_name` AS `company_okved_name`,`c`.`purchase_id` AS `purchase_id`,`c`.`template_id` AS `template_id`,`c`.`company_kpp` AS `company_kpp`,`c`.`company_index` AS `company_index`,`c`.`company_house` AS `company_house`,`c`.`company_region_type` AS `company_region_type`,`c`.`company_region_name` AS `company_region_name`,`c`.`company_area_type` AS `company_area_type`,`c`.`company_area_name` AS `company_area_name`,`c`.`company_locality_type` AS `company_locality_type`,`c`.`company_locality_name` AS `company_locality_name`,`c`.`company_street_type` AS `company_street_type`,`c`.`company_street_name` AS `company_street_name`,`c`.`company_innfl` AS `company_innfl`,`c`.`company_person_position_type` AS `company_person_position_type`,`c`.`company_person_position_name` AS `company_person_position_name`,`c`.`company_doc_name` AS `company_doc_name`,`c`.`company_doc_gifter` AS `company_doc_gifter`,`c`.`company_doc_code` AS `company_doc_code`,`c`.`company_doc_house` AS `company_doc_house`,`c`.`company_doc_flat` AS `company_doc_flat`,`c`.`company_doc_region_type` AS `company_doc_region_type`,`c`.`company_doc_region_name` AS `company_doc_region_name`,`c`.`company_doc_area_type` AS `company_doc_area_type`,`c`.`company_doc_area_name` AS `company_doc_area_name`,`c`.`company_doc_locality_type` AS `company_doc_locality_type`,`c`.`company_doc_locality_name` AS `company_doc_locality_name`,`c`.`company_doc_street_type` AS `company_doc_street_type`,`c`.`company_doc_street_name` AS `company_doc_street_name`,`c`.`city_id` AS `city_id`,`c`.`region_id` AS `region_id`,`c`.`bank_id` AS `bank_id`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`company_person_sex` AS `company_person_sex`,`c`.`company_ip_type` AS `company_ip_type`,`c`.`company_json` AS `company_json` from ((((`bank_cities_time_priority` `b` join `companies` `c` on(((`c`.`city_id` = `b`.`city_id`) and (`c`.`bank_id` = `b`.`bank_id`) and (json_unquote(json_extract(`c`.`company_json`,'$.company_id')) = `c`.`company_id`)))) join `times` `t` on((`t`.`time_id` = `b`.`time_id`))) join `cities` `ci` on((`ci`.`city_id` = `b`.`city_id`))) join `regions` `r` on((`r`.`region_id` = `c`.`region_id`))) order by `b`.`time_id`,`b`.`priority` ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `bank_times_view`
+--
 DROP TABLE IF EXISTS `bank_times_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`bank_cities_time_priority` `b` join `times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `calls_file_view`
+--
 DROP TABLE IF EXISTS `calls_file_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `calls_file_view`  AS  select `c`.`call_id` AS `call_id`,`f`.`file_id` AS `file_id`,`f`.`file_name` AS `file_name` from (`calls` `c` join `files` `f` on((`f`.`file_id` = `c`.`file_id`))) where (`c`.`file_id` is not null) ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `columns_translates_view`
+--
 DROP TABLE IF EXISTS `columns_translates_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `columns_translates_view`  AS  select `c`.`column_id` AS `column_id`,if((`t`.`translate_to` is not null),`t`.`translate_to`,`c`.`column_name`) AS `translate_to`,`c`.`column_name` AS `column_name` from (`columns` `c` left join `translates` `t` on((`t`.`translate_from` = `c`.`column_name`))) ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `empty_companies_view`
+--
 DROP TABLE IF EXISTS `empty_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `empty_companies_view`  AS  select `companies`.`company_id` AS `company_id`,`companies`.`company_date_create` AS `company_date_create` from `companies` where (isnull(`companies`.`company_ogrn`) and isnull(`companies`.`company_ogrn_date`) and isnull(`companies`.`company_person_name`) and isnull(`companies`.`company_person_surname`) and isnull(`companies`.`company_person_patronymic`) and isnull(`companies`.`company_person_birthday`) and isnull(`companies`.`company_person_birthplace`) and isnull(`companies`.`company_inn`) and isnull(`companies`.`company_address`) and isnull(`companies`.`company_doc_number`) and isnull(`companies`.`company_doc_date`) and isnull(`companies`.`company_organization_name`) and isnull(`companies`.`company_organization_code`) and isnull(`companies`.`company_phone`) and isnull(`companies`.`company_email`) and isnull(`companies`.`company_okved_code`) and isnull(`companies`.`company_okved_name`) and isnull(`companies`.`company_kpp`) and isnull(`companies`.`company_index`) and isnull(`companies`.`company_house`) and isnull(`companies`.`company_region_type`) and isnull(`companies`.`company_region_name`) and isnull(`companies`.`company_area_type`) and isnull(`companies`.`company_area_name`) and isnull(`companies`.`company_locality_type`) and isnull(`companies`.`company_locality_name`) and isnull(`companies`.`company_street_type`) and isnull(`companies`.`company_street_name`) and isnull(`companies`.`company_innfl`) and isnull(`companies`.`company_person_position_type`) and isnull(`companies`.`company_person_position_name`) and isnull(`companies`.`company_doc_name`) and isnull(`companies`.`company_doc_gifter`) and isnull(`companies`.`company_doc_code`) and isnull(`companies`.`company_doc_house`) and isnull(`companies`.`company_doc_flat`) and isnull(`companies`.`company_doc_region_type`) and isnull(`companies`.`company_doc_region_name`) and isnull(`companies`.`company_doc_area_type`) and isnull(`companies`.`company_doc_area_name`) and isnull(`companies`.`company_doc_locality_type`) and isnull(`companies`.`company_doc_locality_name`) and isnull(`companies`.`company_doc_street_type`) and isnull(`companies`.`company_doc_street_name`) and isnull(`companies`.`company_date_registration`) and isnull(`companies`.`company_person_sex`) and isnull(`companies`.`company_ip_type`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `end_calls_view`
+--
 DROP TABLE IF EXISTS `end_calls_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `end_calls_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`type_id` AS `type_id`,`u`.`user_sip` AS `user_sip`,replace(`co`.`company_phone`,'+','') AS `company_phone`,`u`.`user_id` AS `user_id`,`co`.`company_id` AS `company_id`,`c`.`file_id` AS `file_id` from ((`calls` `c` join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) join `companies` `co` on((`co`.`company_id` = `c`.`company_id`))) where (`c`.`type_id` in (40,41)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `statistic_view`
+--
 DROP TABLE IF EXISTS `statistic_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `statistic_view`  AS  select `companies`.`bank_id` AS `bank_id`,cast(`companies`.`company_date_update` as date) AS `date`,cast(`companies`.`company_date_update` as time(6)) AS `time`,`companies`.`type_id` AS `type_id` from `companies` group by `companies`.`bank_id`,`date`,`time`,`companies`.`type_id` order by `companies`.`bank_id`,`date`,`time`,`companies`.`type_id` ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `templates_view`
+--
 DROP TABLE IF EXISTS `templates_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `templates_view`  AS  select `tm`.`template_id` AS `template_id`,`tm`.`type_id` AS `type_id`,`tm`.`template_columns_count` AS `template_columns_count`,`tp`.`type_name` AS `type_name` from (`templates` `tm` join `types` `tp` on((`tp`.`type_id` = `tm`.`type_id`))) ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `template_columns_view`
+--
 DROP TABLE IF EXISTS `template_columns_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `template_columns_view`  AS  select `t`.`template_id` AS `template_id`,`tc`.`template_column_id` AS `template_column_id`,`c`.`column_id` AS `column_id`,`c`.`column_name` AS `column_name`,`c`.`column_price` AS `column_price`,`c`.`column_blocked` AS `column_blocked`,`tc`.`template_column_letters` AS `template_column_letters`,`tc`.`template_column_name` AS `template_column_name`,`ts`.`type_id` AS `type_id`,`ts`.`type_name` AS `type_name`,`tc`.`template_column_duplicate` AS `template_column_duplicate` from (((`template_columns` `tc` join `templates` `t` on((`t`.`template_id` = `tc`.`template_id`))) join `columns` `c` on((`c`.`column_id` = `tc`.`column_id`))) join `types` `ts` on((`ts`.`type_id` = `t`.`type_id`))) ;
+
+-- --------------------------------------------------------
+
+--
+-- Структура для представления `users_connections_view`
+--
 DROP TABLE IF EXISTS `users_connections_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`c`.`connection_api_id` AS `connection_api_id`,`c`.`type_id` AS `connection_type_id`,`tt`.`type_name` AS `connection_type_name`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online`,`u`.`user_email` AS `user_email`,`u`.`bank_id` AS `bank_id`,`u`.`user_sip` AS `user_sip` from (((`connections` `c` left join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `types` `t` on((`t`.`type_id` = `u`.`type_id`))) left join `types` `tt` on((`tt`.`type_id` = `c`.`type_id`))) ;
 
+--
+-- Индексы сохранённых таблиц
+--
 
+--
+-- Индексы таблицы `banks`
+--
 ALTER TABLE `banks`
   ADD PRIMARY KEY (`bank_id`);
 
+--
+-- Индексы таблицы `bank_cities`
+--
 ALTER TABLE `bank_cities`
   ADD PRIMARY KEY (`bank_city_id`),
   ADD KEY `bank_id` (`bank_id`),
   ADD KEY `city_id` (`city_id`);
 
+--
+-- Индексы таблицы `bank_cities_time_priority`
+--
 ALTER TABLE `bank_cities_time_priority`
   ADD PRIMARY KEY (`bank_city_time_priority_id`),
   ADD KEY `bank_id` (`bank_id`),
   ADD KEY `time_id` (`time_id`),
   ADD KEY `city_id` (`city_id`);
 
+--
+-- Индексы таблицы `calls`
+--
 ALTER TABLE `calls`
   ADD PRIMARY KEY (`call_id`),
   ADD KEY `type_id` (`type_id`),
@@ -3499,18 +3847,30 @@ ALTER TABLE `calls`
   ADD KEY `user_id` (`user_id`),
   ADD KEY `file_id` (`file_id`);
 
+--
+-- Индексы таблицы `cities`
+--
 ALTER TABLE `cities`
   ADD PRIMARY KEY (`city_id`);
 
+--
+-- Индексы таблицы `codes`
+--
 ALTER TABLE `codes`
   ADD PRIMARY KEY (`code_id`),
   ADD UNIQUE KEY `code_value` (`code_value`),
   ADD KEY `region_id` (`region_id`);
 
+--
+-- Индексы таблицы `columns`
+--
 ALTER TABLE `columns`
   ADD PRIMARY KEY (`column_id`),
   ADD UNIQUE KEY `column_name` (`column_name`);
 
+--
+-- Индексы таблицы `companies`
+--
 ALTER TABLE `companies`
   ADD PRIMARY KEY (`company_id`),
   ADD UNIQUE KEY `company_ogrn` (`company_ogrn`),
@@ -3526,12 +3886,18 @@ ALTER TABLE `companies`
   ADD KEY `old_type_id` (`old_type_id`),
   ADD KEY `call_id` (`call_id`);
 
+--
+-- Индексы таблицы `connections`
+--
 ALTER TABLE `connections`
   ADD PRIMARY KEY (`connection_id`),
   ADD UNIQUE KEY `connection_hash` (`connection_hash`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `type_id` (`type_id`);
 
+--
+-- Индексы таблицы `files`
+--
 ALTER TABLE `files`
   ADD PRIMARY KEY (`file_id`),
   ADD UNIQUE KEY `file_name` (`file_name`),
@@ -3539,49 +3905,82 @@ ALTER TABLE `files`
   ADD KEY `purchase_id` (`purchase_id`),
   ADD KEY `user_id` (`user_id`);
 
+--
+-- Индексы таблицы `fns_codes`
+--
 ALTER TABLE `fns_codes`
   ADD PRIMARY KEY (`fns_code_id`),
   ADD KEY `city_id` (`city_id`),
   ADD KEY `region_id` (`region_id`);
 
+--
+-- Индексы таблицы `purchases`
+--
 ALTER TABLE `purchases`
   ADD PRIMARY KEY (`purchase_id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `transaction_id` (`transaction_id`);
 
+--
+-- Индексы таблицы `regions`
+--
 ALTER TABLE `regions`
   ADD PRIMARY KEY (`region_id`),
   ADD UNIQUE KEY `region_name` (`region_name`);
 
+--
+-- Индексы таблицы `states`
+--
 ALTER TABLE `states`
   ADD PRIMARY KEY (`state_id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `connection_id` (`connection_id`);
 
+--
+-- Индексы таблицы `templates`
+--
 ALTER TABLE `templates`
   ADD PRIMARY KEY (`template_id`),
   ADD KEY `type_id` (`type_id`);
 
+--
+-- Индексы таблицы `template_columns`
+--
 ALTER TABLE `template_columns`
   ADD PRIMARY KEY (`template_column_id`),
   ADD KEY `template_id` (`template_id`),
   ADD KEY `column_id` (`column_id`);
 
+--
+-- Индексы таблицы `times`
+--
 ALTER TABLE `times`
   ADD PRIMARY KEY (`time_id`);
 
+--
+-- Индексы таблицы `transactions`
+--
 ALTER TABLE `transactions`
   ADD PRIMARY KEY (`transaction_id`),
   ADD KEY `type_id` (`type_id`),
   ADD KEY `user_id` (`user_id`);
 
+--
+-- Индексы таблицы `translates`
+--
 ALTER TABLE `translates`
   ADD PRIMARY KEY (`translate_id`);
 
+--
+-- Индексы таблицы `types`
+--
 ALTER TABLE `types`
   ADD PRIMARY KEY (`type_id`),
   ADD UNIQUE KEY `type_name` (`type_name`);
 
+--
+-- Индексы таблицы `users`
+--
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
   ADD UNIQUE KEY `user_email` (`user_email`),
@@ -3590,89 +3989,173 @@ ALTER TABLE `users`
   ADD KEY `type_id` (`type_id`),
   ADD KEY `bank_id` (`bank_id`);
 
+--
+-- AUTO_INCREMENT для сохранённых таблиц
+--
 
+--
+-- AUTO_INCREMENT для таблицы `banks`
+--
 ALTER TABLE `banks`
   MODIFY `bank_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `bank_cities`
+--
 ALTER TABLE `bank_cities`
   MODIFY `bank_city_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `bank_cities_time_priority`
+--
 ALTER TABLE `bank_cities_time_priority`
   MODIFY `bank_city_time_priority_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `calls`
+--
 ALTER TABLE `calls`
   MODIFY `call_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `cities`
+--
 ALTER TABLE `cities`
   MODIFY `city_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `codes`
+--
 ALTER TABLE `codes`
   MODIFY `code_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `columns`
+--
 ALTER TABLE `columns`
   MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `companies`
+--
 ALTER TABLE `companies`
   MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `connections`
+--
 ALTER TABLE `connections`
   MODIFY `connection_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `files`
+--
 ALTER TABLE `files`
   MODIFY `file_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `fns_codes`
+--
 ALTER TABLE `fns_codes`
   MODIFY `fns_code_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `purchases`
+--
 ALTER TABLE `purchases`
   MODIFY `purchase_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `regions`
+--
 ALTER TABLE `regions`
   MODIFY `region_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `states`
+--
 ALTER TABLE `states`
   MODIFY `state_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `templates`
+--
 ALTER TABLE `templates`
   MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `template_columns`
+--
 ALTER TABLE `template_columns`
   MODIFY `template_column_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `times`
+--
 ALTER TABLE `times`
   MODIFY `time_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `transactions`
+--
 ALTER TABLE `transactions`
   MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `translates`
+--
 ALTER TABLE `translates`
   MODIFY `translate_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `types`
+--
 ALTER TABLE `types`
   MODIFY `type_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT для таблицы `users`
+--
 ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- Ограничения внешнего ключа сохраненных таблиц
+--
 
+--
+-- Ограничения внешнего ключа таблицы `bank_cities`
+--
 ALTER TABLE `bank_cities`
   ADD CONSTRAINT `bank_cities_ibfk_1` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `bank_cities_ibfk_2` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `bank_cities_time_priority`
+--
 ALTER TABLE `bank_cities_time_priority`
   ADD CONSTRAINT `bank_cities_time_priority_ibfk_1` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `bank_cities_time_priority_ibfk_2` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `bank_cities_time_priority_ibfk_3` FOREIGN KEY (`time_id`) REFERENCES `times` (`time_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `calls`
+--
 ALTER TABLE `calls`
   ADD CONSTRAINT `calls_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `calls_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`company_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `calls_ibfk_3` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `calls_ibfk_4` FOREIGN KEY (`file_id`) REFERENCES `files` (`file_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `codes`
+--
 ALTER TABLE `codes`
   ADD CONSTRAINT `codes_ibfk_1` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `companies`
+--
 ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_10` FOREIGN KEY (`call_id`) REFERENCES `calls` (`call_id`) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -3685,38 +4168,65 @@ ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_8` FOREIGN KEY (`file_id`) REFERENCES `files` (`file_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_9` FOREIGN KEY (`old_type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `connections`
+--
 ALTER TABLE `connections`
   ADD CONSTRAINT `connections_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `connections_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `files`
+--
 ALTER TABLE `files`
   ADD CONSTRAINT `files_ibfk_1` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `files_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `files_ibfk_3` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`purchase_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `fns_codes`
+--
 ALTER TABLE `fns_codes`
   ADD CONSTRAINT `fns_codes_ibfk_1` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fns_codes_ibfk_2` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `purchases`
+--
 ALTER TABLE `purchases`
   ADD CONSTRAINT `purchases_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `purchases_ibfk_2` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`transaction_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `states`
+--
 ALTER TABLE `states`
   ADD CONSTRAINT `states_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `states_ibfk_2` FOREIGN KEY (`connection_id`) REFERENCES `connections` (`connection_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `templates`
+--
 ALTER TABLE `templates`
   ADD CONSTRAINT `templates_ibfk_1` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `template_columns`
+--
 ALTER TABLE `template_columns`
   ADD CONSTRAINT `template_columns_ibfk_1` FOREIGN KEY (`template_id`) REFERENCES `templates` (`template_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `template_columns_ibfk_2` FOREIGN KEY (`column_id`) REFERENCES `columns` (`column_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `transactions`
+--
 ALTER TABLE `transactions`
   ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
+--
+-- Ограничения внешнего ключа таблицы `users`
+--
 ALTER TABLE `users`
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`user_creator_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `users_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
