@@ -1,7 +1,7 @@
 BEGIN
 	DECLARE typeToView, period, bankID, type INT(11);
 	DECLARE firstDate VARCHAR(19);
-	DECLARE dataFree, dataBank TINYINT(11);
+	DECLARE dataFree, dataBank, ringing TINYINT(11);
 	DECLARE types JSON;
 	SELECT bank_id INTO bankID FROM users WHERE user_id = NEW.user_id;
 	SET NEW.state_date_update = NOW();

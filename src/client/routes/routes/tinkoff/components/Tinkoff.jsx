@@ -30,7 +30,7 @@ import TimePicker from 'material-ui/TimePicker';
 import Dialog from 'material-ui/Dialog';
 import TextField from 'material-ui/TextField';
 import CircularProgress from 'material-ui/CircularProgress';
-import Badge from 'material-ui/Badge';
+import Checkbox from 'material-ui/Checkbox';
 import {
   Table,
   TableBody,
@@ -81,6 +81,7 @@ export default class Tinkoff extends React.Component {
 		this.closeDialog = this.closeDialog.bind(this);
 		this.sendToApi = this.sendToApi.bind(this);
 		this.comment = this.comment.bind(this);
+		this.ringing = this.ringing.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -223,6 +224,19 @@ export default class Tinkoff extends React.Component {
 	}
 	openURL(url){
 		window.open(url, "_blank");
+	}
+	ringing(){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setUserRinging",
+				values: [
+					this.props.state.connectionHash,
+					!this.props.state.ringing
+				]
+			}
+		})
 	}
 	render(){
 		localStorage.removeItem("hash");
@@ -393,13 +407,27 @@ export default class Tinkoff extends React.Component {
 		              			</SelectField>
 		              		}
 			              	{
-			              		this.state.selectedIndex == 0 &&
-				                <RaisedButton 
-				                	label = "Обновить список"
-				                	backgroundColor="#a4c639"
-				                	labelColor = "#fff"
-				                	onClick = {this.refresh}
-				                />
+			              		this.state.selectedIndex == 0 && [
+			              			<Checkbox
+			              				label = "ПОСЛЕДОВАТЕЛЬНЫЙ ПРОЗВОН"
+			              				style = {{
+			              					display: "inline-block",
+			              					width: "inherit",
+			              					verticalAlign: "middle",
+			              					marginRight: "20px"
+			              				}}
+			              				key = {0}
+			              				checked = {this.props.state.ringing == 1 ? true : false}
+			              				onCheck = {this.ringing}
+			              			/>,
+					                <RaisedButton 
+					                	label = "Обновить список"
+					                	backgroundColor="#a4c639"
+					                	labelColor = "#fff"
+					                	key = {1}
+					                	onClick = {this.refresh}
+					                />
+					              ]
 				              }
 				              {
 				              	(this.state.selectedIndex == 1 || this.state.selectedIndex == 3) &&
