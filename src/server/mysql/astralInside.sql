@@ -671,7 +671,7 @@ BEGIN
   DECLARE userHash VARCHAR(32);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userID, connectionID, activeCompaniesLength, typeID INT(11);
-    DECLARE connectionEnd TINYINT(1);
+    DECLARE connectionEnd, ringing TINYINT(1);
     DECLARE responce, activeCompanies, downloadFilters, distributionFilters JSON;
     SET responce = JSON_ARRAY();
     SET activeCompanies = JSON_ARRAY();
@@ -710,6 +710,7 @@ BEGIN
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+                    SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
                     SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
                     IF activeCompaniesLength > 0
                         THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -721,7 +722,8 @@ BEGIN
                                     "data", JSON_OBJECT(
                                         "companies", activeCompanies,
                                         "distribution", distributionFilters,
-                                        "message", CONCAT("Загружено компаний: ", activeCompaniesLength)
+                                        "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
+                                        "ringing", ringing
                                     )
                                 ))
                             )
@@ -814,7 +816,7 @@ CREATE DEFINER=`root`@`localhost` FUNCTION `autoAuth` (`userHash` VARCHAR(32) CH
 BEGIN
   DECLARE connectionID, userID, activeCompaniesLength, typeID INT(11);
     DECLARE connectionApiID VARCHAR(128);
-    DECLARE userAuth, connectionEnd TINYINT(1);
+    DECLARE userAuth, connectionEnd, ringing TINYINT(1);
     DECLARE responce, activeCompanies, downloadFilters, distributionFilters JSON;
     SET responce = JSON_ARRAY();
   SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
@@ -863,6 +865,7 @@ BEGIN
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+                    SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
                     SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
                     IF activeCompaniesLength > 0
                         THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -874,7 +877,8 @@ BEGIN
                                     "data", JSON_OBJECT(
                                         "companies", activeCompanies,
                                         "distribution", distributionFilters,
-                                        "message", CONCAT("Загружено компаний: ", activeCompaniesLength)
+                                        "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
+                                        "ringing", ringing
                                     )
                                 ))
                             )
@@ -2034,8 +2038,10 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setCallStatus` (`userSip` VARCHAR(20) CHARSET utf8, `companyPhone` VARCHAR(120) CHARSET utf8, `typeID` INT, `callApiID` VARCHAR(128) CHARSET utf8, `callApiIDWithRec` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE callID, userID, companyTypeID, bankID INT(11);
+  DECLARE callID, userID, companyTypeID, companyOldTypeID, bankID, callCount, companyID INT(11);
   DECLARE typeTranslate VARCHAR(128);
+  DECLARE nextPhone VARCHAR(120);
+  DECLARE ringing TINYINT(1);
   DECLARE responce JSON;
   SET responce = JSON_ARRAY();
   SELECT call_id, user_id INTO callID, userID FROM active_calls_view WHERE company_phone = companyPhone AND user_sip = userSip ORDER BY call_id DESC LIMIT 1;
@@ -2046,7 +2052,7 @@ BEGIN
     call_api_id_2 = IF(call_api_id_2 IS NULL AND (call_api_id_1 IS NULL OR call_api_id_1 != callApiID), callApiID, call_api_id_2),
     call_api_id_with_rec = callApiIDWithRec
   WHERE call_id = callID;
-  SELECT type_id, bank_id INTO companyTypeID, bankID FROM companies WHERE call_id = callID;
+  SELECT type_id, old_type_id, bank_id INTO companyTypeID, companyOldTypeID, bankID FROM companies WHERE call_id = callID;
   IF companyTypeID = 36 AND bankID
     THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
     ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
@@ -2058,6 +2064,40 @@ BEGIN
       "messageType", IF(typeID NOT IN (40, 41, 42), "success", "error")
     )
   ))));
+  IF companyOldTypeID IN (9, 35) AND typeID IN (40, 41, 42)
+    THEN BEGIN
+      SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
+      IF ringing = 1
+        THEN BEGIN
+          SELECT COUNT(*) INTO callCount FROM calls WHERE user_id = userID AND type_id NOT IN (40, 41, 42);
+          IF callCount = 0
+            THEN BEGIN
+              SELECT REPLACE(company_phone, "+", ""), company_id INTO nextPhone, companyID FROM companies WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 0 ORDER BY type_id LIMIT 1;
+              IF nextPhone IS NOT NULL
+                THEN BEGIN
+                  INSERT INTO calls (user_id, company_id, type_id) VALUES (userID, companyID, 33);
+                  SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+                  SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                    "type", "sendToZadarma",
+                    "data", JSON_OBJECT(
+                      "options", JSON_OBJECT( 
+                        "from", userSip,
+                        "to", nextPhone,
+                        "predicted", true
+                      ),
+                      "method", "request/callback",
+                      "type", "GET"
+                    )
+                  ));
+                  UPDATE companies SET company_ringing = 1 WHERE company_id = companyID;
+                END;
+              END IF;
+            END;
+          END IF;
+        END;
+      END IF;
+    END;
+  END IF;
   RETURN responce;
 END$$
 
@@ -2344,6 +2384,43 @@ BEGIN
         )
       ));
     END;
+  END IF;
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `setUserRinging` (`connectionHash` VARCHAR(32) CHARSET utf8, `ringing` BOOLEAN) RETURNS JSON NO SQL
+BEGIN
+  DECLARE userID INT(11);
+  DECLARE connectionValid TINYINT(1);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SET connectionValid = checkConnection(connectionHash);
+  IF connectionValid 
+    THEN BEGIN
+      SELECT user_id INTO userID FROM connections WHERE connection_hash = connectionHash;
+      UPDATE users SET user_ringing = ringing WHERE user_id = userID;
+      SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
+        JSON_OBJECT(
+          "type", "merge",
+          "data", JSON_OBJECT(
+            "ringing", ringing
+          )
+        )
+      )));
+    END;
+    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToSocket",
+      "data", JSON_OBJECT(
+        "socketID", connectionApiID,
+        "data", JSON_ARRAY(JSON_OBJECT(
+          "type", "merge",
+          "data", JSON_OBJECT(
+            "auth", 0,
+            "loginMessage", "Требуется ручной вход в систему"
+          )
+        ))
+      )
+    ));
   END IF;
   RETURN responce;
 END$$
@@ -2639,7 +2716,8 @@ CREATE TABLE `companies` (
   `company_apartment` varchar(128) COLLATE utf8_bin DEFAULT NULL,
   `company_date_call_back` varchar(19) COLLATE utf8_bin DEFAULT NULL,
   `old_type_id` int(11) DEFAULT NULL,
-  `call_id` int(11) DEFAULT NULL
+  `call_id` int(11) DEFAULT NULL,
+  `company_ringing` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
@@ -3381,7 +3459,8 @@ CREATE TABLE `users` (
   `user_hash` varchar(32) COLLATE utf8_bin DEFAULT NULL,
   `user_connections_count` int(11) NOT NULL DEFAULT '0',
   `bank_id` int(11) DEFAULT NULL,
-  `user_sip` varchar(20) COLLATE utf8_bin DEFAULT NULL
+  `user_sip` varchar(20) COLLATE utf8_bin DEFAULT NULL,
+  `user_ringing` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN

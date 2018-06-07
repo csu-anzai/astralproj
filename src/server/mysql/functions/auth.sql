@@ -2,7 +2,7 @@ BEGIN
 	DECLARE userHash VARCHAR(32);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userID, connectionID, activeCompaniesLength, typeID INT(11);
-    DECLARE connectionEnd TINYINT(1);
+    DECLARE connectionEnd, ringing TINYINT(1);
     DECLARE responce, activeCompanies, downloadFilters, distributionFilters JSON;
     SET responce = JSON_ARRAY();
     SET activeCompanies = JSON_ARRAY();
@@ -41,6 +41,7 @@ BEGIN
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+                    SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
                     SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
                     IF activeCompaniesLength > 0
                         THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -52,7 +53,8 @@ BEGIN
                                     "data", JSON_OBJECT(
                                         "companies", activeCompanies,
                                         "distribution", distributionFilters,
-                                        "message", CONCAT("Загружено компаний: ", activeCompaniesLength)
+                                        "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
+                                        "ringing", ringing
                                     )
                                 ))
                             )
