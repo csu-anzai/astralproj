@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE callID, userID, companyTypeID, bankID, callCount, companyID INT(11);
+	DECLARE callID, userID, companyTypeID, companyOldTypeID, bankID, callCount, companyID INT(11);
 	DECLARE typeTranslate VARCHAR(128);
 	DECLARE nextPhone VARCHAR(120);
 	DECLARE ringing TINYINT(1);
@@ -13,7 +13,7 @@ BEGIN
 		call_api_id_2 = IF(call_api_id_2 IS NULL AND (call_api_id_1 IS NULL OR call_api_id_1 != callApiID), callApiID, call_api_id_2),
 		call_api_id_with_rec = callApiIDWithRec
 	WHERE call_id = callID;
-	SELECT type_id, bank_id INTO companyTypeID, bankID FROM companies WHERE call_id = callID;
+	SELECT type_id, old_type_id, bank_id INTO companyTypeID, companyOldTypeID, bankID FROM companies WHERE call_id = callID;
 	IF companyTypeID = 36 AND bankID
 		THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
 		ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
@@ -25,7 +25,7 @@ BEGIN
 			"messageType", IF(typeID NOT IN (40, 41, 42), "success", "error")
 		)
 	))));
-	IF companyTypeID IN (9, 35) AND typeID IN (40, 41, 42)
+	IF companyOldTypeID IN (9, 35) AND typeID IN (40, 41, 42)
 		THEN BEGIN
 			SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
 			IF ringing = 1
@@ -34,14 +34,14 @@ BEGIN
 					IF callCount = 0
 						THEN BEGIN
 							SELECT REPLACE(company_phone, "+", ""), company_id INTO nextPhone, companyID FROM companies WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 0 ORDER BY type_id LIMIT 1;
-							IF type_namextPhone IS NOT NULL
+							IF nextPhone IS NOT NULL
 								THEN BEGIN
 									INSERT INTO calls (user_id, company_id, type_id) VALUES (userID, companyID, 33);
 									SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 									SET responce = JSON_MERGE(responce, JSON_OBJECT(
 										"type", "sendToZadarma",
 										"data", JSON_OBJECT(
-											"options", JSON_OBJECT(
+											"options", JSON_OBJECT( 
 												"from", userSip,
 												"to", nextPhone,
 												"predicted", true
