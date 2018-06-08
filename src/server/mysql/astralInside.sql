@@ -2052,7 +2052,7 @@ BEGIN
     call_api_id_2 = IF(call_api_id_2 IS NULL AND (call_api_id_1 IS NULL OR call_api_id_1 != callApiID), callApiID, call_api_id_2),
     call_api_id_with_rec = callApiIDWithRec
   WHERE call_id = callID;
-  SELECT type_id, old_type_id, bank_id INTO companyTypeID, companyOldTypeID, bankID FROM companies WHERE call_id = callID;
+  SELECT type_id, old_type_id, bank_id, company_id INTO companyTypeID, companyOldTypeID, bankID, companyID FROM companies WHERE call_id = callID;
   IF companyTypeID = 36 AND bankID
     THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
     ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
@@ -2064,11 +2064,12 @@ BEGIN
       "messageType", IF(typeID NOT IN (40, 41, 42), "success", "error")
     )
   ))));
-  IF companyOldTypeID IN (9, 35) AND typeID IN (40, 41, 42)
+  IF companyOldTypeID IN (9, 35, 10) AND typeID IN (40, 41, 42) AND companyTypeID IN (9, 35, 36)
     THEN BEGIN
       SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
       IF ringing = 1
         THEN BEGIN
+          UPDATE companies SET company_ringing = IF(type_id = 35 AND old_type_id = 9, 0, 1) WHERE company_id = companyID;
           SELECT COUNT(*) INTO callCount FROM calls WHERE user_id = userID AND type_id NOT IN (40, 41, 42);
           IF callCount = 0
             THEN BEGIN
@@ -2089,7 +2090,6 @@ BEGIN
                       "type", "GET"
                     )
                   ));
-                  UPDATE companies SET company_ringing = 1 WHERE company_id = companyID;
                 END;
               END IF;
             END;
@@ -2391,22 +2391,28 @@ END$$
 CREATE DEFINER=`root`@`localhost` FUNCTION `setUserRinging` (`connectionHash` VARCHAR(32) CHARSET utf8, `ringing` BOOLEAN) RETURNS JSON NO SQL
 BEGIN
   DECLARE userID INT(11);
-  DECLARE connectionValid TINYINT(1);
+  DECLARE connectionValid, oldRinging TINYINT(1);
   DECLARE responce JSON;
   SET responce = JSON_ARRAY();
   SET connectionValid = checkConnection(connectionHash);
   IF connectionValid 
     THEN BEGIN
       SELECT user_id INTO userID FROM connections WHERE connection_hash = connectionHash;
-      UPDATE users SET user_ringing = ringing WHERE user_id = userID;
-      SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
-        JSON_OBJECT(
-          "type", "merge",
-          "data", JSON_OBJECT(
-            "ringing", ringing
-          )
-        )
-      )));
+      SELECT user_ringing INTO oldRinging FROM users WHERE user_id = userID;
+      IF ringing != oldRinging
+        THEN BEGIN
+          UPDATE users SET user_ringing = ringing WHERE user_id = userID;
+          UPDATE companies SET company_ringing = 0 WHERE user_id = userID AND type_id IN (9, 35);
+          SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
+            JSON_OBJECT(
+              "type", "merge",
+              "data", JSON_OBJECT(
+                "ringing", ringing
+              )
+            )
+          )));
+        END;
+      END IF;
     END;
     ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
       "type", "sendToSocket",
