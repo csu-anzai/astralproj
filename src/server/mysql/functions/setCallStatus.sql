@@ -1,19 +1,96 @@
 BEGIN
-	DECLARE callID, userID, companyTypeID, companyOldTypeID, bankID, callCount, companyID INT(11);
+	DECLARE callID, userID, companyTypeID, companyOldTypeID, bankID, callCount, companyID, typeID INT(11);
 	DECLARE typeTranslate VARCHAR(128);
-	DECLARE nextPhone VARCHAR(120);
+	DECLARE nextPhone, companyPhone VARCHAR(120);
 	DECLARE ringing TINYINT(1);
 	DECLARE responce JSON;
 	SET responce = JSON_ARRAY();
-	SELECT call_id, user_id INTO callID, userID FROM active_calls_view WHERE company_phone = companyPhone AND user_sip = userSip ORDER BY call_id DESC LIMIT 1;
-	SELECT tr.translate_to INTO typeTranslate FROM translates tr JOIN types t ON t.type_id = typeID AND t.type_name = tr.translate_from;
+	SELECT call_id, user_id INTO callID, userID FROM active_calls_view WHERE user_sip = userSip ORDER BY call_id DESC LIMIT 1;
 	UPDATE calls SET 
-		type_id = typeID, 
-		call_api_id_1 = IF(call_api_id_1 IS NULL AND (call_api_id_2 IS NULL OR call_api_id_2 != callApiID), callApiID, call_api_id_1), 
-		call_api_id_2 = IF(call_api_id_2 IS NULL AND (call_api_id_1 IS NULL OR call_api_id_1 != callApiID), callApiID, call_api_id_2),
-		call_api_id_with_rec = callApiIDWithRec
+		type_id = IF(
+			call_api_id_internal IS NULL AND call_api_id_destination IS NULL, 
+			IF(
+				callApiID IS NOT NULL,
+				IF(
+					call_predicted = 1, 
+					38, 
+					34
+				),
+				IF(
+					errorStatus = 1,
+					42,
+					43
+				)
+			), 
+			IF(
+				callApiID IS NOT NULL AND (call_api_id_internal IS NOT NULL OR call_api_id_destination IS NOT NULL) AND type_id IN (34, 38, 39), 
+				IF(
+					call_api_id_internal IS NOT NULL AND call_api_id_internal = callApiID,
+					IF(
+						type_id = 34,
+						40,
+						IF(
+							errorStatus IS NOT NULL,
+							39,
+							38
+						)
+					), 
+					IF(
+						type_id = 38 AND call_api_id_destination IS NOT NULL AND call_api_id_destination = callApiID,
+						41,
+						IF(
+							errorStatus IS NOT NULL,
+							39,
+							34
+						)
+					)
+				),
+				type_id
+			)
+		), 
+		call_api_id_internal = IF(
+			call_api_id_internal IS NULL,
+			IF(
+				call_predicted = 1,
+				IF(
+					call_api_id_destination IS NOT NULL,
+					callApiID,
+					call_api_id_internal
+				),
+				IF(
+					call_api_id_destination IS NULL,
+					callApiID,
+					call_api_id_internal
+				)
+			),
+			call_api_id_internal
+		),
+		call_api_id_destination = IF(
+			call_api_id_destination IS NULL,
+			IF(
+				call_predicted = 1,
+				IF(
+					call_api_id_internal IS NULL,
+					callApiID,
+					call_api_id_destination
+				),
+				IF(
+					call_api_id_internal IS NOT NULL,
+					callApiID,
+					call_api_id_destination
+				)
+			),
+			call_api_id_destination
+		),
+		call_api_id_with_rec = IF(
+			call_api_id_with_rec IS NULL AND callApiIDWithRec IS NOT NULL,
+			callApiIDWithRec,
+			call_api_id_with_rec
+		)
 	WHERE call_id = callID;
-	SELECT type_id, old_type_id, bank_id, company_id INTO companyTypeID, companyOldTypeID, bankID, companyID FROM companies WHERE call_id = callID;
+	SELECT type_id INTO typeID FROM calls WHERE call_id = callID;
+	SELECT type_id, old_type_id, bank_id, company_id, company_phone INTO companyTypeID, companyOldTypeID, bankID, companyID, companyPhone FROM companies WHERE call_id = callID;
+	SELECT tr.translate_to INTO typeTranslate FROM translates tr JOIN types t ON t.type_id = typeID AND t.type_name = tr.translate_from;
 	IF companyTypeID = 36 AND bankID
 		THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
 		ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));

@@ -26,10 +26,9 @@ module.exports = modules => (resolve, reject, data) => {
 							query: "setCallStatus",
 							values: [
 								data.options.from,
-								data.options.to.replace("+", ""),
-								body.status == 'success' ? 43 : 42,
 								null,
-								null
+								null,
+								body.status == 'success' ? 0 : 1
 							]
 						}
 					}).then(resolve).catch(reject);

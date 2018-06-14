@@ -20,12 +20,14 @@ module.exports = (env, reducer) => {
 	});
 	express.post("/api/zadarma", (req, res) => {
 		const event = req.body.event;
-		let from = req.body.internal.length == 3 ? req.body.internal : req.body.destination,
-				to = req.body.internal.length == 3 ? req.body.destination : req.body.internal;
+		let internal = req.body.internal,
+				destination = req.body.destination;
 		switch(event){
 			case "NOTIFY_START":
 				break;
 			case "NOTIFY_INTERNAL":
+				break;
+			case "NOTIFY_END":
 				break;
 			case "NOTIFY_ANSWER":
 				reducer.dispatch({
@@ -33,16 +35,13 @@ module.exports = (env, reducer) => {
 					data: {
 						query: "setCallStatus",
 						values: [
-							from,
-							to,
-							39,
+							internal,
 							req.body.pbx_call_id,
-							null
+							null,
+							0
 						]
 					}
 				}).then(then).catch(err);
-				break;
-			case "NOTIFY_END":
 				break;
 			case "NOTIFY_OUT_START":
 				reducer.dispatch({
@@ -50,10 +49,9 @@ module.exports = (env, reducer) => {
 					data: {
 						query: "setCallStatus",
 						values: [
-							from,
-							to,
-							req.body.internal.length == 3 ? 38 : 34,
+							internal,
 							req.body.pbx_call_id,
+							null,
 							null
 						]
 					}
@@ -65,11 +63,10 @@ module.exports = (env, reducer) => {
 					data: {
 						query: "setCallStatus",
 						values: [
-							from,
-							to,
-							req.body.internal.length == 3 ? 41 : 40,
+							internal,
 							req.body.pbx_call_id,
-							req.body.call_id_with_rec
+							req.body.call_id_with_rec,
+							null
 						]
 					}
 				}).then(then).catch(err);
