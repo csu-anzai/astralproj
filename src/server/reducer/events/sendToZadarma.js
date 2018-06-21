@@ -28,7 +28,7 @@ module.exports = modules => (resolve, reject, data) => {
 								data.options.from,
 								null,
 								null,
-								body.status == 'success' ? 0 : 1
+								body.status == 'success' ? 43 : 42
 							]
 						}
 					}).then(resolve).catch(reject);

@@ -26,7 +26,7 @@ module.exports = (env, reducer) => {
 		let titleNumbersArray = mail.subject.match(/\d+/g),
 				fileNameArray = [],
 				fileExt = "";
-		if(mail.attachments[0]){
+		if(mail.attachments && mail.attachments[0]){
 			fileNameArray = mail.attachments[0].fileName.split(".");
 			fileExt = fileNameArray[fileNameArray.length - 1];
 		}

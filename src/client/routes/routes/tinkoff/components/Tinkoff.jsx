@@ -499,8 +499,12 @@ export default class Tinkoff extends React.Component {
 		                { 
 		                	<TableRowColumn>
 		                		{
+		                			company.call_internal_type_id + "  " + company.call_destination_type_id
+		                		}
+		                		{
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
-		                			(company.call_type == 33 ?
+		                			(company.call_internal_type_id == 33 && 
+		                			company.call_destination_type_id == 33 ?
 				                	<CircularProgress 
 				                		size = {24} 
 				                		color = "#00BFA5" 
@@ -512,23 +516,25 @@ export default class Tinkoff extends React.Component {
 			                		<IconButton
 				                		onClick = {this.call.bind(this, company.company_id)}
 				                		title = "Позвонить"
-				                		disabled = {[43,34,38,39].indexOf(company.call_type) == -1 ? false : true}
+				                		disabled = {
+				                			[38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(company.call_internal_type_id) > -1 ||  
+				                			[38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(company.call_destination_type_id) > -1 ? 
+				                				false : 
+				                				true
+				                		}
 				                	>
 				                		{
-				                			[43,34].indexOf(company.call_type) > -1 &&
+				                			([38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(company.call_internal_type_id) > -1 ||  
+				                			[38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(company.call_destination_type_id) > -1) ?
+		                					<DialerSip color = "#00BFA5"/> :
+		                					company.call_destination_type_id == 34 ?
+		                					<PhoneForwarded color = "#00BFA5"/> :
+		                					(company.call_internal_type_id == 39 ||
+		                					company.call_destination_type_id == 39) ?
+		                					<PhoneInTalk color = "#00BFA5"/> :
+				                			([33,43,34].indexOf(company.call_internal_type_id) > -1 ||  
+				                			[33,43].indexOf(company.call_destination_type_id) > -1) &&
 		                					<SettingsPhone color = "#00BFA5"/>
-				                		}
-				                		{
-				                			company.call_type == 38 &&
-		                					<PhoneForwarded color = "#00BFA5"/>
-				                		}
-				                		{
-				                			company.call_type == 39 &&
-				                			<PhoneInTalk color = "#00BFA5"/>
-				                		}
-				                		{
-				                			[43,34,38,39].indexOf(company.call_type) == -1 &&
-		                					<DialerSip color = "#00BFA5"/>
 				                		}
 				                	</IconButton>)
 		                		}

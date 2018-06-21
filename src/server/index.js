@@ -37,6 +37,62 @@ reducer.dispatch({
 		values: []
 	}
 });
+setTimeout(() => {
+	reducer.dispatch({
+		type: "query",
+		data: {
+			query: "setCallStatus",
+			values: [
+				"111",
+				null,
+				null,
+				43
+			]
+		}
+	}).then(responce => {
+		then(responce);
+		reducer.dispatch({
+			type: "query",
+			data: {
+				query: "setCallStatus",
+				values: [
+					"111",
+					"nwefnwejnfjwe",
+					null,
+					34
+				]
+			}
+		}).then(responce => {
+			then(responce);
+			reducer.dispatch({
+				type: "query",
+				data: {
+					query: "setCallStatus",
+					values: [
+						null,
+						"nwefnwejnfjwe",
+						null,
+						39
+					]
+				}
+			}).then(responce => {
+				then(responce);
+				reducer.dispatch({
+					type: "query",
+					data: {
+						query: "setCallStatus",
+						values: [
+							"111",
+							"dqwdqwdqdqdwdqwd",
+							null,
+							34
+						]
+					}
+				}).then(then).catch(err);
+			}).catch(err);
+		}).catch(err);
+	}).catch(err);
+}, 3000);
 
 setTimeout(() => {
 	reducer.dispatch({

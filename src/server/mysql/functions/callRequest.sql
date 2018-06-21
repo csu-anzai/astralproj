@@ -14,7 +14,7 @@ BEGIN
 			IF callsCount IS NOT NULL AND callsCount = 0
 				THEN BEGIN
 					SELECT company_phone INTO companyPhone FROM companies WHERE company_id = companyID;
-					INSERT INTO calls (user_id, company_id, type_id, call_predicted) VALUES (userID, companyID, 33, IF(predicted IS NULL, 0, predicted));
+					INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, IF(predicted IS NULL, 0, predicted));
 					SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 					SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
 						"type", "mergeDeep",

@@ -21,7 +21,46 @@ module.exports = (env, reducer) => {
 	express.post("/api/zadarma", (req, res) => {
 		const event = req.body.event;
 		let internal = req.body.internal,
-				destination = req.body.destination;
+				destination = req.body.destination,
+				disposition = req.body.disposition,
+				dispositionType = 0;
+		if(disposition){
+			switch(disposition){
+				case "answered":
+					dispositionType = 46;
+					break;
+				case "busy":
+					dispositionType = 47;
+					break;
+				case "cancel":
+					dispositionType = 48;
+					break;
+				case "no answer":
+					dispositionType = 49;
+					break;
+				case "failed":
+					dispositionType = 50;
+					break;
+				case "no money":
+					dispositionType = 51;
+					break;
+				case "unallocated number":
+					dispositionType = 52;
+					break;
+				case "no limit":
+					dispositionType = 53;
+					break;
+				case "no day limit":
+					dispositionType = 38;
+					break;
+				case "line limit":
+					dispositionType = 40;
+					break;
+				case "no money, no limit":
+					dispositionType = 41;
+					break;
+			}
+		}
 		switch(event){
 			case "NOTIFY_START":
 				break;
@@ -35,10 +74,10 @@ module.exports = (env, reducer) => {
 					data: {
 						query: "setCallStatus",
 						values: [
-							internal,
+							null,
 							req.body.pbx_call_id,
 							null,
-							0
+							39
 						]
 					}
 				}).then(then).catch(err);
@@ -49,10 +88,10 @@ module.exports = (env, reducer) => {
 					data: {
 						query: "setCallStatus",
 						values: [
-							internal,
+							internal.length > 3 ? destination : internal,
 							req.body.pbx_call_id,
 							null,
-							null
+							34
 						]
 					}
 				}).then(then).catch(err);
@@ -63,10 +102,10 @@ module.exports = (env, reducer) => {
 					data: {
 						query: "setCallStatus",
 						values: [
-							internal,
+							null,
 							req.body.pbx_call_id,
 							req.body.call_id_with_rec,
-							null
+							dispositionType
 						]
 					}
 				}).then(then).catch(err);
