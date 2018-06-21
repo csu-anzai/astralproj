@@ -11,7 +11,7 @@ BEGIN
 			IF ringing != oldRinging
 				THEN BEGIN
 					UPDATE users SET user_ringing = ringing WHERE user_id = userID;
-					UPDATE companies SET company_ringing = 0 WHERE user_id = userID AND type_id IN (9, 35);
+					UPDATE companies SET company_ringing = 0 WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 1;
 					SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
 						JSON_OBJECT(
 							"type", "merge",
