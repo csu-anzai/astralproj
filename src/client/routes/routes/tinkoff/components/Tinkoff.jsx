@@ -499,9 +499,6 @@ export default class Tinkoff extends React.Component {
 		                { 
 		                	<TableRowColumn>
 		                		{
-		                			company.call_internal_type_id + "  " + company.call_destination_type_id
-		                		}
-		                		{
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
 		                			(company.call_internal_type_id == 33 && 
 		                			company.call_destination_type_id == 33 ?
