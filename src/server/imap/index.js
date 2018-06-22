@@ -35,16 +35,17 @@ module.exports = (env, reducer) => {
 					sipID = titleNumbersArray.find(number => number.length == 3),
 					phoneNum = titleNumbersArray.find(number => number != sipID),
 					filePath = `${env.ws.location}:${env.ws.port}/${fileName}`;
-			if(sipID && phoneNum && fileName){
+			if(sipID && fileName){
 				reducer.dispatch({
 					type: "query",
 					data: {
 						query: "setRecordFile",
 						values: [
 							sipID,
-							phoneNum,
+							phoneNum || null,
 							fileName,
-							filePath
+							filePath,
+							(!phoneNum || titleNumbersArray.findIndex(i => i == sipID) == 1) ? 1 : 0
 						]
 					}
 				}).then(then).catch(err);
