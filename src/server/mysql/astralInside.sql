@@ -2456,17 +2456,20 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `setRecordFile` (`userSip` VARCHAR(128) CHARSET utf8, `companyPhone` VARCHAR(128) CHARSET utf8, `fileName` VARCHAR(128) CHARSET utf8, `filePath` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `setRecordFile` (`userSip` VARCHAR(128) CHARSET utf8, `companyPhone` VARCHAR(128) CHARSET utf8, `fileName` VARCHAR(128) CHARSET utf8, `filePath` VARCHAR(128) CHARSET utf8, `internal` TINYINT(1)) RETURNS JSON NO SQL
 BEGIN
   DECLARE callID, userID, fileID INT(11);
   DECLARE responce JSON;
   SET responce = JSON_ARRAY();
-  SELECT call_id, user_id INTO callID, userID FROM end_calls_view WHERE company_phone = companyPhone AND user_sip = userSip ORDER BY call_id DESC LIMIT 1;
+  SELECT call_id, user_id INTO callID, userID FROM end_calls_view WHERE company_phone = IF(companyPhone IS NOT NULL, companyPhone, company_phone) AND user_sip = userSip ORDER BY call_id DESC LIMIT 1;
   IF callID IS NOT NULL
     THEN BEGIN
       INSERT INTO files (file_name, type_id, user_id) VALUES (filePath, 45, userID);
       SELECT file_id INTO fileID FROM files ORDER BY file_id DESC LIMIT 1;
-      UPDATE calls SET file_id = fileID WHERE call_id = callID;
+      UPDATE calls SET 
+        call_destination_file_id = IF(internal = 0, fileID, call_destination_file_id),
+        call_internal_file_id = IF(internal = 1, fileID, call_internal_file_id)
+      WHERE call_id = callID;
       SET responce = JSON_MERGE(responce, JSON_OBJECT(
         "type", "moveFile",
         "data", JSON_OBJECT(
@@ -2475,6 +2478,7 @@ BEGIN
           "to", "files"
         )
       ));
+      SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
     END;
   END IF;
   RETURN responce;
@@ -3018,6 +3022,15 @@ CREATE TABLE `empty_companies_view` (
 ,`company_date_create` varchar(19)
 );
 CREATE TABLE `end_calls_view` (
+`call_id` int(11)
+,`call_internal_type_id` int(11)
+,`call_destination_type_id` int(11)
+,`user_sip` varchar(20)
+,`company_phone` varchar(120)
+,`user_id` int(11)
+,`company_id` int(11)
+,`call_destination_file_id` int(11)
+,`call_internal_file_id` int(11)
 );
 
 CREATE TABLE `files` (
@@ -3681,7 +3694,7 @@ DROP TABLE IF EXISTS `empty_companies_view`;
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `empty_companies_view`  AS  select `companies`.`company_id` AS `company_id`,`companies`.`company_date_create` AS `company_date_create` from `companies` where (isnull(`companies`.`company_ogrn`) and isnull(`companies`.`company_ogrn_date`) and isnull(`companies`.`company_person_name`) and isnull(`companies`.`company_person_surname`) and isnull(`companies`.`company_person_patronymic`) and isnull(`companies`.`company_person_birthday`) and isnull(`companies`.`company_person_birthplace`) and isnull(`companies`.`company_inn`) and isnull(`companies`.`company_address`) and isnull(`companies`.`company_doc_number`) and isnull(`companies`.`company_doc_date`) and isnull(`companies`.`company_organization_name`) and isnull(`companies`.`company_organization_code`) and isnull(`companies`.`company_phone`) and isnull(`companies`.`company_email`) and isnull(`companies`.`company_okved_code`) and isnull(`companies`.`company_okved_name`) and isnull(`companies`.`company_kpp`) and isnull(`companies`.`company_index`) and isnull(`companies`.`company_house`) and isnull(`companies`.`company_region_type`) and isnull(`companies`.`company_region_name`) and isnull(`companies`.`company_area_type`) and isnull(`companies`.`company_area_name`) and isnull(`companies`.`company_locality_type`) and isnull(`companies`.`company_locality_name`) and isnull(`companies`.`company_street_type`) and isnull(`companies`.`company_street_name`) and isnull(`companies`.`company_innfl`) and isnull(`companies`.`company_person_position_type`) and isnull(`companies`.`company_person_position_name`) and isnull(`companies`.`company_doc_name`) and isnull(`companies`.`company_doc_gifter`) and isnull(`companies`.`company_doc_code`) and isnull(`companies`.`company_doc_house`) and isnull(`companies`.`company_doc_flat`) and isnull(`companies`.`company_doc_region_type`) and isnull(`companies`.`company_doc_region_name`) and isnull(`companies`.`company_doc_area_type`) and isnull(`companies`.`company_doc_area_name`) and isnull(`companies`.`company_doc_locality_type`) and isnull(`companies`.`company_doc_locality_name`) and isnull(`companies`.`company_doc_street_type`) and isnull(`companies`.`company_doc_street_name`) and isnull(`companies`.`company_date_registration`) and isnull(`companies`.`company_person_sex`) and isnull(`companies`.`company_ip_type`)) ;
 DROP TABLE IF EXISTS `end_calls_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `end_calls_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`type_id` AS `type_id`,`u`.`user_sip` AS `user_sip`,replace(`co`.`company_phone`,'+','') AS `company_phone`,`u`.`user_id` AS `user_id`,`co`.`company_id` AS `company_id`,`c`.`file_id` AS `file_id` from ((`calls` `c` join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) join `companies` `co` on((`co`.`company_id` = `c`.`company_id`))) where (`c`.`type_id` in (40,41)) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `end_calls_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`call_internal_type_id` AS `call_internal_type_id`,`c`.`call_destination_type_id` AS `call_destination_type_id`,`u`.`user_sip` AS `user_sip`,replace(`co`.`company_phone`,'+','') AS `company_phone`,`u`.`user_id` AS `user_id`,`co`.`company_id` AS `company_id`,`c`.`call_destination_file_id` AS `call_destination_file_id`,`c`.`call_internal_file_id` AS `call_internal_file_id` from ((`calls` `c` join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) join `companies` `co` on((`co`.`company_id` = `c`.`company_id`))) where ((`c`.`call_internal_type_id` in (38,40,41,42,46,47,48,49,50,51,52,53)) or (`c`.`call_destination_type_id` in (38,40,41,42,46,47,48,49,50,51,52,53))) ;
 DROP TABLE IF EXISTS `statistic_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `statistic_view`  AS  select `companies`.`bank_id` AS `bank_id`,cast(`companies`.`company_date_update` as date) AS `date`,cast(`companies`.`company_date_update` as time(6)) AS `time`,`companies`.`type_id` AS `type_id` from `companies` group by `companies`.`bank_id`,`date`,`time`,`companies`.`type_id` order by `companies`.`bank_id`,`date`,`time`,`companies`.`type_id` ;
