@@ -5,6 +5,7 @@ const env = require('../env.json'),
 			nodemailer = require('./nodemailer')(env),
 			mysql = require('./mysql')(env),
 			imap = require('./imap')(env, reducer),
+			telegram = require('./telegram')(env, reducer),
 			err = require('./err'),
 		 	then = require('./then').bind(this, reducer),
 		 	nowDate = new Date(),
@@ -24,6 +25,7 @@ reducer.initEvents({
 	express,
 	nodemailer,
 	mysql,
+	telegram,
 	reducer,
 	env,
 	then,
@@ -37,6 +39,13 @@ reducer.dispatch({
 		values: []
 	}
 });
+
+reducer.dispatch({
+	type: "checkTelegramUpdates",
+	data: {
+
+	}
+}).then(data => console.log(data)).catch(err);
 
 setTimeout(() => {
 	reducer.dispatch({
