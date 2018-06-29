@@ -141,4 +141,5 @@ BEGIN
 			"message", message
 		)
 	));
+	SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(message));
 END

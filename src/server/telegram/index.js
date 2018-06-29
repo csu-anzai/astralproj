@@ -55,14 +55,3 @@ module.exports = (env, reducer) => {
 	const api = new TelegramApi(env, reducer);	
 	return api;
 }
-
-/*reducer.dispatch({
-	type: "query",
-	data: {
-		query: "confirmTelegram",
-		values: [
-			msg,
-			chatId
-		]
-	}
-}).then(then).catch(err);*/

@@ -405,6 +405,9 @@ export default class Supervisor extends React.Component {
 					}))
 				}}/>
 			</div>
+			<div style={{textAlign: "center", marginBottom: "20px"}}>
+				Ключ для подписки на информацию по заливкам в telegram (<a href = "https://t.me/zakupkiInfoBot" target="_blank">@zakupkiInfoBot</a>): {this.props.state.connectionHash}
+			</div>
 		</div>
 	}
 }

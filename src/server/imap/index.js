@@ -23,7 +23,7 @@ module.exports = (env, reducer) => {
 		console.log("\nerror from imap connection: ", err, "\n");
 	});
 	imap.on("mail", (mail, seqno, attributes) => {
-		let titleNumbersArray = mail.subject.match(/\d+/g),
+		let titleNumbersArray = mail.subject && mail.subject.match(/\d+/g),
 				fileNameArray = [],
 				fileExt = "";
 		if(mail.attachments && mail.attachments[0]){
@@ -58,7 +58,7 @@ module.exports = (env, reducer) => {
 				fileNameArray = fileName.split("."),
 				fileExt = fileNameArray.length > 0 ? fileNameArray[fileNameArray.length - 1] : null;
 		if(fileExt != null){
-			if(fileExt == "xlsx"){
+			if(fileExt == "xlsx" || fileExt == "xls"){
 				try {
 					let sheetRows = {};
 					const workbook = xlsx.readFile(attachment.path),

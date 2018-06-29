@@ -40,12 +40,13 @@ reducer.dispatch({
 	}
 });
 
+
 reducer.dispatch({
 	type: "checkTelegramUpdates",
 	data: {
 
 	}
-}).then(data => console.log(data)).catch(err);
+}).then(then).catch(err);
 
 setTimeout(() => {
 	reducer.dispatch({
