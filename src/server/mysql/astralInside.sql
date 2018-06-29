@@ -503,6 +503,7 @@ BEGIN
       "message", message
     )
   ));
+  SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(message));
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `refreshBankSupervisors` (IN `bankID` INT(11), OUT `responce` JSON)  NO SQL
@@ -1124,6 +1125,34 @@ BEGIN
     "$.deleteDuplicateCompanies", deleteDuplicateCompaniesLength,
     "$.deleteEmptyCompanies", companiesLength
   );
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `confirmTelegram` (`chatID` VARCHAR(128) CHARSET utf8, `hash` VARCHAR(32) CHARSET utf8) RETURNS JSON NO SQL
+BEGIN
+  DECLARE userID INT(11);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SELECT user_id INTO userID FROM connections WHERE connection_hash = hash;
+  IF userID IS NULL
+    THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToTelegram",
+      "data", JSON_OBJECT(
+        "chatID", chatID,
+        "message", "Авторизация не удалась, попробуйте другой ключ"
+      )
+    ));
+    ELSE BEGIN
+      UPDATE users SET user_telegram = chatID WHERE user_id = userID;
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "type", "sendToTelegram",
+        "data", JSON_OBJECT(
+          "chatID", chatID,
+          "message", "Авторизация прошла успешно"
+        )
+      ));
+    END;
+  END IF;
   RETURN responce;
 END$$
 
@@ -1902,6 +1931,33 @@ BEGIN
       )
     )); 
   END IF;
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `sendToAllRootsTelegram` (`message` TEXT CHARSET utf8) RETURNS JSON NO SQL
+BEGIN
+  DECLARE userTelegram VARCHAR(128);
+  DECLARE done TINYINT(1);
+  DECLARE responce JSON;
+  DECLARE usersCursor CURSOR FOR SELECT user_telegram FROM users WHERE type_id = 1 AND user_telegram IS NOT NULL;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SET responce = JSON_ARRAY();
+  OPEN usersCursor;
+    usersLoop: LOOP
+      FETCH usersCursor INTO userTelegram;
+      IF done
+        THEN LEAVE usersLoop;
+      END IF;
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "type", "sendToTelegram",
+        "data", JSON_OBJECT(
+          "chatID", userTelegram,
+          "message", message
+        )
+      ));
+      ITERATE usersLoop;
+    END LOOP;
+  CLOSE usersCursor;
   RETURN responce;
 END$$
 
@@ -3604,7 +3660,8 @@ CREATE TABLE `users` (
   `user_connections_count` int(11) NOT NULL DEFAULT '0',
   `bank_id` int(11) DEFAULT NULL,
   `user_sip` varchar(20) COLLATE utf8_bin DEFAULT NULL,
-  `user_ringing` tinyint(1) NOT NULL DEFAULT '0'
+  `user_ringing` tinyint(1) NOT NULL DEFAULT '0',
+  `user_telegram` varchar(128) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
