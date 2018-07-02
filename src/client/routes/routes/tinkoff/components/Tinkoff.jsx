@@ -117,6 +117,7 @@ export default class Tinkoff extends React.Component {
 				]
 			}
 		});
+		this.closeDialog();
 	}
 	sendToApi(){
 		this.props.dispatch({
@@ -193,6 +194,12 @@ export default class Tinkoff extends React.Component {
 			dialog: true,
 			dialogType,
 			companyOrganization: organizationName
+		});
+	}
+	openDialog(dialogType){
+		this.setState({
+			dialogType,
+			dialog: true
 		});
 	}
 	closeDialog(){
@@ -435,7 +442,7 @@ export default class Tinkoff extends React.Component {
 				              	<FlatButton 
 				                	label = "Сбросить список"
 				                	primary
-				                	onClick = {this.reset.bind(this, this.state.selectedIndex == 1 ? 14 : 23)}
+				                	onClick = {this.openDialog.bind(this, 2)}
 				                	style = {{
 				                		marginBottom: "8px"
 				                	}}
@@ -752,12 +759,14 @@ export default class Tinkoff extends React.Component {
 			        onClick={this.closeDialog}
 			      />,
 			      <FlatButton
-			        label="Отправить"
+			        label= {this.state.dialogType == 2 ? "Сбросить" : "Отправить"}
 			        primary
 			        onClick={
 			        	this.state.dialogType == 0 ? 
-			        		this.sendToApi : 
-			        		this.changeType.bind(this, this.state.companyID, 23, [this.state.dateCallBack, this.state.timeCallBack])
+			        		this.sendToApi :
+			        		this.state.dialogType == 1 ? 
+			        			this.changeType.bind(this, this.state.companyID, 23, [this.state.dateCallBack, this.state.timeCallBack]) :
+			        			this.reset.bind(this, this.state.selectedIndex == 1 ? 14 : 23)
 			        }
 			      />,
 			    ]}
@@ -777,7 +786,7 @@ export default class Tinkoff extends React.Component {
 					     		this.comment(text)
 					     	}}
 			    		/> :
-			    		this.state.dialogType == 1 &&
+			    		this.state.dialogType == 1 ?
 			    			<div>
 				    			<DatePicker 
 				    				floatingLabelText="Выбор даты"
@@ -801,7 +810,9 @@ export default class Tinkoff extends React.Component {
 							    <div style = {{fontSize: "12px"}}>
 							    		<Info style={{verticalAlign: "middle", width: "25px", color: "#e8a521"}}/> Время и дата не должны быть меньше текущих даты и времени
 							    </div>
-			    			</div>
+			    			</div> :
+			    			this.state.dialogType == 2 &&
+			    			`Вы уверены что хотите сбросить список "${ this.state.selectedIndex == 1 ? "НЕ ИНТЕРЕСНО" : this.state.selectedIndex == 3 && "ПЕРЕЗВОНИТЬ" }"`
         	}
         </Dialog>
 			</Paper>
