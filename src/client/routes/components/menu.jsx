@@ -6,6 +6,8 @@ import DonutSmall from 'material-ui/svg-icons/action/donut-small';
 import FileDownload from 'material-ui/svg-icons/file/file-download';
 import { push } from 'react-router-redux';
 import { connect } from 'react-redux';
+import Divider from 'material-ui/Divider';
+import Avatar from 'material-ui/Avatar';
 let SelectableList = makeSelectable(List);
 function wrapState(ComposedComponent) {
   return class SelectableList extends React.Component {
@@ -36,6 +38,37 @@ class Menu extends React.Component {
 			docked = { false }
 			onRequestChange = { this.props.dispatch.bind(this, {type: "changeMenuState"}) }
 		>
+      <Avatar
+        style = {{
+          margin: "8px",
+          background: "#00bcd4"
+        }}
+      >
+        {this.props.state.userName && this.props.state.userName.split(" ").map(i => i[0]).join("").slice(0,2)}
+      </Avatar>
+      <div 
+        style = {{
+          display: "inline-block",
+          verticalAlign: "top",
+          paddingTop: "10px"
+        }}
+      >
+        <span
+          style = {{
+            fontSize: "14px"
+          }}
+        >
+          {this.props.state.userName && this.props.state.userName.split(" ").filter((i,k) => k < 2).join(" ")}
+        </span> <br/>
+        <span
+          style = {{
+            fontSize: "12px"
+          }}
+        >
+          {this.props.state.userEmail}
+        </span>
+      </div>
+      <Divider/>
 			<SelectableList
 				defaultValue = {this.props.routing.location && this.props.routing.location.pathname}
         onChange = {this.changePage.bind(this)}
