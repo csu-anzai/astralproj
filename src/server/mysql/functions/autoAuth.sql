@@ -1,11 +1,13 @@
 BEGIN
 	DECLARE connectionID, userID, activeCompaniesLength, typeID INT(11);
     DECLARE connectionApiID VARCHAR(128);
+    DECLARE userName VARCHAR(64);
+    DECLARE userEmail VARCHAR(512);
     DECLARE userAuth, connectionEnd, ringing TINYINT(1);
     DECLARE responce, activeCompanies, downloadFilters, distributionFilters JSON;
     SET responce = JSON_ARRAY();
 	SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
-    SELECT user_id, user_auth, type_id INTO userID, userAuth, typeID FROM users WHERE user_hash = userHash;
+    SELECT user_id, user_auth, type_id, user_name, user_email INTO userID, userAuth, typeID, userName, userEmail FROM users WHERE user_hash = userHash;
     IF connectionID IS NULL OR userAuth = 0 OR connectionEnd = 1 OR userID IS NULL
     	THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
         	"type", "sendToSocket",
@@ -34,7 +36,9 @@ BEGIN
                             "data", JSON_OBJECT(
                                 "loginMessage", "Авторизация прошла успешно",
                                 "auth", 1,
-                                "userType", typeID
+                                "userType", typeID,
+                                "userName", userName,
+                                "userEmail", userEmail
                             )
                         ),
                         JSON_OBJECT(
