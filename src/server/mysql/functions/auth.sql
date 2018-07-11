@@ -80,20 +80,12 @@ BEGIN
             END IF; 
             IF typeID = 1 OR typeID = 19
                 THEN BEGIN
-                    SET responce = JSON_MERGE(responce, JSON_OBJECT(
-                        "type", "procedure",
-                        "data", JSON_OBJECT(
-                            "query", "getBankStatistic",
-                            "values", JSON_ARRAY(
-                                CONCAT(connectionHash)
-                            )
-                        )
-                    ));
+                    SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
                 END;
             END IF;
             IF typeID = 1
                 THEN BEGIN
-                    SELECT state_json ->> "$.download" INTO downloadFilters FROM states WHERE user_id = userID ORDER BY state_id DESC;
+                    SELECT state_json ->> "$.download" INTO downloadFilters FROM states WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
                     SET responce = JSON_MERGE(responce, JSON_ARRAY(
                         JSON_OBJECT(
                             "type", "sendToSocket",

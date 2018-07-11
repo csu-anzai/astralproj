@@ -88,17 +88,7 @@ BEGIN
                 END;
             END IF; 
             IF typeID = 1 OR typeID = 19
-                THEN BEGIN
-                    SET responce = JSON_MERGE(responce, JSON_OBJECT(
-                        "type", "procedure",
-                        "data", JSON_OBJECT(
-                            "query", "getBankStatistic",
-                            "values", JSON_ARRAY(
-                                CONCAT(connectionHash)
-                            )
-                        )
-                    ));
-                END;
+                THEN SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
             END IF;
             IF typeID = 1
                 THEN BEGIN

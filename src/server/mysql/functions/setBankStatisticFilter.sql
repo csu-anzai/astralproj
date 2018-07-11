@@ -23,15 +23,7 @@ BEGIN
 				ITERATE keysLoop;
 			END LOOP;
 			UPDATE states SET state_json = JSON_SET(state_json, "$.statistic", userFilters) WHERE state_id = stateID;
-			SET responce = JSON_MERGE(responce, JSON_OBJECT(
-				"type", "procedure",
-				"data", JSON_OBJECT(
-					"query", "getBankStatistic",
-					"values", JSON_ARRAY(
-						connectionHash
-					)
-				)
-			));
+			SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
 		END;
 		ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToSocket",

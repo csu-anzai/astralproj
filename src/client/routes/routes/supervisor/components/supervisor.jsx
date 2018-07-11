@@ -180,7 +180,7 @@ export default class Supervisor extends React.Component {
 				<h2 style = {headerStyle}>Количество обработанных компаний за период</h2>
 				<SelectField
           floatingLabelText="Тип компаний"
-          value={this.props.state.statistic && this.props.state.statistic.typeToView != undefined ? this.props.state.statistic.typeToView : this.state.typeToView}
+          value={this.props.state.statistic && this.props.state.statistic.typeToView != undefined ? +this.props.state.statistic.typeToView : +this.state.typeToView}
           onChange={this.changeTypeToView}
           autoWidth = {true}
         >
@@ -215,7 +215,7 @@ export default class Supervisor extends React.Component {
         </SelectField>
         <SelectField
           floatingLabelText="Период"
-          value={this.props.state.statistic && this.props.state.statistic.period != undefined ? this.props.state.statistic.period : this.state.period}
+          value={this.props.state.statistic && this.props.state.statistic.period != undefined ? +this.props.state.statistic.period : +this.state.period}
           onChange={this.changePeriod}
           autoWidth = {true}
         >
@@ -246,14 +246,14 @@ export default class Supervisor extends React.Component {
         	fontFamily: "Roboto, sans-serif"
         }}>
         	{
-        		this.props.state.statistic && this.props.state.statistic.templates.map(template => template.items.length > 0 ? template.items.reduce((before, after) => before + after) : 0).reduce((before, after) => before + after)
+        		this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.length
         	}
         	{" компаний за период: "}
         	{
         		(this.props.state.statistic && this.props.state.statistic.period != 6) ?
-        		(this.props.state.statistic.dateStart == this.props.state.statistic.dateEnd ? 
-        			this.props.state.statistic.dateStart :
-        			`${this.props.state.statistic.dateStart} – ${this.props.state.statistic.dateEnd}`) :
+        		(
+        			this.props.state.statistic.working && this.props.state.statistic.working.length > 0 && (this.props.state.statistic.working.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.working[0].date : `${this.props.state.statistic.working[0].date} – ${this.props.state.statistic.working[this.props.state.statistic.working.length - 1].date}`)
+        		) :
         		[<DatePicker 
   						key = {0}
   						floatingLabelText="Начальная дата"
@@ -280,13 +280,14 @@ export default class Supervisor extends React.Component {
   						onChange = {(eny, date) => {
   							this.changeDate(date, 0);
   						}}
-  					/>]
+  					/>,
+  					this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 && `(только ${this.props.state.statistic.working[0].date})` || ""]
         	}
         </div>
 				<Line data = {{
-					labels: this.props.state.statistic && this.props.state.statistic.labels || [],
-				  datasets: this.props.state.statistic && this.props.state.statistic.templates.map((template, key) => ({
-				  	label: template.name || "Компании",
+					labels: this.props.state.statistic && this.props.state.statistic.working && (this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).length == 1 ? this.props.state.statistic.working.map(i => i.hour+":00").filter((i,k,s) => s.indexOf(i) == k) : this.props.state.statistic.working.map(i => i.date)).filter((i,k,s) => s.indexOf(i) == k) || [],
+				  datasets: this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
+				  	label: template.template_name,
 			      fill: false,
 			      lineTension: 0.1,
 			      backgroundColor: this.state.colors[key][1],
@@ -304,7 +305,7 @@ export default class Supervisor extends React.Component {
 			      pointHoverBorderWidth: 2,
 			      pointRadius: 5,
 			      pointHitRadius: 10,
-			      data: template.items || []
+			      data: this.props.state.statistic.working.filter(i => i.template_name == template.template_name).map(i => i.companies)
 				  }))
 				}}/>
 			</div>
@@ -314,7 +315,7 @@ export default class Supervisor extends React.Component {
 				</h2>
 				<SelectField
           floatingLabelText="Период"
-          value={this.props.state.statistic && this.props.state.statistic.dataPeriod != undefined ? this.props.state.statistic.dataPeriod : this.state.dataPeriod}
+          value={this.props.state.statistic && this.props.state.statistic.dataPeriod != undefined ? +this.props.state.statistic.dataPeriod : +this.state.dataPeriod}
           onChange={this.changeDataPeriod}
           autoWidth = {true}
         >
@@ -356,14 +357,14 @@ export default class Supervisor extends React.Component {
         	fontFamily: "Roboto, sans-serif"
         }}>
         	{
-        		this.props.state.statistic && this.props.state.statistic.templates.map(template => template.infoItems.length > 0 ? template.infoItems.reduce((before, after) => before + after) : 0).reduce((before, after) => before + after)
+        		this.props.state.statistic && this.props.state.statistic.data ? this.props.state.statistic.data.length : 0
         	}
         	{" компаний за период: "}
         	{
         		(this.props.state.statistic && this.props.state.statistic.dataPeriod != 6) ?
-        		(this.props.state.statistic.dataDateStart == this.props.state.statistic.dataDateEnd ? 
-        			this.props.state.statistic.dataDateStart :
-        			`${this.props.state.statistic.dataDateStart} – ${this.props.state.statistic.dataDateEnd}`) :
+        		(
+        			this.props.state.statistic.data && this.props.state.statistic.data.length > 0 && (this.props.state.statistic.data.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.data[0].date : `${this.props.state.statistic.data[0].date} – ${this.props.state.statistic.data[this.props.state.statistic.data.length - 1].date}`)
+        		) :
         		[<DatePicker 
   						key = {0}
   						floatingLabelText="Начальная дата"
@@ -390,18 +391,19 @@ export default class Supervisor extends React.Component {
   						onChange = {(eny, date) => {
   							this.changeDataDate(date, 0);
   						}}
-  					/>]
+  					/>,
+  					this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 && `(только ${this.props.state.statistic.data[0].date})` || ""]
         	}
         </div>
 				<Bar data = {{
-			    labels: this.props.state.statistic && this.props.state.statistic.dataLabels || [],
-					datasets: this.props.state.statistic && this.props.state.statistic.templates.map((template, key) => ({
-						label: template.name,
+			    labels: this.props.state.statistic && this.props.state.statistic.data && (this.props.state.statistic.data.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.data.map(i => i.time).filter((item, key, self) => self.indexOf(item) == key) : this.props.state.statistic.data.map(i => i.date)).filter((item, key, self) => self.indexOf(item) == key) || [],
+					datasets: this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
+						label: template.template_name,
 						backgroundColor: this.state.colors[key][1],
 						borderColor: this.state.colors[key][0],
 						pointHoverBackgroundColor: this.state.colors[key][0],
 						pointHoverBorderColor: 'rgba(220,220,220,1)',
-						data: template.infoItems || []
+						data: this.props.state.statistic.data.filter(i => i.template_name == template.template_name).map(i => i.companies)
 					}))
 				}}/>
 			</div>
