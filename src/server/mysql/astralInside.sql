@@ -750,20 +750,12 @@ BEGIN
             END IF; 
             IF typeID = 1 OR typeID = 19
                 THEN BEGIN
-                    SET responce = JSON_MERGE(responce, JSON_OBJECT(
-                        "type", "procedure",
-                        "data", JSON_OBJECT(
-                            "query", "getBankStatistic",
-                            "values", JSON_ARRAY(
-                                CONCAT(connectionHash)
-                            )
-                        )
-                    ));
+                    SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
                 END;
             END IF;
             IF typeID = 1
                 THEN BEGIN
-                    SELECT state_json ->> "$.download" INTO downloadFilters FROM states WHERE user_id = userID ORDER BY state_id DESC;
+                    SELECT state_json ->> "$.download" INTO downloadFilters FROM states WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
                     SET responce = JSON_MERGE(responce, JSON_ARRAY(
                         JSON_OBJECT(
                             "type", "sendToSocket",
@@ -908,17 +900,7 @@ BEGIN
                 END;
             END IF; 
             IF typeID = 1 OR typeID = 19
-                THEN BEGIN
-                    SET responce = JSON_MERGE(responce, JSON_OBJECT(
-                        "type", "procedure",
-                        "data", JSON_OBJECT(
-                            "query", "getBankStatistic",
-                            "values", JSON_ARRAY(
-                                CONCAT(connectionHash)
-                            )
-                        )
-                    ));
-                END;
+                THEN SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
             END IF;
             IF typeID = 1
                 THEN BEGIN
@@ -1551,6 +1533,73 @@ BEGIN
   RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `getBankStatistic` (`connectionHash` VARCHAR(32) CHARSET utf8) RETURNS JSON NO SQL
+BEGIN
+  DECLARE connectionID, bankID, userID, user INT(11);
+  DECLARE connectionValid, bank, free TINYINT(1);
+  DECLARE connectionApiID VARCHAR(128);
+  DECLARE dateStart, dateEnd, dataDateStart, dataDateEnd VARCHAR(19);
+  DECLARE responce, state, statistic, types JSON;
+  SET responce = JSON_ARRAY();
+  SET connectionValid = checkConnection(connectionHash);
+  SELECT connection_api_id INTO connectionApiID FROM connections WHERE connection_hash = connectionHash;
+  IF connectionValid
+    THEN BEGIN
+      SELECT connection_id, bank_id, user_id INTO connectionID, bankID, userID FROM users_connections_view WHERE connection_hash = connectionHash;
+      SELECT state_json INTO state FROM states WHERE connection_id = connectionID;
+      SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(state, "$.statistic.dateStart"));
+      SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(state, "$.statistic.dateEnd"));
+      SET dataDateStart = JSON_UNQUOTE(JSON_EXTRACT(state, "$.statistic.dataDateStart"));
+      SET dataDateEnd = JSON_UNQUOTE(JSON_EXTRACT(state, "$.statistic.dataDateEnd"));
+      SET types = JSON_EXTRACT(state, "$.statistic.types");
+      SET user = JSON_EXTRACT(state, "$.statistic.user");
+      SET bank = JSON_EXTRACT(state, "$.statistic.dataBank");
+      SET free = JSON_EXTRACT(state, "$.statistic.dataFree");
+      SET statistic = JSON_OBJECT(
+        "working", getWorkingBankStatistic(bankID, dateStart, dateEnd, types, user),
+        "data", getDataStatistic(dataDateStart,dataDateEnd, IF(bank, bankID, NULL), free),
+        "typeToView", JSON_EXTRACT(state, "$.statistic.typeToView"),
+        "period", JSON_EXTRACT(state, "$.statistic.period"),
+        "dateStart", dateStart,
+        "dateEnd", dateEnd,
+        "users", getUsers(bankID),
+        "user", user,
+        "dataFree", free,
+        "dataBank", bank,
+        "dataDateStart", dataDateStart,
+        "dataDateEnd", dataDateEnd,
+        "dataPeriod", JSON_EXTRACT(state, "$.statistic.dataPeriod")
+      );
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "type", "sendToSocket",
+        "data", JSON_OBJECT(
+          "socketID", connectionApiID,
+          "data", JSON_ARRAY(JSON_OBJECT(
+            "type", "merge",
+            "data", JSON_OBJECT(
+              "statistic", statistic
+            )
+          ))
+        )
+      ));
+    END;
+    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToSocket",
+      "data", JSON_OBJECT(
+        "socketID", connectionApiID,
+        "data", JSON_ARRAY(JSON_OBJECT(
+          "type", "merge",
+          "data", JSON_OBJECT(
+            "auth", 0,
+            "loginMessage", "Требуется ручной вход в систему"
+          )
+        ))
+      )
+    ));
+  END IF;
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `getColumns` () RETURNS JSON NO SQL
 BEGIN
   DECLARE columnID INT(11);
@@ -1596,6 +1645,35 @@ BEGIN
   SET responce = JSON_OBJECT(
     "companies", responce
   );
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `getDataStatistic` (`dateStart` VARCHAR(19) CHARSET utf8, `dateEnd` VARCHAR(19) CHARSET utf8, `bankID` INT(11), `free` TINYINT(1)) RETURNS JSON NO SQL
+BEGIN
+  DECLARE done TINYINT(1);
+  DECLARE companiesCount INT(11);
+  DECLARE templateName VARCHAR(128);
+  DECLARE companiesDate VARCHAR(10);
+  DECLARE companiesTime VARCHAR(5);
+  DECLARE responce JSON;
+  DECLARE companiesCursor CURSOR FOR SELECT COUNT(*), ty.type_name, DATE(c.company_date_create) company_date, CONCAT(HOUR(c.company_date_create), ":", MINUTE(c.company_date_create)) company_time FROM companies c JOIN templates t ON t.template_id = c.template_id JOIN types ty ON ty.type_id = t.type_id WHERE IF(bankID IS NOT NULL, c.bank_id = bankID, 1) AND IF(free, c.type_id = 10, 1) AND DATE(c.company_date_create) BETWEEN DATE(dateStart) AND DATE(dateEnd) GROUP BY company_date, company_time, ty.type_name ORDER BY company_date, company_time, ty.type_name;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SET responce = JSON_ARRAY();
+  OPEN companiesCursor;
+    companiesLoop: LOOP
+      FETCH companiesCursor INTO companiesCount, templateName, companiesDate, companiesTime;
+      IF done 
+        THEN LEAVE companiesLoop;
+      END IF;
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "template_name", templateName,
+        "companies", companiesCount,
+        "date", companiesDate,
+        "time", companiesTime
+      ));
+      ITERATE companiesLoop;
+    END LOOP;
+  CLOSE companiesCursor;
   RETURN responce;
 END$$
 
@@ -1702,6 +1780,36 @@ BEGIN
       ITERATE usersLoop;
     END LOOP;
   CLOSE usersCursor;
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `getWorkingBankStatistic` (`bankID` INT(11), `dateStart` VARCHAR(19) CHARSET utf8, `dateEnd` VARCHAR(19) CHARSET utf8, `companiesTypes` JSON, `userID` INT(11)) RETURNS JSON NO SQL
+BEGIN
+  DECLARE done TINYINT(1);
+  DECLARE responce JSON;
+  DECLARE companiesCount, iterator INT(11);
+  DECLARE companiesHour VARCHAR(2);
+  DECLARE companiesDate VARCHAR(10);  
+  DECLARE templateName VARCHAR(128);
+  DECLARE companiesCursor CURSOR FOR SELECT COUNT(*), DATE(c.company_date_update) company_date, HOUR(c.company_date_update) company_hour, ty.type_name FROM companies c JOIN templates t ON t.template_id = c.template_id JOIN types ty ON ty.type_id = t.type_id WHERE bank_id = bankID AND JSON_CONTAINS(companiesTypes, CONCAT(c.type_id)) AND IF(userID IS NOT NULL AND userID > 0, c.user_id = userID, 1) AND DATE(company_date_update) BETWEEN DATE(dateStart) AND DATE(dateEnd) GROUP BY company_date, company_hour, ty.type_name; 
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SET responce = JSON_ARRAY();
+  SET iterator = 0;
+  OPEN companiesCursor;
+    companiesLoop: LOOP
+      FETCH companiesCursor INTO companiesCount, companiesDate, companiesHour, templateName;
+      IF done 
+        THEN LEAVE companiesLoop;
+      END IF;
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "template_name", templateName,
+        "companies", companiesCount,
+        "date", companiesDate,
+        "hour", companiesHour
+      ));
+      ITERATE companiesLoop;
+    END LOOP;
+  CLOSE companiesCursor;
   RETURN responce;
 END$$
 
@@ -2116,15 +2224,7 @@ BEGIN
         ITERATE keysLoop;
       END LOOP;
       UPDATE states SET state_json = JSON_SET(state_json, "$.statistic", userFilters) WHERE state_id = stateID;
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "type", "procedure",
-        "data", JSON_OBJECT(
-          "query", "getBankStatistic",
-          "values", JSON_ARRAY(
-            connectionHash
-          )
-        )
-      ));
+      SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
     END;
     ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
       "type", "sendToSocket",
