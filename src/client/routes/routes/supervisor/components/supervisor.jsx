@@ -246,7 +246,7 @@ export default class Supervisor extends React.Component {
         	fontFamily: "Roboto, sans-serif"
         }}>
         	{
-        		this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.length
+        		this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.length > 0 && this.props.state.statistic.working.map(i => i.companies).reduce((before, after) => before + after) || 0
         	}
         	{" компаний за период: "}
         	{
@@ -357,7 +357,7 @@ export default class Supervisor extends React.Component {
         	fontFamily: "Roboto, sans-serif"
         }}>
         	{
-        		this.props.state.statistic && this.props.state.statistic.data ? this.props.state.statistic.data.length : 0
+        		this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.length > 0 ? this.props.state.statistic.data.map(i => i.companies).reduce((before, after) => before + after) : 0
         	}
         	{" компаний за период: "}
         	{
