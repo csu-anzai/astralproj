@@ -21,8 +21,11 @@ class TelegramApi {
 			url: `${this.telegramApiUrl}/getUpdates`
 		}, this.requestOptions);
 		return new Promise((resolve, reject) => {
-			tr.request(options, (err, res, body) => {
-				err ? reject(err) : resolve(body);
+			tr.newTorSession(error => {
+				error ? reject(error) : 
+				tr.request(options, (err, res, body) => {
+					err ? reject(err) : resolve(body);
+				});
 			});
 		});
 	}
@@ -44,14 +47,18 @@ class TelegramApi {
 			!reply_to_message_id && delete(options.body.reply_to_message_id);
 			!reply_markup && delete(options.body.reply_markup);
 			return new Promise((resolve, reject) => {
-				tr.request(options, (err, res, body) => {
-					err ? reject(err) : resolve(body);
+				tr.newTorSession(error => {
+					error ? reject(error) :
+					tr.request(options, (err, res, body) => {
+						err ? reject(err) : resolve(body);
+					});
 				});
 			});
 		}
 	}
 }
 module.exports = (env, reducer) => {
+	tr.TorControlPort.password = 'giraffe';
 	const api = new TelegramApi(env, reducer);	
 	return api;
 }
