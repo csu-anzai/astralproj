@@ -158,7 +158,7 @@ BEGIN
   DECLARE columnName VARCHAR(128);
   DECLARE templateColumnLetters VARCHAR(3);
   DECLARE endDate, startDate VARCHAR(26);
-  DECLARE columns, companiesKeys, company, refreshResponce JSON;
+  DECLARE columns, companiesKeys, company JSON;
   DECLARE done TINYINT(1);
   DECLARE templateCursor CURSOR FOR SELECT column_name, template_column_letters FROM custom_template_columns_view;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
@@ -260,11 +260,7 @@ BEGIN
                   THEN LEAVE banksLoop;
                 END IF;
                 SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT insertCompaniesCount) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
-                SET refreshResponce = JSON_ARRAY();
-                CALL refreshBankSupervisors(bankID, refreshResponce);
-                IF JSON_LENGTH(refreshResponce) > 0 
-                  THEN SET responce = JSON_MERGE(responce, refreshResponce);
-                END IF;
+                SET responce  = JSON_MERGE(responce, refreshBankSupervisors(bankID));
                 SET iterator = iterator + 1;
                 ITERATE banksLoop;
               END LOOP;
@@ -296,28 +292,6 @@ BEGIN
     )
   ));
   SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(message));
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `refreshBankSupervisors` (IN `bankID` INT(11), OUT `responce` JSON)  NO SQL
-BEGIN
-  DECLARE userID INT(11);
-  DECLARE connectionHash VARCHAR(32);
-  DECLARE done TINYINT(1);
-  DECLARE statisticResponce JSON;
-  DECLARE usersCursor CURSOR FOR SELECT user_id, connection_hash FROM users_connections_view WHERE connection_end = 0 AND connection_type_id = 3 AND type_id IN (1, 19) AND bank_id = bankID;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN usersCursor;
-    usersLoop: LOOP
-      FETCH usersCursor INTO userID, connectionHash;
-      IF done
-        THEN LEAVE usersLoop;
-      END IF;
-      CALL getBankStatistic(connectionHash, statisticResponce);
-      SET responce = JSON_MERGE(responce, statisticResponce);
-      ITERATE usersLoop;
-    END LOOP;
-  CLOSE usersCursor;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `reserveCompanies` (IN `connectionHash` VARCHAR(32) CHARSET utf8, OUT `responce` JSON)  NO SQL
@@ -1071,22 +1045,6 @@ BEGIN
       UPDATE connections SET connection_end = 1 WHERE connection_hash = connectionHash;
     END;
   END IF;
-  IF userID IS NOT NULL
-    THEN BEGIN 
-      SELECT user_online, bank_id INTO userOnline, bankID FROM users WHERE user_id = userID;
-      IF !userOnline AND bankID IS NOT NULL
-        THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
-          "type", "procedure",
-          "data", JSON_OBJECT(
-            "query", "refreshBankSupervisors",
-            "values", JSON_ARRAY(
-              bankID
-            )
-          )
-        ));
-      END IF;
-    END;
-  END IF;
   RETURN responce;
 END$$
 
@@ -1633,15 +1591,6 @@ BEGIN
               )
             ))
           )
-        ),
-        JSON_OBJECT(
-          "type", "procedure",
-          "data", JSON_OBJECT(
-            "query", "refreshBankSupervisors",
-            "values", JSON_ARRAY(
-              bankID
-            )
-          )
         )
       );
       SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
@@ -1698,6 +1647,28 @@ BEGIN
             )
         )
     ));
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `refreshBankSupervisors` (`bankID` INT(11)) RETURNS JSON NO SQL
+BEGIN
+  DECLARE userID INT(11);
+  DECLARE connectionHash VARCHAR(32);
+  DECLARE done TINYINT(1);
+  DECLARE responce JSON;
+  DECLARE usersCursor CURSOR FOR SELECT user_id, connection_hash FROM users_connections_view WHERE connection_end = 0 AND connection_type_id = 3 AND type_id IN (1, 19) AND bank_id = bankID;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SET responce = JSON_ARRAY();
+  OPEN usersCursor;
+    usersLoop: LOOP
+      FETCH usersCursor INTO userID, connectionHash;
+      IF done
+        THEN LEAVE usersLoop;
+      END IF;
+      SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
+      ITERATE usersLoop;
+    END LOOP;
+  CLOSE usersCursor;
+  RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `refreshUserCompanies` (`userID` INT(11)) RETURNS JSON NO SQL
