@@ -58,7 +58,7 @@ class TelegramApi {
 	}
 }
 module.exports = (env, reducer) => {
-	tr.TorControlPort.password = 'giraffe';
+	tr.TorControlPort.password = env.tor.password;
 	const api = new TelegramApi(env, reducer);	
 	return api;
 }
