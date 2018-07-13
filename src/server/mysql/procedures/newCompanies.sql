@@ -4,7 +4,7 @@ BEGIN
 	DECLARE columnName VARCHAR(128);
 	DECLARE templateColumnLetters VARCHAR(3);
 	DECLARE endDate, startDate VARCHAR(26);
-	DECLARE columns, companiesKeys, company, refreshResponce JSON;
+	DECLARE columns, companiesKeys, company JSON;
 	DECLARE done TINYINT(1);
 	DECLARE templateCursor CURSOR FOR SELECT column_name, template_column_letters FROM custom_template_columns_view;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
@@ -106,11 +106,7 @@ BEGIN
 									THEN LEAVE banksLoop;
 								END IF;
 								SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT insertCompaniesCount) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
-								SET refreshResponce = JSON_ARRAY();
-								CALL refreshBankSupervisors(bankID, refreshResponce);
-								IF JSON_LENGTH(refreshResponce) > 0 
-									THEN SET responce = JSON_MERGE(responce, refreshResponce);
-								END IF;
+								SET responce  = JSON_MERGE(responce, refreshBankSupervisors(bankID));
 								SET iterator = iterator + 1;
 								ITERATE banksLoop;
 							END LOOP;

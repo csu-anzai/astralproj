@@ -25,15 +25,6 @@ BEGIN
 							)
 						))
 					)
-				),
-				JSON_OBJECT(
-					"type", "procedure",
-					"data", JSON_OBJECT(
-						"query", "refreshBankSupervisors",
-						"values", JSON_ARRAY(
-							bankID
-						)
-					)
 				)
 			);
 			SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(

@@ -43,6 +43,7 @@ export default class Supervisor extends React.Component {
 		this.changeBank = this.changeBank.bind(this);
 		this.changeDataFree = this.changeDataFree.bind(this);
 		this.changeDate = this.changeDate.bind(this);
+		this.getFormated = this.getFormated.bind(this);
 	}
 	changeTypeToView(event, key, payload) {
 		this.props.dispatch({
@@ -173,6 +174,17 @@ export default class Supervisor extends React.Component {
 				]
 			}
 		});
+	}
+	getFormated(type, template){
+		let arr = this.props.state.statistic[type].filter(item => item.template_name == template),
+				datesArr = arr.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).map(i => i.date);
+		if(datesArr.length > 1){
+		 	let newArr = datesArr.map(item => arr.filter(i => i.date == item).reduce((before, after) => ({companies: before.companies + after.companies}))).map(i => i.companies);
+		 	arr = newArr;
+		} else {
+			arr = arr.map(i => i.companies);
+		}
+		return arr;
 	}
 	render(){
 		return <div>
@@ -305,7 +317,7 @@ export default class Supervisor extends React.Component {
 			      pointHoverBorderWidth: 2,
 			      pointRadius: 5,
 			      pointHitRadius: 10,
-			      data: this.props.state.statistic.working.filter(i => i.template_name == template.template_name).map(i => i.companies)
+			      data: this.getFormated("working", template.template_name)
 				  }))
 				}}/>
 			</div>
@@ -403,7 +415,7 @@ export default class Supervisor extends React.Component {
 						borderColor: this.state.colors[key][0],
 						pointHoverBackgroundColor: this.state.colors[key][0],
 						pointHoverBorderColor: 'rgba(220,220,220,1)',
-						data: this.props.state.statistic.data.filter(i => i.template_name == template.template_name).map(i => i.companies)
+						data: this.getFormated("data", template.template_name)
 					}))
 				}}/>
 			</div>
