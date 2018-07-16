@@ -35,7 +35,7 @@ reducer.initEvents({
 reducer.dispatch({
 	type: "query",
 	data: {
-		query: "disconnectAll",
+		query: "serverStart",
 		values: []
 	}
 });
