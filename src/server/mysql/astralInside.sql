@@ -1021,12 +1021,6 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `disconnectAll` () RETURNS TINYINT(4) NO SQL
-BEGIN
-  UPDATE connections SET connection_end = 1;
-    RETURN 1;
-END$$
-
 CREATE DEFINER=`root`@`localhost` FUNCTION `disconnectConnection` (`connectionApiID` VARCHAR(128) CHARSET utf8, `connectionHash` VARCHAR(32) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
   DECLARE responce JSON;
@@ -1947,6 +1941,13 @@ BEGIN
     ));
   END IF;
   RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `serverStart` () RETURNS TINYINT(4) NO SQL
+BEGIN
+  UPDATE connections SET connection_end = 1;
+  UPDATE calls c SET call_internal_type_id = 42, call_destination_type_id = 42 WHERE call_internal_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53) AND call_destination_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53);
+  RETURN 1;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setApiResponce` (`companyID` INT(11), `applicationID` VARCHAR(128) CHARSET utf8, `requestID` VARCHAR(128) CHARSET utf8, `success` TINYINT(1)) RETURNS JSON NO SQL
