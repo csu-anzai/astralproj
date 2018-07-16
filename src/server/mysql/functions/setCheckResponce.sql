@@ -42,5 +42,6 @@ BEGIN
 			"message", CONCAT(companiesLength, " компаний успешно обработаны")
 		)
 	));
+	SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(CONCAT(companiesLength, " компаний успешно обработаны")));
 	RETURN responce;
 END
