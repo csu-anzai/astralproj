@@ -2198,6 +2198,7 @@ BEGIN
       "message", CONCAT(companiesLength, " компаний успешно обработаны")
     )
   ));
+  SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(CONCAT(companiesLength, " компаний успешно обработаны")));
   RETURN responce;
 END$$
 
@@ -2214,8 +2215,8 @@ BEGIN
     THEN BEGIN
       SELECT type_id INTO lastTypeID FROM companies WHERE company_id = companyID;
       IF typeID = 23
-        THEN UPDATE companies SET type_id = typeID, company_date_call_back = dateParam, user_id = userID WHERE company_id = companyID;
-        ELSE UPDATE companies SET type_id = typeID, user_id = userID WHERE company_id = companyID;
+        THEN UPDATE companies SET type_id = typeID, company_date_call_back = dateParam, user_id = userID, company_date_update = NOW() WHERE company_id = companyID;
+        ELSE UPDATE companies SET type_id = typeID, user_id = userID, company_date_update = NOW() WHERE company_id = companyID;
       END IF;
       IF typeID = 36 OR lastTypeID = 36 
         THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
@@ -2905,7 +2906,6 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
       SELECT IF(callPredicted = 1, destination_file_name, internal_file_name) INTO fileName FROM calls_file_view WHERE call_id = NEW.call_id;
     END;
   END IF;
-  SET NEW.company_date_update = NOW();
   SET NEW.company_json = JSON_SET(NEW.company_json,
     "$.type_id", NEW.type_id,
     "$.company_date_update", NEW.company_date_update,
