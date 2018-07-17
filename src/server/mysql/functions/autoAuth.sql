@@ -1,13 +1,13 @@
 BEGIN
-	DECLARE connectionID, userID, activeCompaniesLength, typeID INT(11);
+	DECLARE connectionID, userID, activeCompaniesLength, typeID, bankID INT(11);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userName VARCHAR(64);
     DECLARE userEmail VARCHAR(512);
     DECLARE userAuth, connectionEnd, ringing TINYINT(1);
-    DECLARE responce, activeCompanies, downloadFilters, distributionFilters JSON;
+    DECLARE responce, activeCompanies, downloadFilters, distributionFilters, statisticFilters JSON;
     SET responce = JSON_ARRAY();
 	SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
-    SELECT user_id, user_auth, type_id, user_name, user_email INTO userID, userAuth, typeID, userName, userEmail FROM users WHERE user_hash = userHash;
+    SELECT user_id, user_auth, type_id, user_name, user_email, bank_id INTO userID, userAuth, typeID, userName, userEmail, bankID FROM users WHERE user_hash = userHash;
     IF connectionID IS NULL OR userAuth = 0 OR connectionEnd = 1 OR userID IS NULL
     	THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
         	"type", "sendToSocket",
@@ -88,7 +88,22 @@ BEGIN
                 END;
             END IF; 
             IF typeID = 1 OR typeID = 19
-                THEN SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
+                THEN BEGIN
+                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID; 
+                    SET statisticFilters = JSON_SET(statisticFilters, "$.users", getUsers(bankID));
+                    SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                        "type", "sendToSocket",
+                        "data", JSON_OBJECT(
+                            "socketID", connectionApiID,
+                            "data", JSON_ARRAY(JSON_OBJECT(
+                                "type", "merge",
+                                "data", JSON_OBJECT(
+                                    "statistic", statisticFilters
+                                )
+                            ))
+                        )
+                    ));
+                END;
             END IF;
             IF typeID = 1
                 THEN BEGIN

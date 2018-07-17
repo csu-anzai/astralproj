@@ -10,8 +10,8 @@ BEGIN
 		THEN BEGIN
 			SELECT type_id INTO lastTypeID FROM companies WHERE company_id = companyID;
 			IF typeID = 23
-				THEN UPDATE companies SET type_id = typeID, company_date_call_back = dateParam, user_id = userID, company_date_update = NOW() WHERE company_id = companyID;
-				ELSE UPDATE companies SET type_id = typeID, user_id = userID, company_date_update = NOW() WHERE company_id = companyID;
+				THEN UPDATE companies SET type_id = typeID, company_date_call_back = dateParam, user_id = userID WHERE company_id = companyID;
+				ELSE UPDATE companies SET type_id = typeID, user_id = userID WHERE company_id = companyID;
 			END IF;
 			IF typeID = 36 OR lastTypeID = 36 
 				THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
