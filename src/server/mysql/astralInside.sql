@@ -253,17 +253,6 @@ BEGIN
                 ". Удалено ",
                 companiesLength - insertCompaniesCount
               );
-              SELECT COUNT(DISTINCT bank_id) INTO banksCount FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT insertCompaniesCount) companies WHERE bank_id IS NOT NULL;
-              SET iterator = 0;
-              banksLoop: LOOP           
-                IF iterator >= banksCount
-                  THEN LEAVE banksLoop;
-                END IF;
-                SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT insertCompaniesCount) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
-                SET responce  = JSON_MERGE(responce, refreshBankSupervisors(bankID));
-                SET iterator = iterator + 1;
-                ITERATE banksLoop;
-              END LOOP;
             END;
             ELSE SET message = CONCAT("Не все колонки соответствуют шаблону ", templateID, " (", templateСoncurrences, "/", companiesKeysLength, ")");
           END IF;
@@ -1704,28 +1693,6 @@ BEGIN
             )
         )
     ));
-END$$
-
-CREATE DEFINER=`root`@`localhost` FUNCTION `refreshBankSupervisors` (`bankID` INT(11)) RETURNS JSON NO SQL
-BEGIN
-  DECLARE userID INT(11);
-  DECLARE connectionHash VARCHAR(32);
-  DECLARE done TINYINT(1);
-  DECLARE responce JSON;
-  DECLARE usersCursor CURSOR FOR SELECT user_id, connection_hash FROM users_connections_view WHERE connection_end = 0 AND connection_type_id = 3 AND type_id IN (1, 19) AND bank_id = bankID;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN usersCursor;
-    usersLoop: LOOP
-      FETCH usersCursor INTO userID, connectionHash;
-      IF done
-        THEN LEAVE usersLoop;
-      END IF;
-      SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
-      ITERATE usersLoop;
-    END LOOP;
-  CLOSE usersCursor;
-  RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `refreshUserCompanies` (`userID` INT(11)) RETURNS JSON NO SQL
