@@ -20,7 +20,9 @@ BEGIN
 						"dataDateEnd", DATE(NOW()),
 						"dataPeriod", 0,
 						"dataBank", 1,
-						"dataFree", 1
+						"dataFree", 1,
+						"workingCompaniesLimit", 10,
+						"workingCompaniesOffset", 0
 					)
 				);
 			END IF;

@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE connectionID, bankID, userID, user INT(11);
+	DECLARE connectionID, bankID, userID, user, workingCompaniesLimit, workingCompaniesOffset INT(11);
 	DECLARE connectionValid, bank, free TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE dateStart, dateEnd, dataDateStart, dataDateEnd VARCHAR(19);
@@ -21,6 +21,8 @@ BEGIN
 					SET dataDateEnd = JSON_UNQUOTE(JSON_EXTRACT(state, "$.statistic.dataDateEnd"));
 					SET bank = JSON_EXTRACT(state, "$.statistic.dataBank");
 					SET free = JSON_EXTRACT(state, "$.statistic.dataFree");
+					SET workingCompaniesLimit = JSON_EXTRACT(state, "$.statistic.workingCompaniesLimit");
+					SET workingCompaniesOffset = JSON_EXTRACT(state, "$.statistic.workingCompaniesOffset");
 					SET statistic = JSON_OBJECT(
 						"typeToView", JSON_EXTRACT(state, "$.statistic.typeToView"),
 						"period", JSON_EXTRACT(state, "$.statistic.period"),
@@ -32,10 +34,15 @@ BEGIN
 						"dataDateStart", dataDateStart,
 						"dataDateEnd", dataDateEnd,
 						"dataPeriod", JSON_EXTRACT(state, "$.statistic.dataPeriod"),
-						"users", getUsers(bankID)
+						"users", getUsers(bankID),
+						"workingCompaniesLimit", workingCompaniesLimit,
+						"workingCompaniesOffset", workingCompaniesOffset
 					);
 					IF statisticType = "working"
-						THEN SET statistic = JSON_SET(statistic, "$.working", getWorkingBankStatistic(bankID, dateStart, dateEnd, types, user));
+						THEN SET statistic = JSON_SET(statistic, 
+							"$.working", getWorkingBankStatistic(bankID, dateStart, dateEnd, types, user),
+							"$.workingCompanies", getWorkingStatisticCompanies(bankID, dateStart, dateEnd, types, user, workingCompaniesLimit, workingCompaniesOffset)
+						);
 					END IF;
 					IF statisticType = "data"
 						THEN SET statistic = JSON_SET(statistic, "$.data", getDataStatistic(dataDateStart,dataDateEnd, IF(bank, bankID, NULL), free));

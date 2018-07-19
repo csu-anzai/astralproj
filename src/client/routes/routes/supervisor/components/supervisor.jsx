@@ -9,9 +9,22 @@ import {BottomNavigation, BottomNavigationItem} from 'material-ui/BottomNavigati
 import Work from 'material-ui/svg-icons/action/work';
 import Cloud from 'material-ui/svg-icons/file/cloud';
 import Refresh from 'material-ui/svg-icons/navigation/refresh';
+import IconButton from 'material-ui/IconButton';
+import ArrowBack from 'material-ui/svg-icons/navigation/arrow-back';
+import ArrowForward from 'material-ui/svg-icons/navigation/arrow-forward';
+import {
+  Table,
+  TableBody,
+  TableFooter,
+  TableHeader,
+  TableHeaderColumn,
+  TableRow,
+  TableRowColumn,
+} from 'material-ui/Table';
 const partStyle = {
 	maxWidth: "800px",
-	margin: "0 auto 10px"
+	margin: "0 auto 10px",
+	overflowX: "auto"
 };
 const headerStyle = {
 	textAlign: "center", 
@@ -62,12 +75,14 @@ export default class Supervisor extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						typeToView: payload
+						typeToView: payload,
+						workingCompaniesOffset: 0
 					})
 				]
 			}
 		});
 		this.resetStatisticArr("working");
+		this.resetStatisticArr("workingCompanies");
 	}
 	resetStatisticArr(type){
 		this.props.dispatch({
@@ -89,12 +104,14 @@ export default class Supervisor extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						period: payload
+						period: payload,
+						workingCompaniesOffset: 0
 					})
 				]
 			}
 		});
 		this.resetStatisticArr("working");
+		this.resetStatisticArr("workingCompanies");
 	}
 	changeUser(event, key, payload) {
 		this.props.dispatch({
@@ -106,12 +123,14 @@ export default class Supervisor extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						user: payload
+						user: payload,
+						workingCompaniesOffset: 0
 					})
 				]
 			}
 		});
 		this.resetStatisticArr("working");
+		this.resetStatisticArr("workingCompanies");
 	}
 	changeDataPeriod(event, key, payload) {
 		this.props.dispatch({
@@ -175,12 +194,14 @@ export default class Supervisor extends React.Component {
 					this.props.state.connectionHash,
 					JSON.stringify({
 						period: 6,
-						[dateStartBool ? "dateStart" : "dateEnd"]: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+						[dateStartBool ? "dateStart" : "dateEnd"]: `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
+						workingCompaniesOffset: 0
 					})
 				]
 			}
 		});
 		this.resetStatisticArr("working");
+		this.resetStatisticArr("workingCompanies");
 	}
 	changeDataDate(date, dateStartBool){
 		this.props.dispatch({
@@ -229,6 +250,42 @@ export default class Supervisor extends React.Component {
 			}
 		});
 		this.resetStatisticArr(this.state.selectedIndex == 0 ? "working" : "data");
+		this.state.selectedIndex == 0 && this.resetStatisticArr("workingCompanies");
+	}
+	componentDidMount(){
+		let component = document.querySelector("#app > div > div:nth-child(2) > div:nth-child(4) > div > div");
+		console.log(component);
+		component && (component.style.overflow = "auto");
+	}
+	workingPaging(limit, offset){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setBankStatisticFilter",
+				priority: true,
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						workingCompaniesOffset: offset,
+						workingCompaniesLimit: limit
+					})
+				]
+			}
+		});
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "getUserStatistic",
+				priority: true,
+				values: [
+					this.props.state.connectionHash,
+					"working"
+				]
+			}
+		});
+		this.resetStatisticArr("workingCompanies");
 	}
 	render(){
 		return <div>
@@ -257,7 +314,8 @@ export default class Supervisor extends React.Component {
 			</div>
 			{
 				this.state.selectedIndex == 0 ?
-					<div style = {partStyle}>
+					[
+					<div key = {1} style = {partStyle}>
 					<SelectField
 	          floatingLabelText="Тип компаний"
 	          value={this.props.state.statistic && this.props.state.statistic.typeToView != undefined ? +this.props.state.statistic.typeToView : +this.state.typeToView}
@@ -391,7 +449,119 @@ export default class Supervisor extends React.Component {
 						  }))
 						}}/>
 	        }
-					</div> :
+					</div>,
+					<div key = {2} style = {{
+						display: (this.props.state.statistic && this.props.state.statistic.workingCompanies && this.props.state.statistic.workingCompanies.length > 0) ? "block" : "none"
+					}}>
+						<Table
+								fixedHeader={false}
+			          fixedFooter={false}
+			          selectable={false}
+			          multiSelectable={false}
+			          style = {{tableLayout: "auto"}}
+							>
+								<TableHeader
+			            displaySelectAll={false}
+			            adjustForCheckbox={false}
+			            enableSelectAll={false}
+			          >
+			          	<TableRow>
+			          		<TableHeaderColumn>
+			          			Название компании
+			          		</TableHeaderColumn>
+			          		<TableHeaderColumn>
+			          			Ф.И.О
+			          		</TableHeaderColumn>
+			          		<TableHeaderColumn>
+			          			Телефон
+			          		</TableHeaderColumn>
+			          		<TableHeaderColumn>
+			          			ИНН
+			          		</TableHeaderColumn>
+			          		<TableHeaderColumn>
+			          			Дата создания
+			          		</TableHeaderColumn>
+			          		<TableHeaderColumn>
+			          			Дата обновления
+			          		</TableHeaderColumn>
+			          		<TableHeaderColumn>
+			          			Статус
+			          		</TableHeaderColumn>
+			          	</TableRow>
+			          </TableHeader>
+			          <TableBody
+			            displayRowCheckbox={false}
+			            deselectOnClickaway={false}
+			            showRowHover={true}
+			            stripedRows={false}
+			          >
+			          	{
+			          		this.props.state.statistic && this.props.state.statistic.workingCompanies && this.props.state.statistic.workingCompanies.length > 0 && this.props.state.statistic.workingCompanies.map((company, key) => (
+			          			<TableRow
+			          				key = {key}
+			          			>
+			          				<TableRowColumn>
+			          					{company.company_organization_name}
+			          				</TableRowColumn>
+			          				<TableRowColumn>
+			          					{`${company.company_person_name} ${company.company_person_surname} ${company.company_person_patronymic}`}
+			          				</TableRowColumn>
+			          				<TableRowColumn>
+			          					{company.company_phone}
+			          				</TableRowColumn>
+			          				<TableRowColumn>
+			          					{company.company_inn}
+			          				</TableRowColumn>
+			          				<TableRowColumn>
+			          					{company.company_date_create}
+			          				</TableRowColumn>
+			          				<TableRowColumn>
+			          					{company.company_date_update}
+			          				</TableRowColumn>
+			          				<TableRowColumn>
+			          					{company.translate_to}
+			          				</TableRowColumn>
+			          			</TableRow>
+			          		))
+			          	}
+			          	<TableRow>
+			          		<TableRowColumn colSpan = {7} style = {{
+			          			textAlign: "right"
+			          		}}>
+			          			<IconButton 
+			            			title = "сюда"
+			            			disabled = {
+			            				this.props.state.statistic && this.props.state.statistic.hasOwnProperty("workingCompaniesOffset") && this.props.state.statistic.workingCompaniesOffset <= 0 ? true : false
+			            			}
+			            			onClick = {this.workingPaging.bind(this, this.props.state.statistic && this.props.state.statistic.hasOwnProperty("workingCompaniesLimit") && this.props.state.statistic.workingCompaniesLimit, this.props.state.statistic && this.props.state.statistic.hasOwnProperty("workingCompaniesOffset") && this.props.state.statistic.workingCompaniesOffset - this.props.state.statistic.workingCompaniesLimit)}
+		            			>
+		            				<ArrowBack/>
+			            		</IconButton>
+			            		<div style = {{
+			            			display: "inline-block",
+			            			lineHeight: "48px",
+			            			verticalAlign: "top"
+			            		}}>
+			            			{
+			            				this.props.state.statistic && this.props.state.statistic.workingCompanies && 
+			            				`c ${this.props.state.statistic.workingCompaniesOffset == 0 ? 1 : this.props.state.statistic.workingCompaniesOffset} по ${this.props.state.statistic.workingCompaniesOffset + this.props.state.statistic.workingCompanies.length}` 
+			            			}
+			            		</div>
+			            		<IconButton 
+			            			title = "туда"
+			            			disabled = {
+			            				this.props.state.statistic && this.props.state.statistic.workingCompanies && this.props.state.statistic.workingCompanies.length < this.props.state.statistic.workingCompaniesLimit ? true : false
+			            			}
+			            			onClick = {this.workingPaging.bind(this, this.props.state.statistic && this.props.state.statistic.hasOwnProperty("workingCompaniesLimit") && this.props.state.statistic.workingCompaniesLimit, this.props.state.statistic && this.props.state.statistic.hasOwnProperty("workingCompaniesOffset") && this.props.state.statistic.workingCompaniesOffset + this.props.state.statistic.workingCompaniesLimit)}
+		            			>
+		            				<ArrowForward/>
+			            		</IconButton>
+			          		</TableRowColumn>
+			          	</TableRow>
+			          </TableBody>
+							</Table>
+					</div>
+					] :
 					<div style = {partStyle}>
 						<SelectField
 		          floatingLabelText="Период"
