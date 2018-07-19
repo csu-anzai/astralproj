@@ -2,11 +2,11 @@ BEGIN
 	DECLARE connectionValid TINYINT(1);
 	DECLARE keyName VARCHAR(128);
 	DECLARE connectionApiID VARCHAR(32);
-	DECLARE keysLength, iterator, stateID, userID, connectionID INT(11);
+	DECLARE keysLength, iterator, stateID, userID, connectionID, bankID INT(11);
 	DECLARE userFilters, responce, filtersKeys JSON;
 	SET connectionValid = checkConnection(connectionHash);
 	SET responce = JSON_ARRAY();
-	SELECT user_id, connection_id, connection_api_id INTO userID, connectionID, connectionApiID FROM users_connections_view WHERE connection_hash = connectionHash;
+	SELECT user_id, connection_id, connection_api_id, bank_id INTO userID, connectionID, connectionApiID, bankID FROM users_connections_view WHERE connection_hash = connectionHash;
 	IF connectionValid
 		THEN BEGIN	
 			SET filtersKeys = JSON_KEYS(filters);
@@ -23,7 +23,19 @@ BEGIN
 				ITERATE keysLoop;
 			END LOOP;
 			UPDATE states SET state_json = JSON_SET(state_json, "$.statistic", userFilters) WHERE state_id = stateID;
-			SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
+			SET userFilters = JSON_SET(userFilters, "$.users", getUsers(bankID));
+			SET responce = JSON_MERGE(responce, JSON_OBJECT(
+				"type", "sendToSocket",
+				"data", JSON_OBJECT(
+					"socketID", connectionApiID,
+					"data", JSON_ARRAY(JSON_OBJECT(
+						"type", "mergeDeep",
+						"data", JSON_OBJECT(
+							"statistic", userFilters
+						)
+					))
+				)
+			));
 		END;
 		ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToSocket",

@@ -99,17 +99,6 @@ BEGIN
 								". Удалено ",
 								companiesLength - insertCompaniesCount
 							);
-							SELECT COUNT(DISTINCT bank_id) INTO banksCount FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT insertCompaniesCount) companies WHERE bank_id IS NOT NULL;
-							SET iterator = 0;
-							banksLoop: LOOP						
-								IF iterator >= banksCount
-									THEN LEAVE banksLoop;
-								END IF;
-								SELECT DISTINCT bank_id INTO bankID FROM (SELECT bank_id FROM companies ORDER BY company_id DESC LIMIT insertCompaniesCount) companies WHERE bank_id IS NOT NULL LIMIT 1 OFFSET iterator;
-								SET responce  = JSON_MERGE(responce, refreshBankSupervisors(bankID));
-								SET iterator = iterator + 1;
-								ITERATE banksLoop;
-							END LOOP;
 						END;
 						ELSE SET message = CONCAT("Не все колонки соответствуют шаблону ", templateID, " (", templateСoncurrences, "/", companiesKeysLength, ")");
 					END IF;

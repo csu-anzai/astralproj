@@ -3,12 +3,12 @@ BEGIN
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userName VARCHAR(64);
     DECLARE userEmail VARCHAR(512);
-    DECLARE userID, connectionID, activeCompaniesLength, typeID INT(11);
+    DECLARE userID, connectionID, activeCompaniesLength, typeID, bankID INT(11);
     DECLARE connectionEnd, ringing TINYINT(1);
-    DECLARE responce, activeCompanies, downloadFilters, distributionFilters JSON;
+    DECLARE responce, activeCompanies, downloadFilters, distributionFilters, statisticFilters JSON;
     SET responce = JSON_ARRAY();
     SET activeCompanies = JSON_ARRAY();
-    SELECT user_id, type_id, user_name, user_email INTO userID, typeID, userName, userEmail FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
+    SELECT user_id, type_id, user_name, user_email, bank_id INTO userID, typeID, userName, userEmail, bankID FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
     SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     IF userID IS NOT NULL AND connectionID IS NOT NULL AND connectionEnd = 0
         THEN BEGIN 
@@ -80,7 +80,20 @@ BEGIN
             END IF; 
             IF typeID = 1 OR typeID = 19
                 THEN BEGIN
-                    SET responce = JSON_MERGE(responce, getBankStatistic(connectionHash));
+                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID; 
+                    SET statisticFilters = JSON_SET(statisticFilters, "$.users", getUsers(bankID));
+                    SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                        "type", "sendToSocket",
+                        "data", JSON_OBJECT(
+                            "socketID", connectionApiID,
+                            "data", JSON_ARRAY(JSON_OBJECT(
+                                "type", "merge",
+                                "data", JSON_OBJECT(
+                                    "statistic", statisticFilters
+                                )
+                            ))
+                        )
+                    ));
                 END;
             END IF;
             IF typeID = 1
