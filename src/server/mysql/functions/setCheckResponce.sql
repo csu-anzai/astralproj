@@ -39,9 +39,9 @@ BEGIN
 	SET responce = JSON_MERGE(responce, JSON_OBJECT(
 		"type", "print",
 		"data", JSON_OBJECT(
-			"message", CONCAT(companiesLength, " компаний успешно обработаны")
+			"message", CONCAT(companiesLength, " компаний успешно обработаны"),
+			"telegram", 1
 		)
 	));
-	SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(CONCAT(companiesLength, " компаний успешно обработаны")));
 	RETURN responce;
 END

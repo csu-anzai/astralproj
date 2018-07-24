@@ -123,8 +123,8 @@ BEGIN
 	SET responce = JSON_MERGE(responce, JSON_OBJECT(
 		"type", "print",
 		"data", JSON_OBJECT(
-			"message", message
+			"message", message,
+			"telegram", 1
 		)
 	));
-	SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(message));
 END

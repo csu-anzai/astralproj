@@ -1,23 +1,23 @@
 BEGIN
-	DECLARE userID INT(11);
 	DECLARE responce JSON;
+	DECLARE telegramID INT(11);
 	SET responce = JSON_ARRAY();
-	SELECT user_id INTO userID FROM connections WHERE connection_hash = hash;
-	IF userID IS NULL
+	SELECT telegram_id INTO telegramID FROM telegrams WHERE telegram_chat_id = chatID;
+	IF telegramID IS NOT NULL
 		THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
 			"type", "sendToTelegram",
 			"data", JSON_OBJECT(
-				"chatID", chatID,
-				"message", "Авторизация не удалась, попробуйте другой ключ"
+				"chats", JSON_ARRAY(chatID),
+				"message", "Вы уже зарегестрированы в системе"
 			)
 		));
 		ELSE BEGIN
-			UPDATE users SET user_telegram = chatID WHERE user_id = userID;
+			INSERT INTO telegrams (telegram_chat_id) VALUES (chatID);
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "sendToTelegram",
 				"data", JSON_OBJECT(
-					"chatID", chatID,
-					"message", "Авторизация прошла успешно"
+					"chats", JSON_ARRAY(chatID),
+					"message", "Подписка на обновления установлена"
 				)
 			));
 		END;
