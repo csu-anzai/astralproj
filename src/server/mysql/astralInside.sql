@@ -277,10 +277,10 @@ BEGIN
   SET responce = JSON_MERGE(responce, JSON_OBJECT(
     "type", "print",
     "data", JSON_OBJECT(
-      "message", message
+      "message", message,
+      "telegram", 1
     )
   ));
-  SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(message));
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `reserveCompanies` (IN `connectionHash` VARCHAR(32) CHARSET utf8, OUT `responce` JSON)  NO SQL
@@ -901,27 +901,27 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `confirmTelegram` (`chatID` VARCHAR(128) CHARSET utf8, `hash` VARCHAR(32) CHARSET utf8) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `confirmTelegram` (`chatID` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE userID INT(11);
   DECLARE responce JSON;
+  DECLARE telegramID INT(11);
   SET responce = JSON_ARRAY();
-  SELECT user_id INTO userID FROM connections WHERE connection_hash = hash;
-  IF userID IS NULL
+  SELECT telegram_id INTO telegramID FROM telegrams WHERE telegram_chat_id = chatID;
+  IF telegramID IS NOT NULL
     THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
       "type", "sendToTelegram",
       "data", JSON_OBJECT(
-        "chatID", chatID,
-        "message", "Авторизация не удалась, попробуйте другой ключ"
+        "chats", JSON_ARRAY(chatID),
+        "message", "Вы уже зарегестрированы в системе"
       )
     ));
     ELSE BEGIN
-      UPDATE users SET user_telegram = chatID WHERE user_id = userID;
+      INSERT INTO telegrams (telegram_chat_id) VALUES (chatID);
       SET responce = JSON_MERGE(responce, JSON_OBJECT(
         "type", "sendToTelegram",
         "data", JSON_OBJECT(
-          "chatID", chatID,
-          "message", "Авторизация прошла успешно"
+          "chats", JSON_ARRAY(chatID),
+          "message", "Подписка на обновления установлена"
         )
       ));
     END;
@@ -1869,33 +1869,6 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `sendToAllRootsTelegram` (`message` TEXT CHARSET utf8) RETURNS JSON NO SQL
-BEGIN
-  DECLARE userTelegram VARCHAR(128);
-  DECLARE done TINYINT(1);
-  DECLARE responce JSON;
-  DECLARE usersCursor CURSOR FOR SELECT user_telegram FROM users WHERE type_id = 1 AND user_telegram IS NOT NULL;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN usersCursor;
-    usersLoop: LOOP
-      FETCH usersCursor INTO userTelegram;
-      IF done
-        THEN LEAVE usersLoop;
-      END IF;
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "type", "sendToTelegram",
-        "data", JSON_OBJECT(
-          "chatID", userTelegram,
-          "message", message
-        )
-      ));
-      ITERATE usersLoop;
-    END LOOP;
-  CLOSE usersCursor;
-  RETURN responce;
-END$$
-
 CREATE DEFINER=`root`@`localhost` FUNCTION `sendToAllUserSockets` (`userID` INT(11), `sendArray` JSON) RETURNS JSON NO SQL
 BEGIN
   DECLARE connectionApiID VARCHAR(128);
@@ -1967,6 +1940,43 @@ BEGIN
             "loginMessage", "Требуется ручной вход в систему"
           )
         ))
+      )
+    ));
+  END IF;
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `sendToTelegram` (`message` TEXT CHARSET utf8) RETURNS JSON NO SQL
+BEGIN
+  DECLARE chatID VARCHAR(128);
+  DECLARE done TINYINT(1);
+  DECLARE responce, telegramsArray JSON;
+  DECLARE telegramCursor CURSOR FOR SELECT telegram_chat_id FROM telegrams WHERE telegram_chat_id IS NOT NULL;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SET responce = JSON_ARRAY();
+  SET telegramsArray = JSON_ARRAY();
+  OPEN telegramCursor;
+    telegramLoop: LOOP
+      FETCH telegramCursor INTO chatID;
+      IF done
+        THEN LEAVE telegramLoop;
+      END IF;
+      SET telegramsArray = JSON_MERGE(telegramsArray, CONCAT(chatID));
+      ITERATE telegramLoop;
+    END LOOP;
+  CLOSE telegramCursor;
+  IF JSON_LENGTH(telegramsArray) > 0
+    THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToTelegram",
+      "data", JSON_OBJECT(
+        "chats", telegramsArray,
+        "message", message
+      )
+    ));
+    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "print",
+      "data", JSON_OBJECT(
+        "message", CONCAT("нет чатов для рассылки в телеграм (", message, ")")
       )
     ));
   END IF;
@@ -2237,10 +2247,10 @@ BEGIN
   SET responce = JSON_MERGE(responce, JSON_OBJECT(
     "type", "print",
     "data", JSON_OBJECT(
-      "message", CONCAT(companiesLength, " компаний успешно обработаны")
+      "message", CONCAT(companiesLength, " компаний успешно обработаны"),
+      "telegram", 1
     )
   ));
-  SET responce = JSON_MERGE(responce, sendToAllRootsTelegram(CONCAT(companiesLength, " компаний успешно обработаны")));
   RETURN responce;
 END$$
 
@@ -3449,6 +3459,11 @@ CREATE TABLE `statistic_view` (
 ,`type_id` int(11)
 );
 
+CREATE TABLE `telegrams` (
+  `telegram_id` int(11) NOT NULL,
+  `telegram_chat_id` varchar(120) COLLATE utf8_bin NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
 CREATE TABLE `templates` (
   `template_id` int(11) NOT NULL,
   `type_id` int(11) DEFAULT NULL,
@@ -3612,8 +3627,7 @@ CREATE TABLE `users` (
   `user_connections_count` int(11) NOT NULL DEFAULT '0',
   `bank_id` int(11) DEFAULT NULL,
   `user_sip` varchar(20) COLLATE utf8_bin DEFAULT NULL,
-  `user_ringing` tinyint(1) NOT NULL DEFAULT '0',
-  `user_telegram` varchar(128) COLLATE utf8_bin DEFAULT NULL
+  `user_ringing` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `users_before_insert` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
@@ -3810,6 +3824,9 @@ ALTER TABLE `states`
   ADD KEY `user_id` (`user_id`),
   ADD KEY `connection_id` (`connection_id`);
 
+ALTER TABLE `telegrams`
+  ADD PRIMARY KEY (`telegram_id`);
+
 ALTER TABLE `templates`
   ADD PRIMARY KEY (`template_id`),
   ADD KEY `type_id` (`type_id`);
@@ -3884,6 +3901,9 @@ ALTER TABLE `regions`
 
 ALTER TABLE `states`
   MODIFY `state_id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `telegrams`
+  MODIFY `telegram_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `templates`
   MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT;
