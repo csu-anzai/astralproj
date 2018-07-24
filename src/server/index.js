@@ -40,7 +40,6 @@ reducer.dispatch({
 	}
 });
 
-
 reducer.dispatch({
 	type: "checkTelegramUpdates",
 	data: {

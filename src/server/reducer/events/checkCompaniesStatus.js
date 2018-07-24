@@ -59,7 +59,13 @@ module.exports = modules => (resolve, reject, data) => {
 					}
 				}
 			});
-			console.log(`Отправлено на уточнение статуса ${companies.length} компаний`);
+			modules.reducer.dispatch({
+				type: "print",
+				data: {
+					message: `Отправлено на уточнение статуса ${companies.length} компаний`,
+					telegram: 1
+				}
+			}).then(modules.then).catch(modules.err);
 		}
 	}).catch(reject);
 }
