@@ -12,7 +12,7 @@ module.exports = modules => (resolve, reject, data) => {
 								itemObj.chat.id
 							]
 						}
-					}).then(modules.then).catch(reject);
+					}).then(modules.then).catch(modules.err);
 				} else {
 					reject("Ошибка при обработке сообщений из телеграмма\n");
 				}
@@ -33,5 +33,15 @@ module.exports = modules => (resolve, reject, data) => {
 				}).then(resolve).catch(reject);
 			}, 3000);
 		}
-	}).catch(reject);
+	}).catch(err => {
+		setTimeout(() => {
+			modules.reducer.dispatch({
+				type: "checkTelegramUpdates",
+				data: {
+					
+				}
+			}).then(modules.then).catch(modules.err);
+		}, 3000);
+		reject(`ошибка в обновлении телеграма: ${JSON.stringify(err)}`);
+	});
 }
