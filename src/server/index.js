@@ -17,7 +17,9 @@ const env = require('../env.json'),
 			envRefreshWeekDay = env.dialing_refresh.weekday,
 			envCheckMilliseconds = (env.check.hours * 60 * 60 * 1000) + (env.check.minutes * 60 * 1000) + (env.check.seconds * 1000) + env.check.milliseconds,
 			envRefreshMilliseconds = (env.dialing_refresh.hours * 60 * 60 * 1000) + (env.dialing_refresh.minutes * 60 * 1000) + (env.dialing_refresh.seconds * 1000) + env.dialing_refresh.milliseconds,
+			envStatisticMilliseconds = (env.statistic.hours * 60 * 60 * 1000) + (env.statistic.minutes * 60 * 1000) + (env.statistic.seconds * 1000) + env.statistic.milliseconds,
 			timeoutRefreshMilliseconds = ((envRefreshWeekDay - nowWeekDay) * 24 * 60 * 60 * 1000) + (nowMilleseconds <= envRefreshMilliseconds ? envRefreshMilliseconds - nowMilleseconds : 86400000 - nowMilleseconds + envRefreshMilliseconds + (nowWeekDay == envRefreshWeekDay ? 518400000 : 0)),
+			timeoutStatisticMilliseconds = nowMilleseconds < envStatisticMilliseconds ? envStatisticMilliseconds - nowMilleseconds : 86400000 - nowMilleseconds + envStatisticMilliseconds,
 			timeoutCheckMilliseconds = nowMilleseconds < envCheckMilliseconds ? envCheckMilliseconds - nowMilleseconds : 86400000 - nowMilleseconds + envCheckMilliseconds;
 
 reducer.initEvents({
@@ -38,7 +40,7 @@ reducer.dispatch({
 		query: "serverStart",
 		values: []
 	}
-});
+}).then(then).catch(err);
 
 reducer.dispatch({
 	type: "checkTelegramUpdates",
@@ -91,6 +93,24 @@ setTimeout(() => {
 	}).catch(err);
 }, timeoutRefreshMilliseconds);
 
+setTimeout(() => {
+	reducer.dispatch({
+		type: "telegramDayStatistic",
+		data: [
+
+		]
+	}).then(responce => {
+		setInterval(() => {
+			reducer.dispatch({
+				type: "telegramDayStatistic",
+				data: [
+
+				]
+			}).then(then).catch(err);
+		}, 86400000);
+		then(responce);
+	}).catch(err);
+}, timeoutStatisticMilliseconds);
 
 
 
