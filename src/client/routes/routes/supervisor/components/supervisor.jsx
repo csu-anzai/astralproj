@@ -223,9 +223,9 @@ export default class Supervisor extends React.Component {
 	}
 	getFormated(type, template){
 		let arr = this.props.state.statistic[type].filter(item => item.template_name == template),
-				datesArr = arr.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).map(i => i.date);
+				datesArr = this.props.state.statistic[type].filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).map(i => i.date);
 		if(datesArr.length > 1){
-		 	let newArr = datesArr.map(item => arr.filter(i => i.date == item).reduce((before, after) => ({companies: before.companies + after.companies}))).map(i => i.companies);
+		 	let newArr = datesArr.map(item => arr.filter(i => i.date == item)).map(item => item.length > 0 ? item.reduce((before, after) => ({companies: before.companies + after.companies})).companies : 0);
 		 	arr = newArr;
 		} else {
 			arr = arr.map(i => i.companies);
@@ -254,7 +254,6 @@ export default class Supervisor extends React.Component {
 	}
 	componentDidMount(){
 		let component = document.querySelector("#app > div > div:nth-child(2) > div:nth-child(4) > div > div");
-		console.log(component);
 		component && (component.style.overflow = "auto");
 	}
 	workingPaging(limit, offset){
@@ -662,7 +661,7 @@ export default class Supervisor extends React.Component {
 					</div>
 			}
 			<div style={{textAlign: "center", marginBottom: "20px"}}>
-				Ключ для подписки на информацию по заливкам в telegram (<a href = "https://t.me/zakupkiInfoBot" target="_blank">@zakupkiInfoBot</a>): {this.props.state.connectionHash}
+				Для подписки на информацию по заливкам и обработке компаний напишите любое сообщение в telegram (<a href = "https://t.me/zakupkiInfoBot" target="_blank">@zakupkiInfoBot</a>)
 			</div>
 		</div>
 	}
