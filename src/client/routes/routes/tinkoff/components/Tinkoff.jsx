@@ -613,11 +613,13 @@ export default class Tinkoff extends React.Component {
 		                			</span>
 		                		}
 		                		{
-		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
 		                			company.file_name &&
 		                			<IconButton
 				                		title="Прослушать последнюю запись"
 				                		onClick={this.openURL.bind(this, company.file_name)}
+				                		style = {{
+				                			verticalAlign: this.state.selectedIndex == 2 ? "middle" : "top"
+				                		}}
 				                	>
 				                		<Audiotrack color = "#9575CD"/>
 				                	</IconButton>
