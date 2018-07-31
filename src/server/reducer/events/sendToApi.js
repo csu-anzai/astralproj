@@ -3,6 +3,7 @@ module.exports = modules => (resolve, reject, data) => {
 		let body = Object.assign({
 			source: "Федеральные партнеры",
 			subsource: "API",
+			product: "РКО",
 			firstName: data.companyPersonName,
 			middleName: data.companyPersonPatronymic,
 			lastName: data.companyPersonSurname,
