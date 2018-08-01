@@ -252,32 +252,32 @@ export default class Tinkoff extends React.Component {
 			<Paper zDepth={0}>
 				<BottomNavigation selectedIndex={this.state.selectedIndex}>
 					<BottomNavigationItem
-            label={"В РАБОТЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => [35,9].indexOf(i.type_id) > -1).length || 0)+")"}
+            label={"В РАБОТЕ"}
             icon={<Restore/>}
             onClick={() => this.select(0)}
           />
           <BottomNavigationItem
-            label={"НЕ ИНТЕРЕСНО ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 14).length || 0)+")"}
+            label={"НЕ ИНТЕРЕСНО"}
             icon={<HighlightOff/>}
             onClick={() => this.select(1)}
           />
           <BottomNavigationItem
-            label={"УТВЕРЖДЕНО ("+(this.props.state.companies && this.props.state.companies.filter(i => [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(i.type_id) > -1).length || 0)+")"}
+            label={"УТВЕРЖДЕНО"}
             icon={<CheckCircle/>}
             onClick={() => this.select(2)}
           />
           <BottomNavigationItem
-            label={"ПЕРЕЗВОНИТЬ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 23).length || 0)+")"}
+            label={"ПЕРЕЗВОНИТЬ"}
             icon={<Phone/>}
             onClick={() => this.select(3)}
           />
           <BottomNavigationItem
-            label={"НЕТ СВЯЗИ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 36).length || 0)+")"}
+            label={"НЕТ СВЯЗИ"}
             icon={<CallEnd/>}
             onClick={() => this.select(4)}
           />
           <BottomNavigationItem
-            label={"СЛОЖНЫЕ ("+(this.props.state.companies && this.props.state.companies.filter(i => i.type_id == 37).length || 0)+")"}
+            label={"СЛОЖНЫЕ"}
             icon={<SadFace/>}
             onClick={() => this.select(5)}
           />
@@ -295,7 +295,7 @@ export default class Tinkoff extends React.Component {
 	            enableSelectAll={false}
 	          >
 	            <TableRow>
-	              <TableHeaderColumn colSpan={[2,3].indexOf(this.state.selectedIndex) != -1 ? "9" : "8"}>
+	              <TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "9" : this.state.selectedIndex == 2 ? "10" : "8"}>
 	              	<div>
 		              	<span style = {{
 		              		display: "inline-block",
@@ -453,6 +453,112 @@ export default class Tinkoff extends React.Component {
 	              </TableHeaderColumn>
 	            </TableRow>
 	            <TableRow>
+	            	<TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "9" : this.state.selectedIndex == 2 ? "10" : "8"} style = {{textAlign: "right"}}>
+	            		<IconButton 
+	            			title = "сюда"
+	            			disabled = {
+	            				this.props.state.distribution &&
+	            				this.props.state.distribution[
+        								categories[this.state.selectedIndex]
+        							] &&
+	            				!(this.props.state.distribution[
+        								categories[this.state.selectedIndex]
+        							].rowStart == 1) ? false : true
+	            			}
+	            			onClick = {
+	            				this.setDistributionFilter.bind(this, {
+	            					[categories[this.state.selectedIndex]]: {
+	            						rowLimit: this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit,
+	              					rowStart: (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowStart) - (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit) - 1 >= 0 ? (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowStart) - (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit) - 1 || 1 : 1,
+	              					type: this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].type,
+	              					dateStart: this.props.state.distribution && this.props.state.distribution[
+            								categories[this.state.selectedIndex]
+            							].dateStart,
+            							dateEnd: this.props.state.distribution && this.props.state.distribution[
+            								categories[this.state.selectedIndex]
+            							].dateEnd
+	            					}
+	            				})
+	            			}
+            			>
+            				<ArrowBack/>
+	            		</IconButton>
+	            		<div style = {{
+	            			display: "inline-block",
+	            			lineHeight: "48px",
+	            			verticalAlign: "top"
+	            		}}>
+	            			{
+	            				this.props.state.distribution && 
+	            				this.props.state.companies &&
+	            				`с ${this.props.state.distribution[
+            						categories[this.state.selectedIndex]
+            					].rowStart} по ${this.props.state.distribution[
+            						categories[this.state.selectedIndex]
+            					].rowStart + this.props.state.companies.filter(c => categoriesTypes.findIndex(ct => ct.indexOf(c.type_id) > -1) == this.state.selectedIndex).length - 1 }`
+	            			}
+	            		</div>
+	            		<IconButton 
+	            			title = "туда"
+	            			disabled = {
+	            				(this.props.state.companies &&
+	            				this.props.state.distribution &&
+	            				this.props.state.distribution[
+        								categories[this.state.selectedIndex]
+        							] &&
+	            				this.props.state.companies.length > 0 &&
+	            				this.props.state.companies.filter(company => (
+	            					this.state.selectedIndex == 0 ? [9, 35] :
+	            					this.state.selectedIndex == 1 ? [14] :
+	            					this.state.selectedIndex == 2 ? [15,16,17,24,25,26,27,28,29,30,31,32] :
+	            					this.state.selectedIndex == 3 ? [23] :
+	            					this.state.selectedIndex == 4 ? [36] :
+	            					this.state.selectedIndex == 5 && [37]
+            					).indexOf(company.type_id) != -1).length == this.props.state.distribution[
+        								categories[this.state.selectedIndex]
+        							].rowLimit) ? false : true
+	            			}
+	            			onClick = {()=>{
+	            				this.setDistributionFilter.call(this, {
+	            					[categories[this.state.selectedIndex]]: {
+	            						rowLimit: this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit,
+	              					rowStart: (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowStart) + (this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].rowLimit),
+	              					type: this.props.state.distribution && this.props.state.distribution[
+	              						categories[this.state.selectedIndex]
+	              					].type,
+	              					dateStart: this.props.state.distribution && this.props.state.distribution[
+            								categories[this.state.selectedIndex]
+            							].dateStart,
+            							dateEnd: this.props.state.distribution && this.props.state.distribution[
+            								categories[this.state.selectedIndex]
+            							].dateEnd
+	            					}
+	            				});
+	            			}}
+            			>
+            				<ArrowForward/>
+	            		</IconButton>
+	            	</TableHeaderColumn>
+	            </TableRow>
+	            <TableRow>
 	              <TableHeaderColumn>Телефон</TableHeaderColumn>
 	              <TableHeaderColumn>Тип компании</TableHeaderColumn>
 	              <TableHeaderColumn>ИНН</TableHeaderColumn>
@@ -469,6 +575,10 @@ export default class Tinkoff extends React.Component {
 	              	<TableHeaderColumn>Дата и Время</TableHeaderColumn>
 	              }
               	<TableHeaderColumn>{this.state.selectedIndex != 2 ? "Действия" : "Статус обработки"}</TableHeaderColumn>
+              	{
+              		this.state.selectedIndex == 2 &&
+	              	<TableHeaderColumn>Действия</TableHeaderColumn>
+              	}
 	            </TableRow>
 	          </TableHeader>
 	          <TableBody
@@ -613,18 +723,30 @@ export default class Tinkoff extends React.Component {
 		                			</span>
 		                		}
 		                		{
+		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
 		                			company.file_name &&
 		                			<IconButton
 				                		title="Прослушать последнюю запись"
 				                		onClick={this.openURL.bind(this, company.file_name)}
-				                		style = {{
-				                			verticalAlign: this.state.selectedIndex == 2 ? "middle" : "top"
-				                		}}
 				                	>
 				                		<Audiotrack color = "#9575CD"/>
 				                	</IconButton>
 		                		}
 			                </TableRowColumn>
+		                }
+		                {
+		                	this.state.selectedIndex == 2 &&
+		                	<TableRowColumn>
+		                		{
+		                			company.file_name &&
+			                		<IconButton
+				                		title="Прослушать последнюю запись"
+				                		onClick={this.openURL.bind(this, company.file_name)}
+				                	>
+				                		<Audiotrack color = "#9575CD"/>
+				                	</IconButton>
+		                		}
+		                	</TableRowColumn>
 		                }
 		              </TableRow>
 	          		)) || 
@@ -640,7 +762,7 @@ export default class Tinkoff extends React.Component {
 	          		</TableRow>
 	          	}
 	          	<TableRow>
-	            	<TableHeaderColumn colSpan={[2,3].indexOf(this.state.selectedIndex) != -1 ? "9" : "8"} style = {{textAlign: "right"}}>
+	            	<TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "9" : this.state.selectedIndex == 2 ? "10" : "8"} style = {{textAlign: "right"}}>
 	            		<IconButton 
 	            			title = "сюда"
 	            			disabled = {
