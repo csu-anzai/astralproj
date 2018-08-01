@@ -12,15 +12,15 @@ module.exports = (env, reducer) => {
 	}));
 	imap.start();
 	imap.on("server:connected", () => {
-		console.log("\nconnect to imap server\n");
+		console.log("\nсоединение с сервером imap установлено");
 	});
 	imap.on("server:disconnected", () => {
 		const imap = require("./")(env, reducer);
 		reducer.initEvents({imap});
-		console.log("\ndisconnect from imap server\n");
+		console.log("\nсоединение с сервером imap разорвано\n");
 	});
 	imap.on("error", err => {
-		console.log("\nerror from imap connection: ", err, "\n");
+		console.log("\nошибка в imap соединении: ", err, "\n");
 	});
 	imap.on("mail", (mail, seqno, attributes) => {
 		let titleNumbersArray = mail.subject && mail.subject.match(/\d+/g),
@@ -53,7 +53,7 @@ module.exports = (env, reducer) => {
 		}
 	});
 	imap.on("attachment", attachment => {
-		console.log("new file in: ", attachment.path);
+		console.log("Новый файл: ", attachment.path);
 		let fileName = attachment.generatedFileName,
 				fileNameArray = fileName.split("."),
 				fileExt = fileNameArray.length > 0 ? fileNameArray[fileNameArray.length - 1] : null;
@@ -76,16 +76,37 @@ module.exports = (env, reducer) => {
 						}
 					}
 					if (sheetRows) {
-						console.log("transform xlsx file to json format well done. File have " + (Object.keys(sheetRows).length - 1) + " rows. Date " + new Date() + "\n");
+						//console.log("Чтение exel файла завершено. В файле " + (Object.keys(sheetRows).length - 1) + " строк. Дата: " + new Date() + "\n");
+						reducer.dispatch({
+							type: "print",
+							data: {
+								message: "Чтение exel файла завершено. В файле " + (Object.keys(sheetRows).length - 1) + " строк. Дата: " + new Date() + "\n",
+								telegram: 1
+							}
+						}).then(then).catch(err);
 						reducer.dispatch({
 							type: "saveParseResult",
 							data: sheetRows
 						}).then(then).catch(err);
 					} else {
-						console.log("transform xlsx file to json format have error. JSON result: " + sheetRows);
+						//console.log("Ошибка чтения exel файла. Результат чтения: " + sheetRows);
+						reducer.dispatch({
+							type: "print",
+							data: {
+								message: "Ошибка чтения exel файла. Результат чтения: " + sheetRows,
+								telegram: 1
+							}
+						}).then(then).catch(err);
 					}
 				} catch(err) {
-					console.log(err);
+					//console.log(`ошибка в чтении exel файла: ${err}`);
+					reducer.dispatch({
+						type: "print",
+						data: {
+							message: `ошибка в чтении exel файла: ${err}`,
+							telegram: 1
+						}
+					}).then(then).catch(err);
 				}
 			}
 		}
