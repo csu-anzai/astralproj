@@ -1772,6 +1772,43 @@ BEGIN
   RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `resetCall` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11)) RETURNS JSON NO SQL
+BEGIN
+  DECLARE connectionValid TINYINT(1);
+  DECLARE callID, userID, typeID, bankID INT(11);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SET connectionValid = checkConnection(connectionHash);
+  IF connectionValid
+    THEN BEGIN
+      SELECT call_id, user_id, type_id, bank_id INTO callID, userID, typeID, bankID FROM companies WHERE company_id = companyID;
+      IF callID IS NOT NULL
+        THEN BEGIN
+          UPDATE calls SET call_destination_type_id = 42, call_internal_type_id = 42 WHERE call_id = callID;
+          IF typeID = 36
+            THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+            ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+          END IF;
+        END;
+      END IF;
+    END;
+    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToSocket",
+      "data", JSON_OBJECT(
+        "socketID", connectionApiID,
+        "data", JSON_ARRAY(JSON_OBJECT(
+          "type", "merge",
+          "data", JSON_OBJECT(
+            "auth", 0,
+            "loginMessage", "Требуется ручной вход в систему"
+          )
+        ))
+      )
+    ));
+  END IF;
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `resetCalls` () RETURNS JSON NO SQL
 BEGIN
   DECLARE responce, usersArray JSON;
@@ -2561,7 +2598,9 @@ BEGIN
       SELECT file_id INTO fileID FROM files ORDER BY file_id DESC LIMIT 1;
       UPDATE calls SET 
         call_destination_file_id = IF(internal = 0, fileID, call_destination_file_id),
-        call_internal_file_id = IF(internal = 1, fileID, call_internal_file_id)
+        call_internal_file_id = IF(internal = 1, fileID, call_internal_file_id),
+        call_destination_type_id = IF(call_destination_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53), call_destination_type_id, 42),
+        call_internal_type_id = IF(call_internal_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53), call_internal_type_id, 42)
       WHERE call_id = callID;
       SET responce = JSON_MERGE(responce, JSON_OBJECT(
         "type", "moveFile",
