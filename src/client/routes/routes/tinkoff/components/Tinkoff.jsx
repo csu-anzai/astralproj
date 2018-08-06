@@ -18,6 +18,7 @@ import Audiotrack from 'material-ui/svg-icons/image/audiotrack';
 import PhoneForwarded from 'material-ui/svg-icons/notification/phone-forwarded';
 import PhoneInTalk from 'material-ui/svg-icons/notification/phone-in-talk';
 import SettingsPhone from 'material-ui/svg-icons/action/settings-phone';
+import Replay from 'material-ui/svg-icons/av/replay';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
 import IconButton from 'material-ui/IconButton';
@@ -242,6 +243,19 @@ export default class Tinkoff extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					!this.props.state.ringing
+				]
+			}
+		})
+	}
+	resetCall(company_id){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "resetCall",
+				values: [
+					this.props.state.connectionHash,
+					company_id
 				]
 			}
 		})
@@ -653,6 +667,17 @@ export default class Tinkoff extends React.Component {
 				                	</IconButton>)
 		                		}
 		                		{
+		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > - 1 &&
+		                			([34,39,33,43].indexOf(company.call_internal_type_id) > -1 ||  
+		                			[34,39,33,43].indexOf(company.call_destination_type_id) > -1) &&
+		                			<IconButton
+		                				title = "Сбросить статус звонока"
+		                				onClick = {this.resetCall.bind(this, company.company_id)}
+		                			>
+		                				<Replay color = "#bd38c1"/>
+		                			</IconButton>
+		                		}
+		                		{
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
 				                	<IconButton
 				                		title="Оформить заявку"
@@ -745,6 +770,16 @@ export default class Tinkoff extends React.Component {
 				                	>
 				                		<Audiotrack color = "#9575CD"/>
 				                	</IconButton>
+		                		}
+		                		{
+		                			([34,39,33,43].indexOf(company.call_internal_type_id) > -1 ||  
+		                			[34,39,33,43].indexOf(company.call_destination_type_id) > -1) &&
+		                			<IconButton
+		                				title = "Сбросить статус звонока"
+		                				onClick = {this.resetCall.bind(this, company.company_id)}
+		                			>
+		                				<Replay color = "#bd38c1"/>
+		                			</IconButton>
 		                		}
 		                	</TableRowColumn>
 		                }
