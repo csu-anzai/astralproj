@@ -9,7 +9,9 @@ BEGIN
 			SELECT file_id INTO fileID FROM files ORDER BY file_id DESC LIMIT 1;
 			UPDATE calls SET 
 				call_destination_file_id = IF(internal = 0, fileID, call_destination_file_id),
-				call_internal_file_id = IF(internal = 1, fileID, call_internal_file_id)
+				call_internal_file_id = IF(internal = 1, fileID, call_internal_file_id),
+				call_destination_type_id = IF(call_destination_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53), call_destination_type_id, 42),
+				call_internal_type_id = IF(call_internal_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53), call_internal_type_id, 42)
 			WHERE call_id = callID;
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "moveFile",

@@ -726,7 +726,7 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `callRequest` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11), `predicted` BOOLEAN) RETURNS JSON NO SQL
 BEGIN
-  DECLARE userID, callID, callsCount INT(11);
+  DECLARE userID, callID INT(11);
   DECLARE connectionValid TINYINT(1);
   DECLARE userSip VARCHAR(20);
   DECLARE connectionApiID VARCHAR(32);
@@ -737,45 +737,27 @@ BEGIN
   IF connectionValid
     THEN BEGIN
       SELECT user_sip, user_id, connection_api_id INTO userSip, userID, connectionApiID FROM users_connections_view WHERE connection_hash = connectionHash;
-      SELECT COUNT(*) INTO callsCount FROM active_calls_view WHERE user_id = userID;
-      IF callsCount IS NOT NULL AND callsCount = 0
-        THEN BEGIN
-          SELECT company_phone INTO companyPhone FROM companies WHERE company_id = companyID;
-          INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, IF(predicted IS NULL, 0, predicted));
-          SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
-          SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-            "type", "mergeDeep",
-            "data", JSON_OBJECT(
-              "message", CONCAT("соединение с ", companyPhone, " имеет статус: ожидание ответа от АТС")
-            )
-          ))));
-          SET responce = JSON_MERGE(responce, JSON_OBJECT(
-            "type", "sendToZadarma",
-            "data", JSON_OBJECT(
-              "options", JSON_OBJECT(
-                "from", userSip,
-                "to", companyPhone,
-                "predicted", predicted
-              ),
-              "method", "request/callback",
-              "type", "GET"
-            )
-          ));
-        END;
-        ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
-          "type", "sendToSocket",
-          "data", JSON_OBJECT(
-            "socketID", connectionApiID,
-            "data", JSON_ARRAY(JSON_OBJECT(
-              "type", "merge",
-              "data", JSON_OBJECT(
-                "message", "Вы не можете начать новый разговор, пока не закончился предыдущий",
-                "messageType", "error" 
-              )
-            ))
-          )
-        ));
-      END IF;
+      SELECT company_phone INTO companyPhone FROM companies WHERE company_id = companyID;
+      INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, IF(predicted IS NULL, 0, predicted));
+      SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+      SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+        "type", "mergeDeep",
+        "data", JSON_OBJECT(
+          "message", CONCAT("соединение с ", companyPhone, " имеет статус: ожидание ответа от АТС")
+        )
+      ))));
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "type", "sendToZadarma",
+        "data", JSON_OBJECT(
+          "options", JSON_OBJECT(
+            "from", userSip,
+            "to", companyPhone,
+            "predicted", predicted
+          ),
+          "method", "request/callback",
+          "type", "GET"
+        )
+      ));
     END;
     ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
       "type", "sendToSocket",
@@ -1790,6 +1772,90 @@ BEGIN
   RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `resetCall` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11)) RETURNS JSON NO SQL
+BEGIN
+  DECLARE connectionValid TINYINT(1);
+  DECLARE callID, userID, typeID, bankID INT(11);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SET connectionValid = checkConnection(connectionHash);
+  IF connectionValid
+    THEN BEGIN
+      SELECT call_id, user_id, type_id, bank_id INTO callID, userID, typeID, bankID FROM companies WHERE company_id = companyID;
+      IF callID IS NOT NULL
+        THEN BEGIN
+          UPDATE calls SET call_destination_type_id = 42, call_internal_type_id = 42 WHERE call_id = callID;
+          IF typeID = 36
+            THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+            ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+          END IF;
+        END;
+      END IF;
+    END;
+    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToSocket",
+      "data", JSON_OBJECT(
+        "socketID", connectionApiID,
+        "data", JSON_ARRAY(JSON_OBJECT(
+          "type", "merge",
+          "data", JSON_OBJECT(
+            "auth", 0,
+            "loginMessage", "Требуется ручной вход в систему"
+          )
+        ))
+      )
+    ));
+  END IF;
+  RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `resetCalls` () RETURNS JSON NO SQL
+BEGIN
+  DECLARE responce, usersArray JSON;
+  DECLARE callsCountBefore, callsCountAfter, userID, iterator, usersLength INT(11);
+  DECLARE done TINYINT(1);
+  DECLARE usersCursor CURSOR FOR SELECT DISTINCT user_id FROM active_calls_view;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SET responce = JSON_ARRAY();
+  SET usersArray = JSON_ARRAY();
+  OPEN usersCursor;
+    usersLoop: LOOP
+      FETCH usersCursor INTO userID;
+      IF done 
+        THEN LEAVE usersLoop; 
+      END IF;
+      SET usersArray = JSON_MERGE(usersArray, CONCAT(userID));
+      ITERATE usersLoop;
+    END LOOP;
+  CLOSE usersCursor;
+  SELECT count(*) INTO callsCountBefore FROM active_calls_view;
+  UPDATE calls c SET call_internal_type_id = 42, call_destination_type_id = 42 WHERE call_internal_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53) AND call_destination_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53);
+  SELECT count(*) INTO callsCountAfter FROM active_calls_view;
+  SET usersLength = JSON_LENGTH(usersArray);
+  IF usersLength > 0
+    THEN BEGIN
+      SET iterator = 0;
+      usersLoop: LOOP
+        IF iterator >= usersLength
+          THEN LEAVE usersLoop;
+        END IF;
+        SET userID = JSON_UNQUOTE(JSON_EXTRACT(usersArray, CONCAT("$[", iterator, "]")));
+        SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+        SET iterator = iterator + 1;
+        ITERATE usersLoop;
+      END LOOP;
+    END;
+  END IF;
+  SET responce = JSON_MERGE(responce, JSON_OBJECT(
+    "type", "print",
+    "data", JSON_OBJECT(
+      "message", CONCAT("Число активных звонков (до | после) сброса: ", callsCountBefore, " | ", callsCountAfter),
+      "telegram", 1
+    )
+  ));
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `resetCompanies` (`connectionHash` VARCHAR(32) CHARSET utf8, `typeID` INT(11)) RETURNS JSON NO SQL
 BEGIN
   DECLARE userID, connectionID INT(11);
@@ -2022,11 +2088,23 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `serverStart` () RETURNS TINYINT(4) NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `serverStart` () RETURNS JSON NO SQL
 BEGIN
+  DECLARE responce JSON;
+  DECLARE connectionsBeforeCount, connectionsAfterCount INT(11);
+  SET responce = JSON_ARRAY();
+  SELECT count(*) INTO connectionsBeforeCount FROM connections WHERE connection_end = 0;
   UPDATE connections SET connection_end = 1;
-  UPDATE calls c SET call_internal_type_id = 42, call_destination_type_id = 42 WHERE call_internal_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53) AND call_destination_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53);
-  RETURN 1;
+  SELECT count(*) INTO connectionsAfterCount FROM connections WHERE connection_end = 0;
+  SET responce = JSON_MERGE(responce, resetCalls());
+  SET responce = JSON_MERGE(responce, JSON_OBJECT(
+    "type", "print",
+    "data", JSON_OBJECT(
+      "message", CONCAT("число активных соединений (до | после) сброса: ", connectionsBeforeCount, " | ", connectionsAfterCount),
+      "telegram", 1
+    )
+  ));
+  RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setApiResponce` (`companyID` INT(11), `applicationID` VARCHAR(128) CHARSET utf8, `requestID` VARCHAR(128) CHARSET utf8, `success` TINYINT(1)) RETURNS JSON NO SQL
@@ -2520,7 +2598,9 @@ BEGIN
       SELECT file_id INTO fileID FROM files ORDER BY file_id DESC LIMIT 1;
       UPDATE calls SET 
         call_destination_file_id = IF(internal = 0, fileID, call_destination_file_id),
-        call_internal_file_id = IF(internal = 1, fileID, call_internal_file_id)
+        call_internal_file_id = IF(internal = 1, fileID, call_internal_file_id),
+        call_destination_type_id = IF(call_destination_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53), call_destination_type_id, 42),
+        call_internal_type_id = IF(call_internal_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53), call_internal_type_id, 42)
       WHERE call_id = callID;
       SET responce = JSON_MERGE(responce, JSON_OBJECT(
         "type", "moveFile",
