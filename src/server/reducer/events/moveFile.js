@@ -7,7 +7,7 @@ module.exports = modules => (resolve, reject, data) => {
 			if(err){
 				reject(err);
 			} else {
-				console.log(`файл перемещен успешно из ${from} в ${to}`);
+				modules.log.writeLog("files",`файл перемещен успешно из ${from} в ${to}`);
 			}
 		});
 	}

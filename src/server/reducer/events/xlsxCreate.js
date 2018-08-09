@@ -2,6 +2,10 @@ const JE = require('json-xlsx');
 module.exports = modules => (resolve, reject, data) => {
 	const je = new JE({tmpDir: __dirname + '/../../express' + modules.env.express.staticPath});
 	je.write({name: data.name, data: data.data}, (err, filepath) => {
+    modules.log.writeLog("files", {
+        type: "createFile",
+        filepath
+    });
     if (err) {
     	reject(err);
     } else {
