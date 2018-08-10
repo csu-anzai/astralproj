@@ -25,6 +25,10 @@ class TelegramApi {
 				error ? reject(error) : 
 				tr.request(options, (err, res, body) => {
 					err ? reject(err) : resolve(body);
+					this.reducer.modules.log.writeLog("telegram", {
+						type: "update",
+						data: body
+					});
 				});
 			});
 		});
@@ -51,6 +55,10 @@ class TelegramApi {
 					error ? reject(error) :
 					tr.request(options, (err, res, body) => {
 						err ? reject(err) : resolve(body);
+						this.reducer.modules.log.writeLog("telegram", {
+							type: "send",
+							data: body
+						});
 					});
 				});
 			});

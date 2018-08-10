@@ -18,13 +18,14 @@ module.exports = modules => (resolve, reject, data) => {
 			json: true,
 			url: modules.env.tinkoff.applicationUrl
 		};
+		modules.log.writeLog("tinkoff", {
+			type: "request",
+			options
+		});
 		request(options, (err, res, body) => {
 			if(err){
 				reject(err);
 			} else {
-				if (body.success == 0) {
-					console.log(body);
-				}
 				modules.reducer.dispatch({
 					type: "query",
 					data: {
@@ -40,5 +41,9 @@ module.exports = modules => (resolve, reject, data) => {
 					}
 				}).then(resolve).catch(reject);
 			}
+			modules.log.writeLog("tinkoff", {
+				type: "responce",
+				body
+			});
 		});
 }

@@ -14,7 +14,15 @@ module.exports = modules => (resolve, reject, data) => {
 				'Authorization': `${modules.env.zadarma.key}:${sign}`
 			}
 		};
+		modules.log.writeLog("zadarma", {
+			type: "request",
+			options
+		});
 		request(options, (error, response, body) => {
+			modules.log.writeLog("zadarma", {
+				type: "responce",
+				body
+			});
 			if(error){
 				reject(error);
 			} else {

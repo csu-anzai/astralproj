@@ -19,6 +19,7 @@ module.exports = modules => (resolve, reject, data) => {
 		} else {
 			message = "Сегодня нет обработанных компаний";
 		}
+		modules.log.writeLog("system", message);
 		modules.reducer.dispatch({
 			type: "print",
 			data: {

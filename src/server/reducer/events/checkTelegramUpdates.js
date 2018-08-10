@@ -14,7 +14,7 @@ module.exports = modules => (resolve, reject, data) => {
 						}
 					}).then(modules.then).catch(modules.err);
 				} else {
-					reject("Ошибка при обработке сообщений из телеграмма\n");
+					reject("Ошибка при обработке сообщений из телеграмма");
 				}
 			});
 			modules.reducer.dispatch({
@@ -42,6 +42,6 @@ module.exports = modules => (resolve, reject, data) => {
 				}
 			}).then(modules.then).catch(modules.err);
 		}, 3000);
-		reject(`ошибка в обновлении телеграма: ${JSON.stringify(err)}`);
+		reject({message: "ошибка в обновлении телеграма", err});
 	});
 }

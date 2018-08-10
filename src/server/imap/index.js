@@ -1,9 +1,10 @@
 const mailListener = require("mail-listener2"),
-			xlsx = require("xlsx"),
-			err = require("./../err");
-let then = require("./../then");
+			xlsx = require("xlsx");
+let then = require("./../then"),
+		err = require("./../err");
 module.exports = (env, reducer) => {
 	then = then.bind(this, reducer);
+	err = err.bind(this, reducer);
 	let envClone = JSON.parse(JSON.stringify(env));
 	const imap = new mailListener(Object.assign(envClone.imap, {
 		attachmentOptions: {
@@ -12,15 +13,15 @@ module.exports = (env, reducer) => {
 	}));
 	imap.start();
 	imap.on("server:connected", () => {
-		console.log("\nсоединение с сервером imap установлено");
+		reducer.modules.log.writeLog("imap","соединение с сервером imap установлено");
 	});
 	imap.on("server:disconnected", () => {
 		const imap = require("./")(env, reducer);
 		reducer.initEvents({imap});
-		console.log("\nсоединение с сервером imap разорвано\n");
+		reducer.modules.log.writeLog("imap","соединение с сервером imap разорвано");
 	});
 	imap.on("error", err => {
-		console.log("\nошибка в imap соединении: ", err, "\n");
+		reducer.modules.log.writeLog("errors","ошибка в imap соединении: ", err);
 	});
 	imap.on("mail", (mail, seqno, attributes) => {
 		let titleNumbersArray = mail.subject && mail.subject.match(/\d+/g),
@@ -53,7 +54,7 @@ module.exports = (env, reducer) => {
 		}
 	});
 	imap.on("attachment", attachment => {
-		console.log("Новый файл: ", attachment.path);
+		reducer.modules.log.writeLog("files", {type: "attachment", path: attachment.path});
 		let fileName = attachment.generatedFileName,
 				fileNameArray = fileName.split("."),
 				fileExt = fileNameArray.length > 0 ? fileNameArray[fileNameArray.length - 1] : null;
@@ -76,20 +77,13 @@ module.exports = (env, reducer) => {
 						}
 					}
 					if (sheetRows) {
-						//console.log("Чтение exel файла завершено. В файле " + (Object.keys(sheetRows).length - 1) + " строк. Дата: " + new Date() + "\n");
-						reducer.dispatch({
-							type: "print",
-							data: {
-								message: "Чтение exel файла завершено. В файле " + (Object.keys(sheetRows).length - 1) + " строк. Дата: " + new Date() + "\n",
-								telegram: 1
-							}
-						}).then(then).catch(err);
+						reducer.modules.log.writeLog("system", "Чтение exel файла завершено. В файле " + (Object.keys(sheetRows).length - 1) + " строк. Дата: " + new Date());
 						reducer.dispatch({
 							type: "saveParseResult",
 							data: sheetRows
 						}).then(then).catch(err);
 					} else {
-						//console.log("Ошибка чтения exel файла. Результат чтения: " + sheetRows);
+						reducer.modules.log.writeLog("errors", "Ошибка чтения exel файла. Результат чтения: " + sheetRows);
 						reducer.dispatch({
 							type: "print",
 							data: {
@@ -99,7 +93,7 @@ module.exports = (env, reducer) => {
 						}).then(then).catch(err);
 					}
 				} catch(err) {
-					//console.log(`ошибка в чтении exel файла: ${err}`);
+					reducer.modules.log.writeLog("errors", `ошибка в чтении exel файла: ${err}`);
 					reducer.dispatch({
 						type: "print",
 						data: {
@@ -112,7 +106,7 @@ module.exports = (env, reducer) => {
 		}
 	});
 	imap.on("done", attachment => {
-		console.log("done\n");
+		reducer.modules.log.writeLog("imap","done");
 	});
 	return imap;
 }

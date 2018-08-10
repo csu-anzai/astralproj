@@ -1,10 +1,11 @@
 const Express = require("express"),
 			Helmet = require("helmet"),
-			parser = require("body-parser"),
-			err = require("./../err");
-let then = require("./../then");
+			parser = require("body-parser");
+let err = require("./../err"),
+		then = require("./../then");
 module.exports = (env, reducer) => {
 	then = then.bind(this, reducer);
+	err = err.bind(this, reducer);
 	const express = Express();
 	express.use(Helmet());
 	express.use(parser.urlencoded({extended: false}));
@@ -19,6 +20,10 @@ module.exports = (env, reducer) => {
 		res.send(false);
 	});
 	express.post("/api/zadarma", (req, res) => {
+		reducer.modules.log.writeLog("zadarma", {
+			type: "in",
+			data: req.body
+		});
 		const event = req.body.event;
 		let internal = req.body.internal,
 				destination = req.body.destination,
@@ -125,7 +130,11 @@ module.exports = (env, reducer) => {
 		}
 	});
 	express.get("/api/zadarma", (req, res) => {
-		res.send(req.query.zd_echo);	
+		res.send(req.query.zd_echo);
+		reducer.modules.log.writeLog("zadarma", {
+			type: "echo",
+			data: req.query.zd_echo
+		});	
 	});
 	express.use(Express.static(__dirname + env.express.staticPath));
 	return express;

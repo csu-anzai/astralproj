@@ -6,8 +6,9 @@ const env = require('../env.json'),
 			mysql = require('./mysql')(env),
 			imap = require('./imap')(env, reducer),
 			telegram = require('./telegram')(env, reducer),
-			err = require('./err'),
+			err = require('./err').bind(this, reducer),
 		 	then = require('./then').bind(this, reducer),
+		 	log = require('./logs')(),
 		 	nowDate = new Date(),
 			nowHours = nowDate.getHours(),
 			nowMinutes = nowDate.getMinutes(),
@@ -33,7 +34,8 @@ reducer.initEvents({
 	reducer,
 	env,
 	then,
-	err
+	err,
+	log
 });
 
 reducer.dispatch({

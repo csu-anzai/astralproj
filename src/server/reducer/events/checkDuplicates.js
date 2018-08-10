@@ -23,6 +23,10 @@ module.exports = modules => (resolve, reject, data) => {
 			companies.push(companiesArr);
 		}
 	}
+	modules.log.writeLog("system", {
+		type: "checkDuplicates",
+		data
+	});
 	companies && data.companies.length > 0 && Promise.all(data.companies.map(company => new Promise((resolve, reject) => {
 		request({
 			url: modules.env.tinkoff.checkInnUrl,
@@ -37,6 +41,10 @@ module.exports = modules => (resolve, reject, data) => {
 		});
 	}))).then(responce => {
 		let keys = [];
+		modules.log.writeLog("system", {
+			type: "checkDuplicatesResponce",
+			responce
+		});
 		responce.forEach((item, key) => {
 			item.result != "Success" && keys.push(key);
 		});
