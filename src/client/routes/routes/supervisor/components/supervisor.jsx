@@ -6,6 +6,7 @@ import Divider from 'material-ui/Divider';
 import Checkbox from 'material-ui/Checkbox';
 import DatePicker from 'material-ui/DatePicker';
 import {BottomNavigation, BottomNavigationItem} from 'material-ui/BottomNavigation';
+import FlatButton from 'material-ui/FlatButton';
 import Work from 'material-ui/svg-icons/action/work';
 import Cloud from 'material-ui/svg-icons/file/cloud';
 import Refresh from 'material-ui/svg-icons/navigation/refresh';
@@ -64,6 +65,19 @@ export default class Supervisor extends React.Component {
 		this.getFormated = this.getFormated.bind(this);
 		this.refresh = this.refresh.bind(this);
 		this.resetStatisticArr = this.resetStatisticArr.bind(this);
+		this.createFile = this.createFile.bind(this);
+	}
+	createFile(){
+		this.props.dispatch({
+			type: "procedure",
+			socket: true,
+			data: {
+				query: "createStatisticFile",
+				values: [
+					this.props.state.connectionHash
+				]
+			}
+		})
 	}
 	changeTypeToView(event, key, payload) {
 		this.props.dispatch({
@@ -93,6 +107,17 @@ export default class Supervisor extends React.Component {
 				})
 			}
 		});
+		if(type == "workingCompanies" || type == "working") {
+			this.props.dispatch({
+				type: "merge",
+				data: {
+					statistic: Object.assign(this.props.state.statistic, {
+						message: "",
+						fileURL: ""
+					})
+				}
+			});
+		}
 	}
 	changePeriod(event, key, payload) {
 		this.props.dispatch({
@@ -423,30 +448,39 @@ export default class Supervisor extends React.Component {
 	        </div>
 	        {
 	        	this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.length > 0 &&
-						<Line data = {{
-							labels: this.props.state.statistic && this.props.state.statistic.working && (this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).length == 1 ? this.props.state.statistic.working.map(i => i.hour+":00").filter((i,k,s) => s.indexOf(i) == k) : this.props.state.statistic.working.map(i => i.date)).filter((i,k,s) => s.indexOf(i) == k) || [],
-						  datasets: this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
-						  	label: template.template_name,
-					      fill: false,
-					      lineTension: 0.1,
-					      backgroundColor: this.state.colors[key][1],
-					      borderColor: this.state.colors[key][0],
-					      borderCapStyle: 'butt',
-					      borderDash: [],
-					      borderDashOffset: 0.0,
-					      borderJoinStyle: 'miter',
-					      pointBorderColor: this.state.colors[key][0],
-					      pointBackgroundColor: '#fff',
-					      pointBorderWidth: 1,
-					      pointHoverRadius: 10,
-					      pointHoverBackgroundColor: this.state.colors[key][0],
-					      pointHoverBorderColor: 'rgba(220,220,220,1)',
-					      pointHoverBorderWidth: 2,
-					      pointRadius: 5,
-					      pointHitRadius: 10,
-					      data: this.getFormated("working", template.template_name)
-						  }))
-						}}/>
+	        	[
+	        		<FlatButton 
+	        			key = {0}
+              	label = "Создать файл"
+              	primary
+              	onClick = {this.createFile}
+              />,
+             	this.props.state.statistic && this.props.state.statistic.fileURL && <a key = {1} href = {this.props.state.statistic.fileURL} target = "_blank">{this.props.state.statistic.fileURL}</a> || "",
+							<Line key = {2} data = {{
+								labels: this.props.state.statistic && this.props.state.statistic.working && (this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).length == 1 ? this.props.state.statistic.working.map(i => i.hour+":00").filter((i,k,s) => s.indexOf(i) == k) : this.props.state.statistic.working.map(i => i.date)).filter((i,k,s) => s.indexOf(i) == k) || [],
+							  datasets: this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
+							  	label: template.template_name,
+						      fill: false,
+						      lineTension: 0.1,
+						      backgroundColor: this.state.colors[key][1],
+						      borderColor: this.state.colors[key][0],
+						      borderCapStyle: 'butt',
+						      borderDash: [],
+						      borderDashOffset: 0.0,
+						      borderJoinStyle: 'miter',
+						      pointBorderColor: this.state.colors[key][0],
+						      pointBackgroundColor: '#fff',
+						      pointBorderWidth: 1,
+						      pointHoverRadius: 10,
+						      pointHoverBackgroundColor: this.state.colors[key][0],
+						      pointHoverBorderColor: 'rgba(220,220,220,1)',
+						      pointHoverBorderWidth: 2,
+						      pointRadius: 5,
+						      pointHitRadius: 10,
+						      data: this.getFormated("working", template.template_name)
+							  }))
+							}}/>
+						]
 	        }
 					</div>,
 					<div key = {2} style = {{
