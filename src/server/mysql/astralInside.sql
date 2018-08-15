@@ -55,7 +55,7 @@ BEGIN
       JOIN translates tr ON tr.translate_from = t.type_name  
     WHERE 
       JSON_CONTAINS('", types, "', CONCAT(c.type_id)) AND 
-      c.company_date_update BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "') AND ", 
+      DATE(c.company_date_update) BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "') AND ", 
       IF(userID IS NOT NULL AND userID > 0, CONCAT("c.user_id = ", userID), "1")
   );
   PREPARE mysqlPrepare FROM @mysqlText;
