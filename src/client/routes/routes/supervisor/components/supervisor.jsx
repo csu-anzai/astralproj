@@ -247,15 +247,10 @@ export default class Supervisor extends React.Component {
 		this.resetStatisticArr("data");
 	}
 	getFormated(type, template){
-		let arr = this.props.state.statistic[type].filter(item => item.template_name == template),
-				datesArr = this.props.state.statistic[type].filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).map(i => i.date);
-		if(datesArr.length > 1){
-		 	let newArr = datesArr.map(item => arr.filter(i => i.date == item)).map(item => item.length > 0 ? item.reduce((before, after) => ({companies: before.companies + after.companies})).companies : 0);
-		 	arr = newArr;
-		} else {
-			arr = arr.map(i => i.companies);
-		}
-		return arr;
+		let arr = this.props.state.statistic[type].filter(item => item.template_name == template) || [],
+				datesArr = this.props.state.statistic[type].filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).map(i => i.date),
+	 			newArr = datesArr.length > 1 ? datesArr.map(item => arr.filter(i => i.date == item)).map(item => item.length > 0 ? item.reduce((before, after) => ({companies: before.companies + after.companies})).companies : 0) : datesArr.length == 1 ? arr.map(item => item.companies) : [];
+		return newArr;
 	}
 	select(num){
 		this.setState({
@@ -456,30 +451,46 @@ export default class Supervisor extends React.Component {
               	onClick = {this.createFile}
               />,
              	this.props.state.statistic && this.props.state.statistic.fileURL && <a key = {1} href = {this.props.state.statistic.fileURL} target = "_blank">{this.props.state.statistic.fileURL}</a> || "",
-							<Line key = {2} data = {{
-								labels: this.props.state.statistic && this.props.state.statistic.working && (this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).length == 1 ? this.props.state.statistic.working.map(i => i.hour+":00").filter((i,k,s) => s.indexOf(i) == k) : this.props.state.statistic.working.map(i => i.date)).filter((i,k,s) => s.indexOf(i) == k) || [],
-							  datasets: this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
-							  	label: template.template_name,
-						      fill: false,
-						      lineTension: 0.1,
-						      backgroundColor: this.state.colors[key][1],
-						      borderColor: this.state.colors[key][0],
-						      borderCapStyle: 'butt',
-						      borderDash: [],
-						      borderDashOffset: 0.0,
-						      borderJoinStyle: 'miter',
-						      pointBorderColor: this.state.colors[key][0],
-						      pointBackgroundColor: '#fff',
-						      pointBorderWidth: 1,
-						      pointHoverRadius: 10,
-						      pointHoverBackgroundColor: this.state.colors[key][0],
-						      pointHoverBorderColor: 'rgba(220,220,220,1)',
-						      pointHoverBorderWidth: 2,
-						      pointRadius: 5,
-						      pointHitRadius: 10,
-						      data: this.getFormated("working", template.template_name)
-							  }))
-							}}/>
+							<Line 
+								key = {2} 
+								data = {{
+									labels: this.props.state.statistic && this.props.state.statistic.working && (this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).length == 1 ? this.props.state.statistic.working.map(i => i.hour+":00").filter((i,k,s) => s.indexOf(i) == k) : this.props.state.statistic.working.map(i => i.date)).filter((i,k,s) => s.indexOf(i) == k) || [],
+								  datasets: this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
+								  	label: template.template_name,
+							      fill: false,
+							      lineTension: 0.1,
+							      backgroundColor: this.state.colors[key][1],
+							      borderColor: this.state.colors[key][0],
+							      borderCapStyle: 'butt',
+							      borderDash: [],
+							      borderDashOffset: 0.0,
+							      borderJoinStyle: 'miter',
+							      pointBorderColor: this.state.colors[key][0],
+							      pointBackgroundColor: '#fff',
+							      pointBorderWidth: 1,
+							      pointHoverRadius: 10,
+							      pointHoverBackgroundColor: this.state.colors[key][0],
+							      pointHoverBorderColor: 'rgba(220,220,220,1)',
+							      pointHoverBorderWidth: 2,
+							      pointRadius: 5,
+							      pointHitRadius: 10,
+							      data: this.getFormated("working", template.template_name)
+								  }))
+								}}
+								options = {{
+									scales: {
+				            yAxes: [{
+			                ticks: {
+		                    beginAtZero:true
+			                }
+				            }]
+					        },
+					        tooltips: {
+					        	intersect: false,
+					        	position: "nearest"
+					        }
+								}}
+							/>
 						]
 	        }
 					</div>,
@@ -680,17 +691,33 @@ export default class Supervisor extends React.Component {
 		        </div>
 		        {
 		        	this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.length > 0 &&
-							<Bar data = {{
-						    labels: this.props.state.statistic && this.props.state.statistic.data && (this.props.state.statistic.data.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.data.map(i => i.time).filter((item, key, self) => self.indexOf(item) == key) : this.props.state.statistic.data.map(i => i.date)).filter((item, key, self) => self.indexOf(item) == key) || [],
-								datasets: this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
-									label: template.template_name,
-									backgroundColor: this.state.colors[key][1],
-									borderColor: this.state.colors[key][0],
-									pointHoverBackgroundColor: this.state.colors[key][0],
-									pointHoverBorderColor: 'rgba(220,220,220,1)',
-									data: this.getFormated("data", template.template_name)
-								}))
-							}}/>
+							<Bar 
+								data = {{
+							    labels: this.props.state.statistic && this.props.state.statistic.data && (this.props.state.statistic.data.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.data.map(i => i.time).filter((item, key, self) => self.indexOf(item) == key) : this.props.state.statistic.data.map(i => i.date)).filter((item, key, self) => self.indexOf(item) == key) || [],
+									datasets: this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
+										label: template.template_name,
+										backgroundColor: this.state.colors[key][1],
+										borderColor: this.state.colors[key][0],
+										pointHoverBackgroundColor: this.state.colors[key][0],
+										pointHoverBorderColor: 'rgba(220,220,220,1)',
+										data: this.getFormated("data", template.template_name)
+									}))
+								}}
+								options = {{
+									scales: {
+				            yAxes: [{
+			                ticks: {
+		                    beginAtZero:true,
+		                    stacked: false
+			                }			        
+				            }]
+					        },
+					        tooltips: {
+					        	intersect: false,
+					        	position: "nearest"
+					        }
+								}}
+							/>
 		        }
 					</div>
 			}
