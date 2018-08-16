@@ -248,8 +248,18 @@ export default class Supervisor extends React.Component {
 	}
 	getFormated(type, template){
 		let arr = this.props.state.statistic[type].filter(item => item.template_name == template) || [],
-				datesArr = this.props.state.statistic[type].filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).map(i => i.date),
-	 			newArr = datesArr.length > 1 ? datesArr.map(item => arr.filter(i => i.date == item)).map(item => item.length > 0 ? item.reduce((before, after) => ({companies: before.companies + after.companies})).companies : 0) : datesArr.length == 1 ? arr.map(item => item.companies) : [];
+				datesArr = this.props.state.statistic[type].filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).map(i => i.date) || [],
+				time = type == "data" ? "time" : "hour",
+				timesArr = datesArr.length == 1 ? this.props.state.statistic[type].filter((item, key, self) => self.findIndex(i => i[time] == item[time]) == key).map(i => i[time]) : [],
+	 			newArr = datesArr.length > 1 ? 
+	 				datesArr.map(item => arr.filter(i => i.date == item)).map(item => item.length > 0 ? 
+ 						item.reduce((before, after) => ({companies: before.companies + after.companies})).companies : 
+ 						0) : 
+	 				datesArr.length == 1 ? 
+	 					timesArr.map(item => arr.filter(i => i[time] == item)).map(item => item.length > 0 ? 
+	 						item.reduce((before, after) => ({companies: before.companies + after.companies})).companies : 
+	 						0) : 
+	 					[];
 		return newArr;
 	}
 	select(num){
