@@ -18,35 +18,32 @@ class Log {
 		this.dateFormated = dateFormated;
 		!fs.existsSync(`./src/server/logs/data/`) && fs.mkdirSync(`./src/server/logs/data`);
 		if(!fs.existsSync(`./src/server/logs/data/${dateFormated}`)){
-			let objectString = JSON.stringify({});
 			fs.mkdirSync(`./src/server/logs/data/${dateFormated}/`);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/ws.json`, objectString);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/errors.json`, objectString);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/telegram.json`, objectString);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/imap.json`, objectString);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/files.json`, objectString);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/zadarma.json`, objectString);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/system.json`, objectString);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/db.json`, objectString);
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/tinkoff.json`, objectString);
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/ws.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/errors.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/telegram.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/imap.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/files.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/zadarma.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/system.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/db.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/tinkoff.txt`, "");
 		}
 	}
 	writeLog(type, object){
-		const exists = fs.existsSync(`./src/server/logs/data/${this.dateFormated}/${type}.json`),
+		const exists = fs.existsSync(`./src/server/logs/data/${this.dateFormated}/${type}.txt`),
 					objectString = JSON.stringify(object),
 					date = new Date();
 		if(!exists && type != "errors"){
 			this.writeLog("errors", {
-				message: `Лог ${type}.json не найден для внесения записи: ${objectString}`
+				message: `Лог ${type}.txt не найден для внесения записи: ${objectString}`
 			});
 		} else if(!exists) {
 			console.log(`Нет лога ошибок на дату ${date}. Объект ошибки: ${objectString}`);
 		} else {
-			let log = require(`./data/${this.dateFormated}/${type}.json`),
-					date = new Date(),
+			let date = new Date(),
 					timeFormated = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-			log[timeFormated] = object;
-			fs.writeFileSync(`./src/server/logs/data/${this.dateFormated}/${type}.json`, JSON.stringify(log));
+			fs.appendFileSync(`./src/server/logs/data/${this.dateFormated}/${type}.txt`, `${timeFormated} – ${objectString}\n\n`);
 		}
 	}
 }
