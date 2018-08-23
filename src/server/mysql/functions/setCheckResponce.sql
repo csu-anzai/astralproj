@@ -31,6 +31,13 @@ BEGIN
 				END IF;
 				SET userID = JSON_UNQUOTE(JSON_EXTRACT(users, CONCAT("$[", interator, "]")));
 				SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+				SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+					"type", "mergeDeep",
+					"data", JSON_OBJECT(
+						"message", "статусы компаний обновлены",
+						"messageType", "success"
+					)
+				))));
 				SET interator = interator + 1;
 				ITERATE usersLoop;
 			END LOOP;
@@ -39,8 +46,7 @@ BEGIN
 	SET responce = JSON_MERGE(responce, JSON_OBJECT(
 		"type", "print",
 		"data", JSON_OBJECT(
-			"message", CONCAT(companiesLength, " компаний успешно обработаны"),
-			"telegram", 1
+			"message", CONCAT(companiesLength, " компаний успешно обработаны")
 		)
 	));
 	RETURN responce;
