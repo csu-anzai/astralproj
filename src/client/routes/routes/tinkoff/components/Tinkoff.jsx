@@ -17,6 +17,7 @@ import ArrowForward from 'material-ui/svg-icons/navigation/arrow-forward';
 import Audiotrack from 'material-ui/svg-icons/image/audiotrack';
 import PhoneForwarded from 'material-ui/svg-icons/notification/phone-forwarded';
 import PhoneInTalk from 'material-ui/svg-icons/notification/phone-in-talk';
+import RemoveCircle from 'material-ui/svg-icons/content/remove-circle';
 import SettingsPhone from 'material-ui/svg-icons/action/settings-phone';
 import Replay from 'material-ui/svg-icons/av/replay';
 import Paper from 'material-ui/Paper';
@@ -269,6 +270,26 @@ export default class Tinkoff extends React.Component {
 				user_hash: this.props.state.connectionHash
 			}
 		});
+	}
+	deleteCompanyDialog(companyID){
+		this.setState({
+			companyID
+		});
+		this.openDialog.call(this,3);
+	}
+	deleteCompany(companyID){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "deleteCompany",
+				values: [
+					this.props.state.connectionHash,
+					companyID
+				]
+			}
+		});
+		this.closeDialog();
 	}
 	render(){
 		localStorage.removeItem("hash");
@@ -778,6 +799,15 @@ export default class Tinkoff extends React.Component {
 				                		<Audiotrack color = "#9575CD"/>
 				                	</IconButton>
 		                		}
+		                		{
+		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
+			                		<IconButton
+					                	title = "Удалить компанию"
+					                	onClick = {this.deleteCompanyDialog.bind(this, company.company_id)}
+					                >
+					                	<RemoveCircle color = "#9a2c2c"/>
+					                </IconButton>
+					              }
 			                </TableRowColumn>
 		                }
 		                {
@@ -802,7 +832,13 @@ export default class Tinkoff extends React.Component {
 		                				<Replay color = "#bd38c1"/>
 		                			</IconButton>
 		                		}
-		                	</TableRowColumn>
+		                		<IconButton
+				                	title = "Удалить компанию"
+				                	onClick = {this.deleteCompanyDialog.bind(this, company.company_id)}
+				                >
+					                	<RemoveCircle color = "#9a2c2c"/>
+				                </IconButton>
+	                		</TableRowColumn>
 		                }
 		              </TableRow>
 	          		)) || 
@@ -946,7 +982,9 @@ export default class Tinkoff extends React.Component {
 			        		this.sendToApi :
 			        		this.state.dialogType == 1 ? 
 			        			this.changeType.bind(this, this.state.companyID, 23, [this.state.dateCallBack, this.state.timeCallBack]) :
-			        			this.reset.bind(this, this.state.selectedIndex == 1 ? 14 : 23)
+			        			this.state.dialogType == 2 ?
+			        				this.reset.bind(this, this.state.selectedIndex == 1 ? 14 : 23) :
+			        				this.deleteCompany.bind(this, this.state.companyID)
 			        }
 			      />,
 			    ]}
@@ -991,8 +1029,10 @@ export default class Tinkoff extends React.Component {
 							    		<Info style={{verticalAlign: "middle", width: "25px", color: "#e8a521"}}/> Время и дата не должны быть меньше текущих даты и времени
 							    </div>
 			    			</div> :
-			    			this.state.dialogType == 2 &&
-			    			`Вы уверены что хотите сбросить список "${ this.state.selectedIndex == 1 ? "НЕ ИНТЕРЕСНО" : this.state.selectedIndex == 3 && "ПЕРЕЗВОНИТЬ" }"`
+			    			this.state.dialogType == 2 ?
+			    				`Вы уверены что хотите сбросить список "${ this.state.selectedIndex == 1 ? "НЕ ИНТЕРЕСНО" : this.state.selectedIndex == 3 && "ПЕРЕЗВОНИТЬ" }"` :
+			    				this.state.dialogType == 3 &&
+			    				"Вы уверены что хотите удалить компанию из базы?"
         	}
         </Dialog>
 			</Paper>
