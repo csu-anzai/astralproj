@@ -466,7 +466,7 @@ export default class Supervisor extends React.Component {
 								data = {{
 									labels: this.props.state.statistic && this.props.state.statistic.working && (this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).length == 1 ? this.props.state.statistic.working.map(i => i.hour+":00").filter((i,k,s) => s.indexOf(i) == k) : this.props.state.statistic.working.map(i => i.date)).filter((i,k,s) => s.indexOf(i) == k) || [],
 								  datasets: this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
-								  	label: template.template_name,
+								  	label: `${template.template_name} (${this.getFormated("working", template.template_name).reduce((before, after) => (before + after))})`,
 							      fill: false,
 							      lineTension: 0.1,
 							      backgroundColor: this.state.colors[key][1],
@@ -705,7 +705,7 @@ export default class Supervisor extends React.Component {
 								data = {{
 							    labels: this.props.state.statistic && this.props.state.statistic.data && (this.props.state.statistic.data.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.data.map(i => i.time).filter((item, key, self) => self.indexOf(item) == key) : this.props.state.statistic.data.map(i => i.date)).filter((item, key, self) => self.indexOf(item) == key) || [],
 									datasets: this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
-										label: template.template_name,
+										label: `${template.template_name} (${this.getFormated("data", template.template_name).reduce((before, after) => (before + after))})`,
 										backgroundColor: this.state.colors[key][1],
 										borderColor: this.state.colors[key][0],
 										pointHoverBackgroundColor: this.state.colors[key][0],
