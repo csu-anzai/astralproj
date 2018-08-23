@@ -5,7 +5,7 @@ module.exports = modules => (resolve, reject, data) => {
 		data: {
 			query: "getCompaniesToCheckStatus",
 			values: [
-
+				data.user_hash || null
 			]
 		}
 	}).then(responce => {
@@ -63,7 +63,7 @@ module.exports = modules => (resolve, reject, data) => {
 				type: "print",
 				data: {
 					message: `Отправлено на уточнение статуса ${companies.length} компаний`,
-					telegram: 1
+					user_id: data.user_id
 				}
 			}).then(modules.then).catch(modules.err);
 		}

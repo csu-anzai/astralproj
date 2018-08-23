@@ -83,6 +83,7 @@ export default class Tinkoff extends React.Component {
 		this.sendToApi = this.sendToApi.bind(this);
 		this.comment = this.comment.bind(this);
 		this.ringing = this.ringing.bind(this);
+		this.checkCompanies = this.checkCompanies.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -259,6 +260,15 @@ export default class Tinkoff extends React.Component {
 				]
 			}
 		})
+	}
+	checkCompanies(){
+		this.props.dispatch({
+			type: "checkCompaniesStatus",
+			socket: true,
+			data: {
+				user_hash: this.props.state.connectionHash
+			}
+		});
 	}
 	render(){
 		localStorage.removeItem("hash");
@@ -462,6 +472,17 @@ export default class Tinkoff extends React.Component {
 				                	}}
 				                />
 				              }
+				              {
+		              			this.state.selectedIndex == 2 && 
+		              			<FlatButton 
+		              				label = "Уточнить статус"	
+		              				primary
+		              				onClick = {this.checkCompanies}
+		              				style = {{
+				                		marginBottom: "8px"
+				                	}}
+		              			/>
+		              		}
 		              	</div>
 	              	</div>
 	              </TableHeaderColumn>
