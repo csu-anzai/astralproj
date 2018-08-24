@@ -5,7 +5,7 @@ BEGIN
 	DECLARE companiesDate VARCHAR(10);
 	DECLARE companiesTime VARCHAR(5);
 	DECLARE responce JSON;
-	DECLARE companiesCursor CURSOR FOR SELECT COUNT(*), ty.type_name, DATE(c.company_date_create) company_date, CONCAT(HOUR(c.company_date_create), ":", MINUTE(c.company_date_create)) company_time FROM companies c JOIN templates t ON t.template_id = c.template_id JOIN types ty ON ty.type_id = t.type_id WHERE IF(bankID IS NOT NULL, c.bank_id = bankID, 1) AND IF(free, c.type_id = 10, 1) AND DATE(c.company_date_create) BETWEEN DATE(dateStart) AND DATE(dateEnd) GROUP BY company_date, company_time, ty.type_name ORDER BY company_date, company_time, ty.type_name;
+	DECLARE companiesCursor CURSOR FOR SELECT COUNT(*), ty.type_name, DATE(c.company_date_create) company_date, CONCAT(HOUR(c.company_date_create), ":", MINUTE(c.company_date_create)) company_time FROM companies c JOIN templates t ON t.template_id = c.template_id JOIN types ty ON ty.type_id = t.type_id WHERE IF(bankID IS NOT NULL, c.bank_id = bankID, 1) AND IF(free, c.type_id = 10, 1) AND DATE(c.company_date_create) BETWEEN DATE(dateStart) AND DATE(dateEnd) GROUP BY company_date, company_time, ty.type_name ORDER BY company_date, HOUR(company_time), MINUTE(company_time), ty.type_name;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET responce = JSON_ARRAY();
 	OPEN companiesCursor;
