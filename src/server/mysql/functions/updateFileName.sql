@@ -4,7 +4,7 @@ BEGIN
 	DECLARE userID INT(11);
 	SET responce = JSON_ARRAY();
 	UPDATE files SET file_name = fileName, type_id = 21 WHERE file_id = fileID;
-	UPDATE companies SET type_id = 21 WHERE file_id = fileID;
+	UPDATE companies SET type_id = IF(type_id = 22, 21, type_id), company_file_type = 22 WHERE company_file_type = fileID;
 	SELECT user_id, file_statistic INTO userID, fileStatistic FROM files WHERE file_id = fileID;
 	SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
 		JSON_OBJECT(

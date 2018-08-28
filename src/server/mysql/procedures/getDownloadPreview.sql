@@ -21,9 +21,9 @@ BEGIN
 	WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
 	SET ordersLength = JSON_LENGTH(orders);
 	SET @mysqlText = CONCAT(
-		"CREATE VIEW custom_download_view AS SELECT company_json FROM companies WHERE user_id = ",
+		"CREATE VIEW custom_download_view AS SELECT company_json FROM companies WHERE company_file_user = ",
 		userID,
-		" AND type_id = 20"
+		" AND company_file_type = 20"
 	);
 	IF ordersLength > 0
 		THEN BEGIN
@@ -73,7 +73,10 @@ BEGIN
 				"$.template_id",
 				"$.company_comment",
 				"$.company_date_call_back",
-				"$.call_type"
+				"$.call_type",
+				"$.call_destination_type_id",
+				"$.call_internal_type_id",
+				"$.file_name"
 			);
 			SET companies = JSON_MERGE(companies, company);
 			ITERATE companiesLoop;
@@ -99,7 +102,7 @@ BEGIN
 				SET iterator = iterator + 1;
 				ITERATE translateLoop;
 			END LOOP;
-			SELECT count(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 20;
+			SELECT count(*) INTO companiesCount FROM companies WHERE company_file_user = userID AND company_file_type = 20;
 			SET responce = sendToAllUserSockets(userID, JSON_ARRAY(
 				JSON_OBJECT(
 					"type", "merge",

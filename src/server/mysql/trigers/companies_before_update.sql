@@ -10,7 +10,12 @@ BEGIN
 	END IF;
 	IF OLD.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32) AND NEW.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32)
 		THEN SET NEW.company_date_update = OLD.company_date_update;
-		ELSE SET NEW.company_date_update = NOW();
+		ELSE BEGIN 
+			IF NEW.company_file_user IS NULL AND OLD.company_file_user IS NULL
+				THEN SET NEW.company_date_update = NOW();
+				ELSE SET NEW.company_date_update = OLD.company_date_update;
+			END IF;
+		END;
 	END IF;
 	SET NEW.company_json = JSON_SET(NEW.company_json,
 		"$.type_id", NEW.type_id,

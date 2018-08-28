@@ -20,7 +20,7 @@ BEGIN
 			SET companiesID = JSON_ARRAY();
 			SET allRegions = JSON_ARRAY();
 			SET allColumns = JSON_ARRAY();
-			UPDATE companies SET type_id = 10, user_id = NULL WHERE user_id = userID AND type_id = 20;
+			UPDATE companies SET type_id = IF(type_id = 20, 10, type_id), user_id = IF(type_id = 20, NULL, user_id), company_file_user = NULL, company_file_type = NULL WHERE company_file_user = userID AND company_file_type = 20;
 			SELECT 
 				state_json ->> "$.download.types",
 				state_json ->> "$.download.dateStart",
@@ -49,7 +49,7 @@ BEGIN
 			SET ordersLength = JSON_LENGTH(orders);
 			SET banksLength = JSON_LENGTH(banks);	
 			SET @mysqlText = CONCAT(
-				"UPDATE companies SET type_id = 20, user_id = ", userID, " WHERE DATE(company_date_create)",
+				"UPDATE companies SET type_id = IF(type_id = 10, 20, type_id), user_id = IF(type_id != 10, user_id, ", userID, "), company_file_user = ", userID,", company_file_type = 20 WHERE DATE(company_date_create)",
 				IF(dateStart = dateEnd, "=", " BETWEEN "),
 				IF(dateStart = dateEnd, CONCAT("DATE('", dateStart, "')"), CONCAT("DATE('", dateStart, "') AND DATE('", dateEnd, "')")),
 				IF(typesLength > 0, CONCAT(" AND JSON_CONTAINS('", types, "', JSON_ARRAY(type_id))"), ""),
