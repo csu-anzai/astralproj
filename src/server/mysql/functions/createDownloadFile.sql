@@ -4,7 +4,7 @@ BEGIN
 	DECLARE fileID, iterator, keysLength INT(11);
 	DECLARE keyName, translateTo, connectionApiID VARCHAR(128);
 	DECLARE userID INT(11) DEFAULT (SELECT user_id FROM connections WHERE connection_hash = connectionHash);
-	DECLARE companiesCursor CURSOR FOR SELECT company_json FROM companies WHERE user_id = userID AND type_id = 20;
+	DECLARE companiesCursor CURSOR FOR SELECT company_json FROM companies WHERE company_file_user = userID AND company_file_type = 20;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET responce = JSON_ARRAY();
 	SET connectionValid = checkRootConnection(connectionHash);
@@ -62,7 +62,7 @@ BEGIN
 					ITERATE companiesLoop;
 				END LOOP;
 			CLOSE companiesCursor;
-			UPDATE companies SET type_id = 22, file_id = fileID WHERE user_id = userID AND type_id = 20;
+			UPDATE companies SET type_id = IF(type_id = 20, 22, type_id), file_id = fileID, company_file_type = 22 WHERE company_file_user = userID AND company_file_type = 20;
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "xlsxCreate",
 				"data", JSON_OBJECT(
