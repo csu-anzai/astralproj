@@ -126,9 +126,9 @@ BEGIN
   WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
   SET ordersLength = JSON_LENGTH(orders);
   SET @mysqlText = CONCAT(
-    "CREATE VIEW custom_download_view AS SELECT company_json FROM companies WHERE user_id = ",
+    "CREATE VIEW custom_download_view AS SELECT company_json FROM companies WHERE company_file_user = ",
     userID,
-    " AND type_id = 20"
+    " AND company_file_type = 20"
   );
   IF ordersLength > 0
     THEN BEGIN
@@ -178,7 +178,10 @@ BEGIN
         "$.template_id",
         "$.company_comment",
         "$.company_date_call_back",
-        "$.call_type"
+        "$.call_type",
+        "$.call_destination_type_id",
+        "$.call_internal_type_id",
+        "$.file_name"
       );
       SET companies = JSON_MERGE(companies, company);
       ITERATE companiesLoop;
@@ -204,7 +207,7 @@ BEGIN
         SET iterator = iterator + 1;
         ITERATE translateLoop;
       END LOOP;
-      SELECT count(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 20;
+      SELECT count(*) INTO companiesCount FROM companies WHERE company_file_user = userID AND company_file_type = 20;
       SET responce = sendToAllUserSockets(userID, JSON_ARRAY(
         JSON_OBJECT(
           "type", "merge",
@@ -398,7 +401,7 @@ BEGIN
       SET companiesID = JSON_ARRAY();
       SET allRegions = JSON_ARRAY();
       SET allColumns = JSON_ARRAY();
-      UPDATE companies SET type_id = 10, user_id = NULL WHERE user_id = userID AND type_id = 20;
+      UPDATE companies SET type_id = IF(type_id = 20, 10, type_id), user_id = IF(type_id = 20, NULL, user_id), company_file_user = NULL, company_file_type = NULL WHERE company_file_user = userID AND company_file_type = 20;
       SELECT 
         state_json ->> "$.download.types",
         state_json ->> "$.download.dateStart",
@@ -427,7 +430,7 @@ BEGIN
       SET ordersLength = JSON_LENGTH(orders);
       SET banksLength = JSON_LENGTH(banks); 
       SET @mysqlText = CONCAT(
-        "UPDATE companies SET type_id = 20, user_id = ", userID, " WHERE DATE(company_date_create)",
+        "UPDATE companies SET type_id = IF(type_id = 10, 20, type_id), user_id = IF(type_id != 10, user_id, ", userID, "), company_file_user = ", userID,", company_file_type = 20 WHERE DATE(company_date_create)",
         IF(dateStart = dateEnd, "=", " BETWEEN "),
         IF(dateStart = dateEnd, CONCAT("DATE('", dateStart, "')"), CONCAT("DATE('", dateStart, "') AND DATE('", dateEnd, "')")),
         IF(typesLength > 0, CONCAT(" AND JSON_CONTAINS('", types, "', JSON_ARRAY(type_id))"), ""),
@@ -1010,7 +1013,7 @@ BEGIN
   DECLARE fileID, iterator, keysLength INT(11);
   DECLARE keyName, translateTo, connectionApiID VARCHAR(128);
   DECLARE userID INT(11) DEFAULT (SELECT user_id FROM connections WHERE connection_hash = connectionHash);
-  DECLARE companiesCursor CURSOR FOR SELECT company_json FROM companies WHERE user_id = userID AND type_id = 20;
+  DECLARE companiesCursor CURSOR FOR SELECT company_json FROM companies WHERE company_file_user = userID AND company_file_type = 20;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
   SET responce = JSON_ARRAY();
   SET connectionValid = checkRootConnection(connectionHash);
@@ -1068,7 +1071,7 @@ BEGIN
           ITERATE companiesLoop;
         END LOOP;
       CLOSE companiesCursor;
-      UPDATE companies SET type_id = 22, file_id = fileID WHERE user_id = userID AND type_id = 20;
+      UPDATE companies SET type_id = IF(type_id = 20, 22, type_id), file_id = fileID, company_file_type = 22 WHERE company_file_user = userID AND company_file_type = 20;
       SET responce = JSON_MERGE(responce, JSON_OBJECT(
         "type", "xlsxCreate",
         "data", JSON_OBJECT(
@@ -2851,7 +2854,7 @@ BEGIN
   DECLARE userID INT(11);
   SET responce = JSON_ARRAY();
   UPDATE files SET file_name = fileName, type_id = 21 WHERE file_id = fileID;
-  UPDATE companies SET type_id = 21 WHERE file_id = fileID;
+  UPDATE companies SET type_id = IF(type_id = 22, 21, type_id), company_file_type = 22 WHERE company_file_type = fileID;
   SELECT user_id, file_statistic INTO userID, fileStatistic FROM files WHERE file_id = fileID;
   SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
     JSON_OBJECT(
@@ -3149,7 +3152,9 @@ CREATE TABLE `companies` (
   `company_date_call_back` varchar(19) COLLATE utf8_bin DEFAULT NULL,
   `old_type_id` int(11) DEFAULT NULL,
   `call_id` int(11) DEFAULT NULL,
-  `company_ringing` tinyint(1) NOT NULL DEFAULT '0'
+  `company_ringing` tinyint(1) NOT NULL DEFAULT '0',
+  `company_file_user` int(11) DEFAULT NULL,
+  `company_file_type` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
@@ -3247,7 +3252,12 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
   END IF;
   IF OLD.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32) AND NEW.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32)
     THEN SET NEW.company_date_update = OLD.company_date_update;
-    ELSE SET NEW.company_date_update = NOW();
+    ELSE BEGIN 
+      IF NEW.company_file_user IS NULL AND OLD.company_file_user IS NULL
+        THEN SET NEW.company_date_update = NOW();
+        ELSE SET NEW.company_date_update = OLD.company_date_update;
+      END IF;
+    END;
   END IF;
   SET NEW.company_json = JSON_SET(NEW.company_json,
     "$.type_id", NEW.type_id,
@@ -4089,7 +4099,9 @@ ALTER TABLE `companies`
   ADD KEY `bank_id` (`bank_id`),
   ADD KEY `file_id` (`file_id`),
   ADD KEY `old_type_id` (`old_type_id`),
-  ADD KEY `call_id` (`call_id`);
+  ADD KEY `call_id` (`call_id`),
+  ADD KEY `company_file_user` (`company_file_user`),
+  ADD KEY `company_file_type` (`company_file_type`);
 
 ALTER TABLE `connections`
   ADD PRIMARY KEY (`connection_id`),
@@ -4256,6 +4268,8 @@ ALTER TABLE `codes`
 ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_10` FOREIGN KEY (`call_id`) REFERENCES `calls` (`call_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `companies_ibfk_11` FOREIGN KEY (`company_file_user`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `companies_ibfk_12` FOREIGN KEY (`company_file_type`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_3` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`purchase_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_4` FOREIGN KEY (`template_id`) REFERENCES `templates` (`template_id`) ON DELETE SET NULL ON UPDATE CASCADE,
