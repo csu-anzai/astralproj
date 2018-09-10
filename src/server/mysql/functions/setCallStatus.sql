@@ -2,7 +2,7 @@ BEGIN
 	DECLARE callID, userID, companyTypeID, companyOldTypeID, bankID, callCount, companyID, callInternalTypeID, callDestinationTypeID INT(11);
 	DECLARE typeTranslate VARCHAR(128);
 	DECLARE nextPhone, companyPhone VARCHAR(120);
-	DECLARE ringing, notDial, callEnd TINYINT(1);
+	DECLARE ringing, notDial, callEnd, callProcess TINYINT(1);
 	DECLARE responce JSON;
 	SET responce = JSON_ARRAY();
 	SELECT call_id, user_id INTO callID, userID FROM calls_view WHERE user_sip = userSip OR call_api_id_internal = callApiID OR call_api_id_destination = callApiID ORDER BY call_id DESC LIMIT 1;
@@ -83,6 +83,7 @@ BEGIN
 	WHERE call_id = callID;
 	SELECT call_internal_type_id, call_destination_type_id, company_id INTO callInternalTypeID, callDestinationTypeID, companyID FROM calls WHERE call_id = callID;
 	SET callEnd = IF(callDestinationTypeID IN (38,40,41,42,46,47,48,49,50,51,52,53,33) AND callInternalTypeID IN (38,40,41,42,46,47,48,49,50,51,52,53,33), 1, 0);
+	SET callProcess = IF(callDestinationTypeID = 34, 1, 0);
 	SET notDial = IF((callInternalTypeID IN (42,47,48,49,50) OR callDestinationTypeID IN (42,47,48,49,50)) AND callEnd = 1, 1, 0);
 	UPDATE companies SET type_id = IF(notDial = 1, IF(type_id = 9, 35, 36), IF(type_id IN (35, 36) AND callEnd = 1, 9, type_id)), company_ringing = IF(ringing = 1 AND callEnd = 1, IF(type_id = 35, 0, 1), 0) WHERE company_id = companyID;
 	SELECT type_id, old_type_id, bank_id, company_id, company_phone INTO companyTypeID, companyOldTypeID, bankID, companyID, companyPhone FROM companies WHERE call_id = callID;
@@ -98,6 +99,12 @@ BEGIN
 			"messageType", IF(typeID IN (39, 33, 34, 43), "success", "error")
 		)
 	))));
+	IF callProcess = 1 AND callEnd = 0 
+		THEN BEGIN 
+			UPDATE users SET user_ringing = 0 WHERE user_id = userID;
+			SET ringing = 0;
+		END;
+	END IF;
 	IF companyOldTypeID IN (9, 35, 10) AND callEnd = 1 AND companyTypeID IN (9, 35, 36) AND ringing = 1
 		THEN BEGIN
 			SELECT COUNT(*) INTO callCount FROM active_calls_view WHERE user_id = userID;

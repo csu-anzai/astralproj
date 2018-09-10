@@ -4,7 +4,7 @@ BEGIN
     DECLARE userName VARCHAR(64);
     DECLARE userEmail VARCHAR(512);
     DECLARE userAuth, connectionEnd, ringing TINYINT(1);
-    DECLARE responce, activeCompanies, downloadFilters, distributionFilters, statisticFilters JSON;
+    DECLARE responce, activeCompanies, activeCompany, downloadFilters, distributionFilters, statisticFilters JSON;
     SET responce = JSON_ARRAY();
 	SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     SELECT user_id, user_auth, type_id, user_name, user_email, bank_id INTO userID, userAuth, typeID, userName, userEmail, bankID FROM users WHERE user_hash = userHash;
@@ -54,6 +54,8 @@ BEGIN
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+                    SET activeCompany = JSON_OBJECT();
+                    SELECT company_json INTO activeCompany FROM working_user_company_view WHERE user_id = userID LIMIT 1;
                     SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
                     SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
                     IF activeCompaniesLength > 0
@@ -65,6 +67,7 @@ BEGIN
                                     "type", "merge",
                                     "data", JSON_OBJECT(
                                         "companies", activeCompanies,
+                                        "activeCompany", activeCompany,
                                         "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
                                         "ringing", ringing
