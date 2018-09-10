@@ -525,7 +525,7 @@ BEGIN
     DECLARE userEmail VARCHAR(512);
     DECLARE userID, connectionID, activeCompaniesLength, typeID, bankID INT(11);
     DECLARE connectionEnd, ringing TINYINT(1);
-    DECLARE responce, activeCompanies, downloadFilters, distributionFilters, statisticFilters JSON;
+    DECLARE responce, activeCompanies, downloadFilters, distributionFilters, statisticFilters, activeCompany JSON;
     SET responce = JSON_ARRAY();
     SET activeCompanies = JSON_ARRAY();
     SELECT user_id, type_id, user_name, user_email, bank_id INTO userID, typeID, userName, userEmail, bankID FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
@@ -565,6 +565,8 @@ BEGIN
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+                    SET activeCompany = JSON_OBJECT();
+                    SELECT company_json INTO activeCompany FROM working_user_company_view WHERE user_id = userID LIMIT 1;
                     SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
                     SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
                     IF activeCompaniesLength > 0
@@ -576,6 +578,7 @@ BEGIN
                                     "type", "merge",
                                     "data", JSON_OBJECT(
                                         "companies", activeCompanies,
+                                        "activeCompany", activeCompany,
                                         "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
                                         "ringing", ringing
@@ -679,7 +682,7 @@ BEGIN
     DECLARE userName VARCHAR(64);
     DECLARE userEmail VARCHAR(512);
     DECLARE userAuth, connectionEnd, ringing TINYINT(1);
-    DECLARE responce, activeCompanies, downloadFilters, distributionFilters, statisticFilters JSON;
+    DECLARE responce, activeCompanies, activeCompany, downloadFilters, distributionFilters, statisticFilters JSON;
     SET responce = JSON_ARRAY();
   SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     SELECT user_id, user_auth, type_id, user_name, user_email, bank_id INTO userID, userAuth, typeID, userName, userEmail, bankID FROM users WHERE user_hash = userHash;
@@ -729,6 +732,8 @@ BEGIN
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
+                    SET activeCompany = JSON_OBJECT();
+                    SELECT company_json INTO activeCompany FROM working_user_company_view WHERE user_id = userID LIMIT 1;
                     SELECT user_ringing INTO ringing FROM users WHERE user_id = userID;
                     SELECT state_json ->> "$.distribution" INTO distributionFilters FROM states WHERE connection_id = connectionID;
                     IF activeCompaniesLength > 0
@@ -740,6 +745,7 @@ BEGIN
                                     "type", "merge",
                                     "data", JSON_OBJECT(
                                         "companies", activeCompanies,
+                                        "activeCompany", activeCompany,
                                         "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
                                         "ringing", ringing
@@ -1856,6 +1862,67 @@ BEGIN
     ));
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `nextCall` (`connectionHash` VARCHAR(32) CHARSET utf8) RETURNS JSON NO SQL
+BEGIN
+  DECLARE connectionApiID VARCHAR(120);
+  DECLARE companyID, userID INT(11);
+  DECLARE validConnection TINYINT(1);
+  DECLARE userSip VARCHAR(20);
+  DECLARE companyPhone VARCHAR(120);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SET validConnection = checkConnection(connectionHash);
+  SELECT user_id, connection_api_id INTO userID, connectionApiID FROM connections WHERE connection_hash = connectionHash;
+  IF validConnection 
+    THEN BEGIN
+      SELECT user_sip INTO userSip FROM users WHERE user_id = userID;
+      SELECT company_json ->> "$.company_id" INTO companyID FROM working_user_company_view WHERE user_id = userID LIMIT 1;
+      IF companyID IS NOT NULL 
+        THEN UPDATE companies SET company_ringing = 1 WHERE company_id = companyID;
+      END IF;
+      SELECT company_json ->> "$.company_phone", company_json ->> "$.company_id" INTO companyPhone, companyID FROM companies WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 0 ORDER BY type_id LIMIT 1;
+      IF companyPhone IS NOT NULL
+        THEN BEGIN 
+          INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, 1);
+          SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "sendToZadarma",
+            "data", JSON_OBJECT(
+              "options", JSON_OBJECT(
+                "from", userSip,
+                "to", companyPhone,
+                "predicted", 1
+              ),
+              "method", "request/callback",
+              "type", "GET"
+            )
+          ));
+          SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+          SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+            "type", "mergeDeep",
+            "data", JSON_OBJECT(
+              "message", CONCAT("соединение с ", companyPhone, " имеет статус: ожидание ответа от АТС")
+            )
+          ))));
+        END;
+      END IF;
+    END;
+    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToSocket",
+      "data", JSON_OBJECT(
+        "socketID", connectionApiID,
+        "data", JSON_ARRAY(JSON_OBJECT(
+          "type", "merge",
+          "data", JSON_OBJECT(
+            "auth", 0,
+            "loginMessage", "Требуется ручной вход в систему"
+          )
+        ))
+      )
+    ));
+  END IF;
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `refreshBankSupervisors` (`bankID` INT(11)) RETURNS JSON NO SQL
 BEGIN
     DECLARE userID INT(11);
@@ -1880,13 +1947,15 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `refreshUserCompanies` (`userID` INT(11)) RETURNS JSON NO SQL
 BEGIN
-  DECLARE responce JSON;
+  DECLARE responce, activeCompany JSON;
   DECLARE connectionApiID VARCHAR(128);
   DECLARE connectionID INT(11);
   DECLARE done TINYINT(1);
   DECLARE connectionsCursor CURSOR FOR SELECT connection_id, connection_api_id FROM connections WHERE user_id = userID AND connection_end = 0;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
   SET responce = JSON_ARRAY();
+  SET activeCompany = JSON_OBJECT();
+  SELECT company_json INTO activeCompany FROM working_user_company_view WHERE user_id = userID LIMIT 1;
   OPEN connectionsCursor;
     connectionsLoop:LOOP
       FETCH connectionsCursor INTO connectionID, connectionApiID;
@@ -1901,7 +1970,8 @@ BEGIN
             JSON_OBJECT(
               "type", "merge",
               "data", JSON_OBJECT(
-                "companies", getActiveBankUserCompanies(connectionID)
+                "companies", getActiveBankUserCompanies(connectionID),
+                "activeCompany", activeCompany
               )
             )
           )
@@ -2348,140 +2418,147 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setCallStatus` (`userSip` VARCHAR(20) CHARSET utf8, `callApiID` VARCHAR(128) CHARSET utf8, `callApiIDWithRec` VARCHAR(128) CHARSET utf8, `typeID` INT(11)) RETURNS JSON NO SQL
 BEGIN
-    DECLARE callID, userID, companyTypeID, companyOldTypeID, bankID, callCount, companyID, callInternalTypeID, callDestinationTypeID INT(11);
-    DECLARE typeTranslate VARCHAR(128);
-    DECLARE nextPhone, companyPhone VARCHAR(120);
-    DECLARE ringing, notDial, callEnd TINYINT(1);
-    DECLARE responce JSON;
-    SET responce = JSON_ARRAY();
-    SELECT call_id, user_id INTO callID, userID FROM calls_view WHERE user_sip = userSip OR call_api_id_internal = callApiID OR call_api_id_destination = callApiID ORDER BY call_id DESC LIMIT 1;
-    SELECT user_sip, user_ringing INTO userSip, ringing FROM users WHERE user_id = userID;
-    UPDATE calls SET 
-        call_internal_type_id = IF(
-            (
-                call_api_id_internal IS NOT NULL AND 
-                call_api_id_internal = callApiID
-            ) OR 
-            (
-                call_api_id_internal IS NULL AND (
-                    (
-                        call_api_id_destination IS NULL AND 
-                        call_predicted = 0
-                    ) OR (
-                        call_api_id_destination IS NOT NULL AND 
-                        call_api_id_destination != callApiID
-                    )
-                )
-            ),
-            typeID,
-            call_internal_type_id
-        ),
-        call_destination_type_id = IF(
-            (
-                call_api_id_destination IS NOT NULL AND 
-                call_api_id_destination = callApiID
-            ) OR 
-            (
-                call_api_id_destination IS NULL AND (
-                    (
-                        call_api_id_internal IS NULL AND 
-                        call_predicted = 1
-                    ) OR (
-                        call_api_id_internal IS NOT NULL AND 
-                        call_api_id_internal != callApiID
-                    )
-                )
-            ),
-            typeID,
-            call_destination_type_id
-        ),
-        call_api_id_internal = IF(
-            call_api_id_internal IS NULL AND 
-            ((
-                call_api_id_destination IS NULL AND
-                call_predicted = 0
-            ) OR (
-                call_api_id_destination IS NOT NULL AND
-                call_api_id_destination != callApiID
-            )),
-            callApiID,
-            call_api_id_internal
-        ),
-        call_api_id_destination = IF(
+  DECLARE callID, userID, companyTypeID, companyOldTypeID, bankID, callCount, companyID, callInternalTypeID, callDestinationTypeID INT(11);
+  DECLARE typeTranslate VARCHAR(128);
+  DECLARE nextPhone, companyPhone VARCHAR(120);
+  DECLARE ringing, notDial, callEnd, callProcess TINYINT(1);
+  DECLARE responce JSON;
+  SET responce = JSON_ARRAY();
+  SELECT call_id, user_id INTO callID, userID FROM calls_view WHERE user_sip = userSip OR call_api_id_internal = callApiID OR call_api_id_destination = callApiID ORDER BY call_id DESC LIMIT 1;
+  SELECT user_sip, user_ringing INTO userSip, ringing FROM users WHERE user_id = userID;
+  UPDATE calls SET 
+    call_internal_type_id = IF(
+      (
+        call_api_id_internal IS NOT NULL AND 
+        call_api_id_internal = callApiID
+      ) OR 
+      (
+        call_api_id_internal IS NULL AND (
+          (
             call_api_id_destination IS NULL AND 
-            ((
-                call_api_id_internal IS NULL AND
-                call_predicted = 1
-            ) OR (
-                call_api_id_internal IS NOT NULL AND 
-                call_api_id_internal != callApiID
-            )),
-            callApiID,
-            call_api_id_destination
-        ),
-        call_internal_api_id_with_rec = IF(
-            call_api_id_internal = callApiID,
-            callApiIDWithRec,
-            call_internal_api_id_with_rec
-        ),
-        call_destination_api_id_with_rec = IF(
-            call_api_id_destination = callApiID,
-            callApiIDWithRec,
-            call_destination_api_id_with_rec
+            call_predicted = 0
+          ) OR (
+            call_api_id_destination IS NOT NULL AND 
+            call_api_id_destination != callApiID
+          )
         )
-    WHERE call_id = callID;
-    SELECT call_internal_type_id, call_destination_type_id, company_id INTO callInternalTypeID, callDestinationTypeID, companyID FROM calls WHERE call_id = callID;
-    SET callEnd = IF(callDestinationTypeID IN (38,40,41,42,46,47,48,49,50,51,52,53,33) AND callInternalTypeID IN (38,40,41,42,46,47,48,49,50,51,52,53,33), 1, 0);
-    SET notDial = IF((callInternalTypeID IN (42,47,48,49,50) OR callDestinationTypeID IN (42,47,48,49,50)) AND callEnd = 1, 1, 0);
-    UPDATE companies SET type_id = IF(notDial = 1, IF(type_id = 9, 35, 36), IF(type_id IN (35, 36) AND callEnd = 1, 9, type_id)), company_ringing = IF(ringing = 1 AND callEnd = 1, IF(type_id = 35, 0, 1), 0) WHERE company_id = companyID;
-    SELECT type_id, old_type_id, bank_id, company_id, company_phone INTO companyTypeID, companyOldTypeID, bankID, companyID, companyPhone FROM companies WHERE call_id = callID;
-    SELECT tr.translate_to INTO typeTranslate FROM translates tr JOIN types t ON t.type_id = typeID AND t.type_name = tr.translate_from;
-    IF companyTypeID = 36 AND bankID
-        THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
-        ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
-    END IF;
-    SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-        "type", "mergeDeep",
-        "data", JSON_OBJECT(
-            "message", CONCAT("соединение с ", companyPhone, " имеет статус: ", typeTranslate),
-            "messageType", IF(typeID IN (39, 33, 34, 43), "success", "error")
+      ),
+      typeID,
+      call_internal_type_id
+    ),
+    call_destination_type_id = IF(
+      (
+        call_api_id_destination IS NOT NULL AND 
+        call_api_id_destination = callApiID
+      ) OR 
+      (
+        call_api_id_destination IS NULL AND (
+          (
+            call_api_id_internal IS NULL AND 
+            call_predicted = 1
+          ) OR (
+            call_api_id_internal IS NOT NULL AND 
+            call_api_id_internal != callApiID
+          )
         )
-    ))));
-    IF companyOldTypeID IN (9, 35, 10) AND callEnd = 1 AND companyTypeID IN (9, 35, 36) AND ringing = 1
+      ),
+      typeID,
+      call_destination_type_id
+    ),
+    call_api_id_internal = IF(
+      call_api_id_internal IS NULL AND 
+      ((
+        call_api_id_destination IS NULL AND
+        call_predicted = 0
+      ) OR (
+        call_api_id_destination IS NOT NULL AND
+        call_api_id_destination != callApiID
+      )),
+      callApiID,
+      call_api_id_internal
+    ),
+    call_api_id_destination = IF(
+      call_api_id_destination IS NULL AND 
+      ((
+        call_api_id_internal IS NULL AND
+        call_predicted = 1
+      ) OR (
+        call_api_id_internal IS NOT NULL AND 
+        call_api_id_internal != callApiID
+      )),
+      callApiID,
+      call_api_id_destination
+    ),
+    call_internal_api_id_with_rec = IF(
+      call_api_id_internal = callApiID,
+      callApiIDWithRec,
+      call_internal_api_id_with_rec
+    ),
+    call_destination_api_id_with_rec = IF(
+      call_api_id_destination = callApiID,
+      callApiIDWithRec,
+      call_destination_api_id_with_rec
+    )
+  WHERE call_id = callID;
+  SELECT call_internal_type_id, call_destination_type_id, company_id INTO callInternalTypeID, callDestinationTypeID, companyID FROM calls WHERE call_id = callID;
+  SET callEnd = IF(callDestinationTypeID IN (38,40,41,42,46,47,48,49,50,51,52,53,33) AND callInternalTypeID IN (38,40,41,42,46,47,48,49,50,51,52,53,33), 1, 0);
+  SET callProcess = IF(callDestinationTypeID = 34, 1, 0);
+  SET notDial = IF((callInternalTypeID IN (42,47,48,49,50) OR callDestinationTypeID IN (42,47,48,49,50)) AND callEnd = 1, 1, 0);
+  UPDATE companies SET type_id = IF(notDial = 1, IF(type_id = 9, 35, 36), IF(type_id IN (35, 36) AND callEnd = 1, 9, type_id)), company_ringing = IF(ringing = 1 AND callEnd = 1, IF(type_id = 35, 0, 1), 0) WHERE company_id = companyID;
+  SELECT type_id, old_type_id, bank_id, company_id, company_phone INTO companyTypeID, companyOldTypeID, bankID, companyID, companyPhone FROM companies WHERE call_id = callID;
+  SELECT tr.translate_to INTO typeTranslate FROM translates tr JOIN types t ON t.type_id = typeID AND t.type_name = tr.translate_from;
+  IF companyTypeID = 36 AND bankID
+    THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+    ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+  END IF;
+  SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+    "type", "mergeDeep",
+    "data", JSON_OBJECT(
+      "message", CONCAT("соединение с ", companyPhone, " имеет статус: ", typeTranslate),
+      "messageType", IF(typeID IN (39, 33, 34, 43), "success", "error")
+    )
+  ))));
+  IF callProcess = 1 AND callEnd = 0 
+    THEN BEGIN 
+      UPDATE users SET user_ringing = 0 WHERE user_id = userID;
+      SET ringing = 0;
+    END;
+  END IF;
+  IF companyOldTypeID IN (9, 35, 10) AND callEnd = 1 AND companyTypeID IN (9, 35, 36) AND ringing = 1
+    THEN BEGIN
+      SELECT COUNT(*) INTO callCount FROM active_calls_view WHERE user_id = userID;
+      IF callCount = 0
         THEN BEGIN
-            SELECT COUNT(*) INTO callCount FROM active_calls_view WHERE user_id = userID;
-            IF callCount = 0
-                THEN BEGIN
-                    SELECT REPLACE(company_phone, "+", ""), company_id INTO nextPhone, companyID FROM companies WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 0 ORDER BY type_id LIMIT 1;
-                    IF nextPhone IS NOT NULL
-                        THEN BEGIN
-                            INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, 1);
-                            SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
-                            SET responce = JSON_MERGE(responce, JSON_OBJECT(
-                                "type", "sendToZadarma",
-                                "data", JSON_OBJECT(
-                                    "options", JSON_OBJECT( 
-                                        "from", userSip,
-                                        "to", nextPhone,
-                                        "predicted", true
-                                    ),
-                                    "method", "request/callback",
-                                    "type", "GET"
-                                )
-                            ));
-                            SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-                                "type", "mergeDeep",
-                                "data", JSON_OBJECT(
-                                    "message", CONCAT("соединение с ", nextPhone, " имеет статус: ожидание ответа от АТС")
-                                )
-                            ))));
-                        END;
-                    END IF;
-                END;
-            END IF;
+          SELECT REPLACE(company_phone, "+", ""), company_id INTO nextPhone, companyID FROM companies WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 0 ORDER BY type_id LIMIT 1;
+          IF nextPhone IS NOT NULL
+            THEN BEGIN
+              INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, 1);
+              SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+              SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                "type", "sendToZadarma",
+                "data", JSON_OBJECT(
+                  "options", JSON_OBJECT( 
+                    "from", userSip,
+                    "to", nextPhone,
+                    "predicted", true
+                  ),
+                  "method", "request/callback",
+                  "type", "GET"
+                )
+              ));
+              SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+                "type", "mergeDeep",
+                "data", JSON_OBJECT(
+                  "message", CONCAT("соединение с ", nextPhone, " имеет статус: ожидание ответа от АТС")
+                )
+              ))));
+            END;
+          END IF;
         END;
-    END IF;
-    RETURN responce;
+      END IF;
+    END;
+  END IF;
+  RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setCheckResponce` (`companies` JSON) RETURNS JSON NO SQL
@@ -2599,7 +2676,7 @@ BEGIN
   DECLARE keyName VARCHAR(128);
   DECLARE connectionApiID VARCHAR(32);
   DECLARE userID, connectionID, keysLength, iterator, stateID INT(11);
-  DECLARE responce, filtersKeys, userFilters JSON;
+  DECLARE responce, filtersKeys, userFilters, activeCompany JSON;
   SELECT user_id, connection_id, connection_api_id INTO userID, connectionID, connectionApiID FROM users_connections_view WHERE connection_hash = connectionHash;
   SET connectionValid = checkConnection(connectionHash);
   SET responce = JSON_ARRAY();
@@ -2621,6 +2698,8 @@ BEGIN
       SET userFilters = JSON_MERGE(userFilters, filters);
       UPDATE states SET state_json = JSON_SET(state_json, "$.distribution", userFilters) WHERE state_id = stateID;
       SELECT state_json ->> "$.distribution" INTO userFilters FROM states WHERE state_id = stateID;
+      SET activeCompany = JSON_OBJECT();
+      SELECT company_json INTO activeCompany FROM working_user_company_view WHERE user_id = userID LIMIT 1;
       SET responce = JSON_MERGE(responce, JSON_OBJECT(
         "type", "sendToSocket",
         "data", JSON_OBJECT(
@@ -2630,7 +2709,8 @@ BEGIN
               "type", "merge",
               "data", JSON_OBJECT(
                 "distribution", userFilters,
-                "companies", getActiveBankUserCompanies(connectionID)
+                "companies", getActiveBankUserCompanies(connectionID),
+                "activeCompany", activeCompany
               )
             )
           )
@@ -3909,7 +3989,6 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (36, 'not_dial_all'),
 (35, 'not_dial_user'),
 (5, 'post'),
-(6, 'purchase'),
 (9, 'reservation'),
 (1, 'root'),
 (8, 'sale'),
@@ -4008,6 +4087,11 @@ CREATE TABLE `working_statistic_companies_view` (
 ,`type_id` int(11)
 ,`user_id` int(11)
 );
+CREATE TABLE `working_user_company_view` (
+`user_id` int(11)
+,`company_json` json
+,`call_date_create` varchar(19)
+);
 DROP TABLE IF EXISTS `active_calls_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `active_calls_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`call_internal_type_id` AS `call_internal_type_id`,`c`.`call_destination_type_id` AS `call_destination_type_id`,`u`.`user_sip` AS `user_sip`,substr(`co`.`company_phone`,2) AS `company_phone`,`u`.`user_id` AS `user_id`,`co`.`company_id` AS `company_id`,`c`.`call_api_id_internal` AS `call_api_id_internal`,`c`.`call_api_id_destination` AS `call_api_id_destination` from ((`calls` `c` join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) join `companies` `co` on((`co`.`company_id` = `c`.`company_id`))) where ((`c`.`call_destination_type_id` not in (38,40,41,42,46,47,48,49,50,51,52,53)) and (`c`.`call_internal_type_id` not in (38,40,41,42,46,47,48,49,50,51,52,53))) ;
@@ -4047,6 +4131,9 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `working_statistic_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `working_statistic_companies_view`  AS  select json_object('company_organization_name',`c`.`company_organization_name`,'company_person_name',`c`.`company_person_name`,'company_person_surname',`c`.`company_person_surname`,'company_person_patronymic',`c`.`company_person_patronymic`,'company_phone',`c`.`company_phone`,'company_inn',`c`.`company_inn`,'company_date_create',`c`.`company_date_create`,'company_date_update',`c`.`company_date_update`,'translate_to',if((`tr`.`translate_to` is not null),`tr`.`translate_to`,`t`.`type_name`)) AS `company_json`,`c`.`bank_id` AS `bank_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`type_id` AS `type_id`,`c`.`user_id` AS `user_id` from ((`companies` `c` join `types` `t` on((`t`.`type_id` = `c`.`type_id`))) left join `translates` `tr` on((`tr`.`translate_from` = `t`.`type_name`))) ;
+DROP TABLE IF EXISTS `working_user_company_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `working_user_company_view`  AS  select `c`.`user_id` AS `user_id`,`c`.`company_json` AS `company_json`,`cl`.`call_date_create` AS `call_date_create` from (`calls` `cl` join `companies` `c` on((`c`.`call_id` = `cl`.`call_id`))) where (`c`.`company_ringing` = 0) order by `cl`.`call_date_create` desc ;
 
 
 ALTER TABLE `banks`
