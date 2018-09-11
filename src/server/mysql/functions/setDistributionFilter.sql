@@ -3,7 +3,7 @@ BEGIN
 	DECLARE keyName VARCHAR(128);
 	DECLARE connectionApiID VARCHAR(32);
 	DECLARE userID, connectionID, keysLength, iterator, stateID INT(11);
-	DECLARE responce, filtersKeys, userFilters JSON;
+	DECLARE responce, filtersKeys, userFilters, activeCompany JSON;
 	SELECT user_id, connection_id, connection_api_id INTO userID, connectionID, connectionApiID FROM users_connections_view WHERE connection_hash = connectionHash;
 	SET connectionValid = checkConnection(connectionHash);
 	SET responce = JSON_ARRAY();
@@ -25,6 +25,8 @@ BEGIN
 			SET userFilters = JSON_MERGE(userFilters, filters);
 			UPDATE states SET state_json = JSON_SET(state_json, "$.distribution", userFilters) WHERE state_id = stateID;
 			SELECT state_json ->> "$.distribution" INTO userFilters FROM states WHERE state_id = stateID;
+			SET activeCompany = JSON_OBJECT();
+			SELECT company_json INTO activeCompany FROM working_user_company_view WHERE user_id = userID LIMIT 1;
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "sendToSocket",
 				"data", JSON_OBJECT(
@@ -34,7 +36,8 @@ BEGIN
 							"type", "merge",
 							"data", JSON_OBJECT(
 								"distribution", userFilters,
-								"companies", getActiveBankUserCompanies(connectionID)
+								"companies", getActiveBankUserCompanies(connectionID),
+								"activeCompany", activeCompany
 							)
 						)
 					)

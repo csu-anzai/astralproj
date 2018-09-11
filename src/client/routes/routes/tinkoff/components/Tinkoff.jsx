@@ -1,5 +1,6 @@
 import React from 'react';
 import {BottomNavigation, BottomNavigationItem} from 'material-ui/BottomNavigation';
+import Divider from 'material-ui/Divider';
 import Restore from 'material-ui/svg-icons/action/restore';
 import Favorite from 'material-ui/svg-icons/action/favorite';
 import HighlightOff from 'material-ui/svg-icons/action/highlight-off';
@@ -33,6 +34,8 @@ import Dialog from 'material-ui/Dialog';
 import TextField from 'material-ui/TextField';
 import CircularProgress from 'material-ui/CircularProgress';
 import Checkbox from 'material-ui/Checkbox';
+import AppBar from 'material-ui/AppBar';
+import NavigationClose from 'material-ui/svg-icons/navigation/close';
 import {
   Table,
   TableBody,
@@ -76,7 +79,8 @@ export default class Tinkoff extends React.Component {
 			companyOrganization: "",
 			dialogType: 1,
 			dateCallBack: new Date(),
-			timeCallBack: new Date()
+			timeCallBack: new Date(),
+			workDialog: true
 		};
 		this.refresh = this.refresh.bind(this);
 		this.setDistributionFilter = this.setDistributionFilter.bind(this);
@@ -85,6 +89,8 @@ export default class Tinkoff extends React.Component {
 		this.comment = this.comment.bind(this);
 		this.ringing = this.ringing.bind(this);
 		this.checkCompanies = this.checkCompanies.bind(this);
+		this.closeWorkDialog = this.closeWorkDialog.bind(this);
+		this.nextCall = this.nextCall.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -233,6 +239,19 @@ export default class Tinkoff extends React.Component {
 			}
 		})
 	}
+	nextCall(){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "nextCall",
+				priority: true,
+				values: [
+					this.props.state.connectionHash
+				]
+			}
+		});
+	}
 	openURL(url){
 		window.open(url, "_blank");
 	}
@@ -290,6 +309,11 @@ export default class Tinkoff extends React.Component {
 			}
 		});
 		this.closeDialog();
+	}
+	closeWorkDialog(bool){
+		this.setState({
+			workDialog: !bool || typeof bool == "object" ? false : true
+		});
 	}
 	render(){
 		localStorage.removeItem("hash");
@@ -461,17 +485,10 @@ export default class Tinkoff extends React.Component {
 		              		}
 			              	{
 			              		this.state.selectedIndex == 0 && [
-			              			<Checkbox
-			              				label = "ПОСЛЕДОВАТЕЛЬНЫЙ ПРОЗВОН"
-			              				style = {{
-			              					display: "inline-block",
-			              					width: "inherit",
-			              					verticalAlign: "middle",
-			              					marginRight: "20px"
-			              				}}
+			              			<FlatButton
+			              				label = "открыть рабочую область"
+			              				onClick = {this.closeWorkDialog.bind(this, 1)}
 			              				key = {0}
-			              				checked = {this.props.state.ringing == 1 ? true : false}
-			              				onCheck = {this.ringing}
 			              			/>,
 					                <RaisedButton 
 					                	label = "Обновить список"
@@ -1034,6 +1051,213 @@ export default class Tinkoff extends React.Component {
 			    				this.state.dialogType == 3 &&
 			    				"Вы уверены что хотите удалить компанию из базы?"
         	}
+        </Dialog>
+        <Dialog
+        	title = {
+        		<div>
+        			<span>Последний вызов</span>
+        			<div style = {{float: "right", margin: "-15px"}}>
+	        			<RaisedButton 
+	        				label = "звонить дальше"
+	        				style = {{
+	        					marginRight: "15px"
+	        				}}
+	        				primary
+	        				onClick = {this.nextCall}
+	        				disabled = {this.props.state.activeCompany && ([43,39,34,33].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1 || [43,39,34,33].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1) ? true : false}
+	      				/>
+	        			<IconButton>
+	        				<NavigationClose onClick = {this.closeWorkDialog}/>
+	        			</IconButton>
+      				</div>
+        		</div>
+        	}
+        	modal = {false}
+        	open = {(!this.state.dialog && this.state.workDialog) || false}
+        	onRequestClose = {this.closeWorkDialog}
+        	autoScrollBodyContent={true}
+        	actions = {this.props.state.activeCompany && Object.keys(this.props.state.activeCompany).length > 0 && [
+        		<IconButton 
+        			tooltip = "звонок" 
+        			tooltipPosition = "top-center"
+        			disabled = {
+        				this.props.state.activeCompany &&
+        				(
+        					([38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1 ||
+        					[38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1) &&
+        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) == -1
+      					) ?
+      					false :
+      					true
+        			}
+        			onClick = {this.call.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id)}
+      			>
+        			{
+        				this.props.state.activeCompany && (
+        				(
+        					[38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1 ||
+        					[38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1
+      					) ?
+        				<DialerSip color="#00BFA5"/> :
+        				this.props.state.activeCompany.call_destination_type_id == 34 ?
+        				<PhoneForwarded color="#00BFA5"/> :
+        				(
+        					this.props.state.activeCompany.call_internal_type_id == 39 ||
+        					this.props.state.activeCompany.call_destination_type_id == 39
+        				) ?
+        				<PhoneInTalk color="#00BFA5"/> :
+        				(
+        					[33,43,34].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1 ||
+        					[33,43].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1
+        				) &&
+        				<SettingsPhone color="#00BFA5"/>
+        				)
+        			}
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = "сбросить статус звонка" 
+        			tooltipPosition = "top-center" 
+        			disabled = {
+        				this.props.state.activeCompany &&
+        				(
+        					([34,39,33,43].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1 ||
+        					[34,39,33,43].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1) &&
+        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) == -1
+        				) ?
+        				false : 
+        				true
+        			}
+        			onClick = {this.resetCall.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id)}
+      			>
+        			<Replay color="#bd38c1"/>
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = "оформить заявку" 
+        			tooltipPosition = "top-center"
+        			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name, 0)}
+        			disabled = {(this.props.state.activeCompany && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1) ? true : false}
+      			>
+        			<Check color="#a4c639"/>
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = "перезвонить позднее" 
+        			tooltipPosition = "top-center"
+        			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name, 1)}
+        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,23].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+      			>
+        			<Phone color="#EF6C00"/>
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = {
+        				this.props.state.activeCompany &&
+        				this.props.state.activeCompany.type_id == 35 ?
+        					"недозвон (в общий список)" :
+        					"недозвон (в конец рабочего списка)"
+        			} 
+        			tooltipPosition = "top-center"
+        			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, this.props.state.activeCompany && this.props.state.activeCompany.type_id == 35 ? 36 : 35)}
+        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+      			>
+        			{
+        				this.props.state.activeCompany &&
+        				this.props.state.activeCompany.type_id == 35 ?
+        					<CallEnd color="#C51162"/> :
+        					<History color="#283593"/>
+        			}
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = "не подходит" 
+        			tooltipPosition = "top-center"
+        			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, 14)}
+        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,14].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+      			>
+        			<DeleteForever color="#E53935"/>
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = "трудный клиент" 
+        			tooltipPosition = "top-center"
+        			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, 37)}
+        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,37].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+      			>
+        			<SadFace color="#607D8B"/>
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = "прослушать запись" 
+        			tooltipPosition = "top-center"
+        			disabled = {
+        				this.props.state.activeCompany &&
+        				this.props.state.activeCompany.file_name ?
+        					false :
+        					true
+        			}
+        			onClick={this.openURL.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.file_name)}
+      			>
+        			<Audiotrack color="#9575CD"/>
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = "удалить из базы" 
+        			tooltipPosition = "top-center"
+        			onClick = {this.deleteCompanyDialog.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id)}
+      			>
+        			<RemoveCircle color="#9a2c2c"/>
+        		</IconButton>
+        	]}
+				>
+					{
+						this.props.state.activeCompany && Object.keys(this.props.state.activeCompany).length > 0 ? [ 
+							<div key = {20} style = {{margin: "20px 0", padding: "0 10px"}}>Список: {
+        				this.props.state.activeCompany ? ( 
+        				[9,35].indexOf(this.props.state.activeCompany.type_id) > -1 ? 
+        					"В работе" :
+        				this.props.state.activeCompany.type_id == 14 ?
+        					"Не интересно" :
+        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?
+        					"Утверждено" :
+      						this.props.state.activeCompany.type_id == 23 ?
+      							"Перезвонить" :
+      							this.props.state.activeCompany.type_id == 36 ?
+      								"Нет связи" :
+      								this.props.state.activeCompany.type_id == 37 &&
+      								"Сложные") : "–"
+        			}</div>,
+							<Divider key = {19}/>,
+							<div key = {0} style = {{margin: "20px 0", padding: "0 10px"}}>Ф.И.О: {this.props.state.activeCompany && [this.props.state.activeCompany.company_person_name, this.props.state.activeCompany.company_person_surname, this.props.state.activeCompany.company_person_patronymic].join(" ")}</div>,
+							<Divider key = {1}/>,
+							<div key = {2} style = {{margin: "20px 0", padding: "0 10px"}}>Компания: {this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name}</div>,
+							<Divider key = {3}/>,
+							<div key = {4} style = {{margin: "20px 0", padding: "0 10px"}}>Регион: {this.props.state.activeCompany && this.props.state.activeCompany.region_name}</div>,
+							<Divider key = {5}/>,
+							<div key = {6} style = {{margin: "20px 0", padding: "0 10px"}}>Город: {this.props.state.activeCompany && this.props.state.activeCompany.city_name}</div>,
+							<Divider key = {7}/>,
+							<div key = {8} style = {{margin: "20px 0", padding: "0 10px"}}>Телефон: {this.props.state.activeCompany && this.props.state.activeCompany.company_phone}</div>,
+							<Divider key = {9}/>,
+							<div key = {10} style = {{margin: "20px 0", padding: "0 10px"}}>ИНН: {this.props.state.activeCompany && this.props.state.activeCompany.company_inn}</div>,
+							<Divider key = {11} />,
+							<div key = {12} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_id == 1 ? "ИП" : "ООО"}</div>,
+							<Divider key = {13} />,
+							<div key = {14} style = {{margin: "20px 0", padding: "0 10px"}}>Статус обработки: {
+								[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?
+									(this.props.state.activeCompany.type_id == 15 ? "В процессе" :
+									this.props.state.activeCompany.type_id == 16 ? "Успешно" :
+									this.props.state.activeCompany.type_id == 17 ? "Ошибка" :
+									this.props.state.activeCompany.type_id == 24 ? "Дубликат" :
+									this.props.state.activeCompany.type_id == 25 ? "Сбор документов" :
+									this.props.state.activeCompany.type_id == 26 ? "Обработка комплекта" :
+									this.props.state.activeCompany.type_id == 27 ? "Назначение встречи" :
+									this.props.state.activeCompany.type_id == 28 ? "Встреча назначена" :
+									this.props.state.activeCompany.type_id == 29 ? "Постобработка" :
+									this.props.state.activeCompany.type_id == 30 ? "Счет открыт" :
+									this.props.state.activeCompany.type_id == 31 ? "Отказ Банка" :
+									this.props.state.activeCompany.type_id == 32 && "Отказ клиента") :
+									"–"
+							}</div>,							
+							<Divider key = {17} />,
+							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.activeCompany && this.props.state.activeCompany.company_date_call_back || "–"}</div>,
+							<Divider key = {15} />,
+							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Коментарий: {this.props.state.activeCompany && this.props.state.activeCompany.company_comment || "–"}</div>,
+						] : "Не удалось найти последний не распределенный вызов"
+					}
+					<br/>
         </Dialog>
 			</Paper>
 		</div> ||
