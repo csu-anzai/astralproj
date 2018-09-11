@@ -1884,6 +1884,7 @@ BEGIN
       IF companyPhone IS NOT NULL
         THEN BEGIN 
           INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, 1);
+          UPDATE users SET user_ringing = 1 WHERE user_id = userID;
           SET responce = JSON_MERGE(responce, JSON_OBJECT(
             "type", "sendToZadarma",
             "data", JSON_OBJECT(
