@@ -1,5 +1,5 @@
 module.exports = modules => (resolve, reject, data) => {
-	modules.log.writeLog("system", {
+	modules.log.writeLog("email", {
 		type: "sendEmail",
 		data
 	});
@@ -10,7 +10,7 @@ module.exports = modules => (resolve, reject, data) => {
 		text: data.text
 	}, (error, info) => {
 		error ? reject(error) : resolve(info);
-		modules.log.writeLog("system", {
+		modules.log.writeLog("email", {
 			type: "sendEmailResponce",
 			responce: info
 		});

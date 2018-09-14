@@ -8,7 +8,7 @@ BEGIN
 	SELECT connection_api_id, user_id INTO connectionApiID, userID FROM connections WHERE connection_hash = connectionHash;
 	IF connectionValid 
 		THEN BEGIN
-			UPDATE companies SET company_comment = comment, type_id = 15 WHERE company_id = companyID;
+			UPDATE companies SET company_comment = comment, type_id = 15, bank_id = bankID WHERE company_id = companyID;
 			SELECT 
 				JSON_OBJECT(
 					"companyID", company_id,
@@ -19,7 +19,8 @@ BEGIN
 					"companyOrganizationName", company_organization_name,
 					"companyInn", company_inn,
 					"companyOgrn", company_ogrn,
-					"companyComment", company_comment
+					"companyComment", company_comment,
+					"bankID", bank_id
 				) 
 			INTO company FROM companies WHERE company_id = companyID;
 			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
