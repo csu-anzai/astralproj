@@ -77,6 +77,7 @@ export default class Tinkoff extends React.Component {
 			dialog: false,
 			comment: "",
 			companyOrganization: "",
+			companyBank: 0,
 			dialogType: 1,
 			dateCallBack: new Date(),
 			timeCallBack: new Date(),
@@ -91,6 +92,7 @@ export default class Tinkoff extends React.Component {
 		this.checkCompanies = this.checkCompanies.bind(this);
 		this.closeWorkDialog = this.closeWorkDialog.bind(this);
 		this.nextCall = this.nextCall.bind(this);
+		this.bankSelect = this.bankSelect.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -138,7 +140,8 @@ export default class Tinkoff extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify(this.state.companyID),
-					this.state.comment
+					this.state.comment,
+					this.state.companyBank
 				]
 			}
 		});
@@ -216,7 +219,8 @@ export default class Tinkoff extends React.Component {
 			dialog: false,
 			comment: "",
 			companyID: 0,
-			companyOrganization: ""
+			companyOrganization: "",
+			companyBank: 0
 		});
 	}
 	comment(text){
@@ -313,6 +317,11 @@ export default class Tinkoff extends React.Component {
 	closeWorkDialog(bool){
 		this.setState({
 			workDialog: !bool || typeof bool == "object" ? false : true
+		});
+	}
+	bankSelect(event, key, payload){
+		this.setState({
+			companyBank: payload
 		});
 	}
 	render(){
@@ -994,6 +1003,7 @@ export default class Tinkoff extends React.Component {
 			      <FlatButton
 			        label= {this.state.dialogType == 2 ? "Сбросить" : "Отправить"}
 			        primary
+			        disabled = {(this.state.dialogType == 0 && this.state.companyBank == 0) ? true : false}
 			        onClick={
 			        	this.state.dialogType == 0 ? 
 			        		this.sendToApi :
@@ -1011,16 +1021,29 @@ export default class Tinkoff extends React.Component {
         >
         	{
         		this.state.dialogType == 0 ?
-		          <TextField
-					      floatingLabelText="Коментарий к заявке"
-					      multiLine={true}
-					      fullWidth={true}
-					      rows={5}
-					      rowsMax={10}
-					     	onChange = {(event, text) => {
-					     		this.comment(text)
-					     	}}
-			    		/> :
+		          [
+		          	<TextField
+						      floatingLabelText="Коментарий к заявке"
+						      multiLine={true}
+						      fullWidth={true}
+						      rows={5}
+						      rowsMax={10}
+						     	onChange = {(event, text) => {
+						     		this.comment(text)
+						     	}}
+						     	key = {0}
+				    		/>,
+				    		<SelectField
+				    			floatingLabelText="Выбор банка"
+				    			value = {this.state.companyBank}
+				    			errorText = {this.state.companyBank == 0 && "Необходимо выбрать банк"}
+				    			onChange = {this.bankSelect}
+				    			key = {1}
+				    		>
+				    			<MenuItem value={1} primaryText="Тинькофф" />
+				    			<MenuItem value={3} primaryText="Промсвязь" />
+				    		</SelectField>
+			    		] :
 			    		this.state.dialogType == 1 ?
 			    			<div>
 				    			<DatePicker 

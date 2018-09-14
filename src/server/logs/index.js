@@ -28,6 +28,9 @@ class Log {
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/system.txt`, "");
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/db.txt`, "");
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/tinkoff.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/modul.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/promsvyaz.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/email.txt`, "");
 		}
 	}
 	writeLog(type, object){
