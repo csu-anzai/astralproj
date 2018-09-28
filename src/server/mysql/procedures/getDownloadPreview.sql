@@ -76,7 +76,8 @@ BEGIN
 				"$.call_type",
 				"$.call_destination_type_id",
 				"$.call_internal_type_id",
-				"$.file_name"
+				"$.file_name",
+				"$.template_type_id"
 			);
 			SET companies = JSON_MERGE(companies, company);
 			ITERATE companiesLoop;

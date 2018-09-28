@@ -20,7 +20,8 @@ BEGIN
 					"companyInn", company_inn,
 					"companyOgrn", company_ogrn,
 					"companyComment", company_comment,
-					"bankID", bank_id
+					"bankID", bank_id,
+					"templateTypeID", company_json ->> "$.template_type_id"
 				) 
 			INTO company FROM companies WHERE company_id = companyID;
 			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));

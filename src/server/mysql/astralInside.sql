@@ -181,7 +181,8 @@ BEGIN
         "$.call_type",
         "$.call_destination_type_id",
         "$.call_internal_type_id",
-        "$.file_name"
+        "$.file_name",
+        "$.template_type_id"
       );
       SET companies = JSON_MERGE(companies, company);
       ITERATE companiesLoop;
@@ -2257,7 +2258,8 @@ BEGIN
           "companyInn", company_inn,
           "companyOgrn", company_ogrn,
           "companyComment", company_comment,
-          "bankID", bank_id
+          "bankID", bank_id,
+          "templateTypeID", company_json ->> "$.template_type_id"
         ) 
       INTO company FROM companies WHERE company_id = companyID;
       SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
@@ -3268,6 +3270,7 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
     'type_id', NEW.type_id,
     'company_id', NEW.company_id,
     'template_id', NEW.template_id,
+    'template_type_id', (SELECT type_id FROM templates WHERE template_id = NEW.template_id),
     'city_id', NEW.city_id,
     'region_id', NEW.region_id,
     'company_date_create', NEW.company_date_create,
