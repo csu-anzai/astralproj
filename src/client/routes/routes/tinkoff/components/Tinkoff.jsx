@@ -681,7 +681,7 @@ export default class Tinkoff extends React.Component {
 		              ) &&
 		              <TableRow key = {key} style = {{background: [33,34,43,38,39].indexOf(company.call_type) > -1 ? "#E8F5E9" : "inherit"}}>
 		                <TableRowColumn>{company.company_phone || "–"}</TableRowColumn>
-		                <TableRowColumn>{company.template_id == 1 ? "ИП" : "ООО"}</TableRowColumn>
+		                <TableRowColumn>{company.template_type_id == 11 ? "ИП" : "ООО"}</TableRowColumn>
 		                <TableRowColumn>{company.company_inn || "–"}</TableRowColumn>
 		                <TableRowColumn>{company.region_name || "–"}</TableRowColumn>
 		                <TableRowColumn>{company.city_name || "–"}</TableRowColumn>
@@ -1256,7 +1256,7 @@ export default class Tinkoff extends React.Component {
 							<Divider key = {9}/>,
 							<div key = {10} style = {{margin: "20px 0", padding: "0 10px"}}>ИНН: {this.props.state.activeCompany && this.props.state.activeCompany.company_inn}</div>,
 							<Divider key = {11} />,
-							<div key = {12} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_id == 1 ? "ИП" : "ООО"}</div>,
+							<div key = {12} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_type_id == 11 ? "ИП" : "ООО"}</div>,
 							<Divider key = {13} />,
 							<div key = {14} style = {{margin: "20px 0", padding: "0 10px"}}>Статус обработки: {
 								[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?

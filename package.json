@@ -34,10 +34,12 @@
     "react-router-redux": "^3.0.0",
     "redux": "^3.7.2",
     "request": "^2.85.0",
+    "soap": "^0.25.0",
     "socket.io": "^2.0.4",
     "socket.io-client": "^2.0.4",
     "tor-request": "^2.1.2",
-    "xlsx": "^0.12.6"
+    "xlsx": "^0.12.6",
+    "xml-parse": "^0.3.1"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",

@@ -27,6 +27,7 @@ BEGIN
 		'type_id', NEW.type_id,
 		'company_id', NEW.company_id,
 		'template_id', NEW.template_id,
+		'template_type_id', (SELECT type_id FROM templates WHERE template_id = NEW.template_id),
 		'city_id', NEW.city_id,
 		'region_id', NEW.region_id,
 		'company_date_create', NEW.company_date_create,
