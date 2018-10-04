@@ -61,7 +61,7 @@ module.exports = modules => (resolve, reject, data) => {
 							body.result.applicationId :
 							body.applicationId || "false") : "123",
 						data.bankID != 3 ? body.requestId : null,
-						data.bankID != 3 ? (data.bankID == 1 ? (body.success ? 1 : 0)) : 1
+						data.bankID != 3 ? (body.success ? 1 : 0) : 1
 					]
 				}
 			}).then(resolve).catch(reject);
