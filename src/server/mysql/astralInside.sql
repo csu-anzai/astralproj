@@ -2250,19 +2250,26 @@ BEGIN
       UPDATE companies SET company_comment = comment, type_id = 15, bank_id = bankID WHERE company_id = companyID;
       SELECT 
         JSON_OBJECT(
-          "companyID", company_id,
-          "companyPersonName", company_person_name,
-          "companyPersonSurname", company_person_surname,
-          "companyPersonPatronymic", company_person_patronymic,
-          "companyPhone", company_phone,
-          "companyOrganizationName", company_organization_name,
-          "companyInn", company_inn,
-          "companyOgrn", company_ogrn,
-          "companyComment", company_comment,
-          "bankID", bank_id,
-          "templateTypeID", company_json ->> "$.template_type_id"
+          "companyID", c.company_id,
+          "companyPersonName", c.company_person_name,
+          "companyPersonSurname", c.company_person_surname,
+          "companyPersonPatronymic", c.company_person_patronymic,
+          "companyPhone", c.company_phone,
+          "companyOrganizationName", c.company_organization_name,
+          "companyInn", c.company_inn,
+          "companyOgrn", c.company_ogrn,
+          "companyComment", c.company_comment,
+          "bankID", c.bank_id,
+          "templateTypeID", c.company_json ->> "$.template_type_id",
+          "regionCode", cd.code_value,
+          "psbFilialCode", f.psb_filial_code_value
         ) 
-      INTO company FROM companies WHERE company_id = companyID;
+      INTO company 
+      FROM 
+        companies c 
+        LEFT JOIN codes cd ON cd.region_id = c.region_id
+        LEFT JOIN psb_filial_codes f ON f.city_id = c.city_id
+      WHERE company_id = companyID LIMIT 1;
       SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
       SET responce = JSON_MERGE(responce,
         JSON_OBJECT(
@@ -3465,6 +3472,12 @@ CREATE TABLE `phone_codes` (
   `city_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+CREATE TABLE `psb_filial_codes` (
+  `psb_filial_code_id` int(11) NOT NULL,
+  `city_id` int(11) DEFAULT NULL,
+  `psb_filial_code_value` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
 CREATE TABLE `purchases` (
   `purchase_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -4218,6 +4231,10 @@ ALTER TABLE `phone_codes`
   ADD PRIMARY KEY (`phone_code_id`),
   ADD KEY `city_id` (`city_id`);
 
+ALTER TABLE `psb_filial_codes`
+  ADD PRIMARY KEY (`psb_filial_code_id`),
+  ADD KEY `city_id` (`city_id`);
+
 ALTER TABLE `purchases`
   ADD PRIMARY KEY (`purchase_id`),
   ADD KEY `user_id` (`user_id`),
@@ -4304,6 +4321,9 @@ ALTER TABLE `fns_codes`
 ALTER TABLE `phone_codes`
   MODIFY `phone_code_id` int(11) NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `psb_filial_codes`
+  MODIFY `psb_filial_code_id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `purchases`
   MODIFY `purchase_id` int(11) NOT NULL AUTO_INCREMENT;
 
@@ -4387,6 +4407,9 @@ ALTER TABLE `fns_codes`
 
 ALTER TABLE `phone_codes`
   ADD CONSTRAINT `phone_codes_ibfk_1` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `psb_filial_codes`
+  ADD CONSTRAINT `psb_filial_codes_ibfk_1` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `purchases`
   ADD CONSTRAINT `purchases_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
