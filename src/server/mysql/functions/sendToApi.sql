@@ -11,19 +11,26 @@ BEGIN
 			UPDATE companies SET company_comment = comment, type_id = 15, bank_id = bankID WHERE company_id = companyID;
 			SELECT 
 				JSON_OBJECT(
-					"companyID", company_id,
-					"companyPersonName", company_person_name,
-					"companyPersonSurname", company_person_surname,
-					"companyPersonPatronymic", company_person_patronymic,
-					"companyPhone", company_phone,
-					"companyOrganizationName", company_organization_name,
-					"companyInn", company_inn,
-					"companyOgrn", company_ogrn,
-					"companyComment", company_comment,
-					"bankID", bank_id,
-					"templateTypeID", company_json ->> "$.template_type_id"
+					"companyID", c.company_id,
+					"companyPersonName", c.company_person_name,
+					"companyPersonSurname", c.company_person_surname,
+					"companyPersonPatronymic", c.company_person_patronymic,
+					"companyPhone", c.company_phone,
+					"companyOrganizationName", c.company_organization_name,
+					"companyInn", c.company_inn,
+					"companyOgrn", c.company_ogrn,
+					"companyComment", c.company_comment,
+					"bankID", c.bank_id,
+					"templateTypeID", c.company_json ->> "$.template_type_id",
+					"regionCode", cd.code_value,
+					"psbFilialCode", f.psb_filial_code_value
 				) 
-			INTO company FROM companies WHERE company_id = companyID;
+			INTO company 
+			FROM 
+				companies c 
+				LEFT JOIN codes cd ON cd.region_id = c.region_id
+				LEFT JOIN psb_filial_codes f ON f.city_id = c.city_id
+			WHERE company_id = companyID LIMIT 1;
 			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 			SET responce = JSON_MERGE(responce,
 				JSON_OBJECT(
