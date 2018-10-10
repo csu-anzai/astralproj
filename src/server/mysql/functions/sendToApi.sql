@@ -23,7 +23,8 @@ BEGIN
 					"bankID", c.bank_id,
 					"templateTypeID", c.company_json ->> "$.template_type_id",
 					"regionCode", cd.code_value,
-					"psbFilialCode", f.psb_filial_code_value
+					"psbFilialCode", f.psb_filial_code_value,
+					"companyEmail", c.company_email
 				) 
 			INTO company 
 			FROM 

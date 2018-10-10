@@ -1041,6 +1041,7 @@ export default class Tinkoff extends React.Component {
 				    			key = {1}
 				    		>
 				    			<MenuItem value={1} primaryText="Тинькофф" />
+				    			<MenuItem value={2} primaryText="Модуль" />
 				    			<MenuItem value={3} primaryText="Промсвязь" />
 				    		</SelectField>
 			    		] :
