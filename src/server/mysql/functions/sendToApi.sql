@@ -23,14 +23,15 @@ BEGIN
 					"bankID", c.bank_id,
 					"templateTypeID", c.company_json ->> "$.template_type_id",
 					"regionCode", cd.code_value,
-					"psbFilialCode", f.psb_filial_code_value,
+					"psbFilialCode", p.psb_code_filial,
+					"psbRegionCode", p.psb_code_region,
 					"companyEmail", c.company_email
 				) 
 			INTO company 
 			FROM 
 				companies c 
 				LEFT JOIN codes cd ON cd.region_id = c.region_id
-				LEFT JOIN psb_filial_codes f ON f.city_id = c.city_id
+				LEFT JOIN psb_codes p ON p.city_id = c.city_id
 			WHERE company_id = companyID LIMIT 1;
 			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 			SET responce = JSON_MERGE(responce,
