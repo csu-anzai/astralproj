@@ -9,6 +9,7 @@ const env = require('../env.json'),
 			err = require('./err').bind(this, reducer),
 		 	then = require('./then').bind(this, reducer),
 		 	log = require('./logs')(),
+		 	vtb = require('./vtb')(env, reducer),
 		 	nowDate = new Date(),
 			nowHours = nowDate.getHours(),
 			nowMinutes = nowDate.getMinutes(),
@@ -35,8 +36,11 @@ reducer.initEvents({
 	env,
 	then,
 	err,
-	log
+	log,
+	vtb
 });
+
+vtb.getStartToken();
 
 reducer.dispatch({
 	type: "query",
