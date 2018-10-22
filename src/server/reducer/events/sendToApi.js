@@ -88,6 +88,16 @@ module.exports = modules => (resolve, reject, data) => {
 						type: "responce",
 						body
 					});
+					modules.reducer.dispatch({
+						type: "sendEmail",
+						data: {
+							emails: [
+								modules.env.modul.email
+							],
+							subject: `Лид от Астрал.инсайда ${data.companyOrganizationName} / ${data.companyInn}`,
+							text: `Ф.И.О.: ${[data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" ")}\nТелефон: ${data.companyPhone}\nНазвание: ${data.companyOrganizationName}\nИНН: ${data.companyInn}\nИдентификатор запроса: ${body.requestId}\nИдентификатор заявки: ${body.applicationId}\nКоментарий: ${data.companyComment}`
+						}
+					}).then(modules.then).catch(modules.err);
 				}
 			});
 		}
