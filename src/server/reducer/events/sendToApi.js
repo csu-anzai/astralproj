@@ -1,6 +1,5 @@
 const request = require('request'),
-			xml = require("xml-parse"),
-			crypto = require("crypto");
+			xml = require("xml-parse");
 module.exports = modules => (resolve, reject, data) => {
 	switch(+data.bankID){
 		case 1: {
