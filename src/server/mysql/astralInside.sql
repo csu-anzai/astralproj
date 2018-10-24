@@ -313,7 +313,7 @@ BEGIN
                 IF iterator >= companiesLength
                   THEN LEAVE companiesLoop;
                 END IF;
-                SET company = JSON_EXTRACT(companies, CONCAT("$.r", iterator + 1));
+                SET company = JSON_EXTRACT(companies, CONCAT("$.r", iterator + 2));
                 SET @mysqlText = CONCAT(@mysqlText, "(", templateID, ", ");
                 SET iterator2 = 0;
                 companyLoop: LOOP
