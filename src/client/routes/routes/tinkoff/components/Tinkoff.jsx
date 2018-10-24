@@ -1043,7 +1043,6 @@ export default class Tinkoff extends React.Component {
 				    			<MenuItem value={1} primaryText="Тинькофф" />
 				    			<MenuItem value={2} primaryText="Модуль" />
 				    			<MenuItem value={3} primaryText="Промсвязь" />
-				    			<MenuItem value={4} primaryText="ВТБ" />
 				    		</SelectField>
 			    		] :
 			    		this.state.dialogType == 1 ?

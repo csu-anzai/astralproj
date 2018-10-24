@@ -183,13 +183,13 @@ module.exports = modules => (resolve, reject, data) => {
 										org_name: data.companyOrganizationName || "",
 										inn: data.companyInn || "",
 										ogrn: data.companyOgrn || "",
-										product: "810",
-										tariff_plan: "7",
+										product: "",
+										tariff_plan: "",
 										region: data.regionCode || "",
 										branch: "",
 										contact_phone: data.companyPhone || "",
 										contact_email: data.companyEmail || "",
-										add_info: data.companyComment,
+										add_info: `Ф.И.О.: ${[data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join("")}\n${data.companyComment}`,
 										agreement: "1"
 									}
 								},
@@ -216,7 +216,7 @@ module.exports = modules => (resolve, reject, data) => {
 										'Token': modules.vtb.getToken()
 									},
 									body: {
-										comment: data.companyComment || ""
+										comment: `Ф.И.О.: ${[data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join("")}\n${data.companyComment}`
 									},
 									json: true,
 									url: modules.env.vtb.applyAnketaUrl.replace("${id}", applicationId)
