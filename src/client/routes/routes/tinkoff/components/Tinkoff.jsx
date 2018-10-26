@@ -373,7 +373,7 @@ export default class Tinkoff extends React.Component {
 	            enableSelectAll={false}
 	          >
 	            <TableRow>
-	              <TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "9" : this.state.selectedIndex == 2 ? "10" : "8"}>
+	              <TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "10" : this.state.selectedIndex == 2 ? "11" : "9"}>
 	              	<div>
 		              	<span style = {{
 		              		display: "inline-block",
@@ -535,7 +535,7 @@ export default class Tinkoff extends React.Component {
 	              </TableHeaderColumn>
 	            </TableRow>
 	            <TableRow>
-	            	<TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "9" : this.state.selectedIndex == 2 ? "10" : "8"} style = {{textAlign: "right"}}>
+	            	<TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "10" : this.state.selectedIndex == 2 ? "11" : "9"} style = {{textAlign: "right"}}>
 	            		<IconButton 
 	            			title = "сюда"
 	            			disabled = {
@@ -648,6 +648,7 @@ export default class Tinkoff extends React.Component {
 	              <TableHeaderColumn>Город</TableHeaderColumn>
 	              <TableHeaderColumn>Название компании</TableHeaderColumn>
 	              <TableHeaderColumn>Ф.И.О</TableHeaderColumn>
+	              <TableHeaderColumn>Банки</TableHeaderColumn>
 	              {
 	              	this.state.selectedIndex == 2 &&
 	              	<TableHeaderColumn>Коментарий</TableHeaderColumn>
@@ -687,6 +688,7 @@ export default class Tinkoff extends React.Component {
 		                <TableRowColumn>{company.city_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{company.company_organization_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{`${company.company_person_name} ${company.company_person_surname} ${company.company_person_patronymic}`.split("null").join("")}</TableRowColumn>
+		                <TableRowColumn style={{whiteSpace: "normal"}}>{company.company_banks.join(" ")}</TableRowColumn>
 		                {
 		                	this.state.selectedIndex == 2 &&
 		                	<TableRowColumn style={{whiteSpace: "normal"}}>{company.company_comment || "–"}</TableRowColumn>
@@ -870,7 +872,7 @@ export default class Tinkoff extends React.Component {
 	          		)) || 
 	          		<TableRow>
 	          			<TableRowColumn 
-	          				colSpan = "8"
+	          				colSpan = "9"
 	          				style = {{
 	          					textAlign: "center"
 	          				}}
@@ -880,7 +882,7 @@ export default class Tinkoff extends React.Component {
 	          		</TableRow>
 	          	}
 	          	<TableRow>
-	            	<TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "9" : this.state.selectedIndex == 2 ? "10" : "8"} style = {{textAlign: "right"}}>
+	            	<TableHeaderColumn colSpan={this.state.selectedIndex == 3 ? "10" : this.state.selectedIndex == 2 ? "11" : "9"} style = {{textAlign: "right"}}>
 	            		<IconButton 
 	            			title = "сюда"
 	            			disabled = {
@@ -1229,7 +1231,7 @@ export default class Tinkoff extends React.Component {
 				>
 					{
 						this.props.state.activeCompany && Object.keys(this.props.state.activeCompany).length > 0 ? [ 
-							<div key = {20} style = {{margin: "20px 0", padding: "0 10px"}}>Список: {
+							<div key = {0} style = {{margin: "20px 0", padding: "0 10px"}}>Список: {
         				this.props.state.activeCompany ? ( 
         				[9,35].indexOf(this.props.state.activeCompany.type_id) > -1 ? 
         					"В работе" :
@@ -1244,22 +1246,24 @@ export default class Tinkoff extends React.Component {
       								this.props.state.activeCompany.type_id == 37 &&
       								"Сложные") : "–"
         			}</div>,
-							<Divider key = {19}/>,
-							<div key = {0} style = {{margin: "20px 0", padding: "0 10px"}}>Ф.И.О: {this.props.state.activeCompany && [this.props.state.activeCompany.company_person_name, this.props.state.activeCompany.company_person_surname, this.props.state.activeCompany.company_person_patronymic].join(" ")}</div>,
 							<Divider key = {1}/>,
-							<div key = {2} style = {{margin: "20px 0", padding: "0 10px"}}>Компания: {this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name}</div>,
+							<div key = {2} style = {{margin: "20px 0", padding: "0 10px"}}>Ф.И.О: {this.props.state.activeCompany && [this.props.state.activeCompany.company_person_name, this.props.state.activeCompany.company_person_surname, this.props.state.activeCompany.company_person_patronymic].join(" ")}</div>,
 							<Divider key = {3}/>,
-							<div key = {4} style = {{margin: "20px 0", padding: "0 10px"}}>Регион: {this.props.state.activeCompany && this.props.state.activeCompany.region_name}</div>,
+							<div key = {4} style = {{margin: "20px 0", padding: "0 10px"}}>Компания: {this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name}</div>,
 							<Divider key = {5}/>,
-							<div key = {6} style = {{margin: "20px 0", padding: "0 10px"}}>Город: {this.props.state.activeCompany && this.props.state.activeCompany.city_name}</div>,
+							<div key = {6} style = {{margin: "20px 0", padding: "0 10px"}}>Регион: {this.props.state.activeCompany && this.props.state.activeCompany.region_name}</div>,
 							<Divider key = {7}/>,
-							<div key = {8} style = {{margin: "20px 0", padding: "0 10px"}}>Телефон: {this.props.state.activeCompany && this.props.state.activeCompany.company_phone}</div>,
+							<div key = {8} style = {{margin: "20px 0", padding: "0 10px"}}>Город: {this.props.state.activeCompany && this.props.state.activeCompany.city_name}</div>,
 							<Divider key = {9}/>,
-							<div key = {10} style = {{margin: "20px 0", padding: "0 10px"}}>ИНН: {this.props.state.activeCompany && this.props.state.activeCompany.company_inn}</div>,
-							<Divider key = {11} />,
-							<div key = {12} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_type_id == 11 ? "ИП" : "ООО"}</div>,
+							<div key = {10} style = {{margin: "20px 0", padding: "0 10px"}}>Телефон: {this.props.state.activeCompany && this.props.state.activeCompany.company_phone}</div>,
+							<Divider key = {11}/>,
+							<div key = {12} style = {{margin: "20px 0", padding: "0 10px"}}>ИНН: {this.props.state.activeCompany && this.props.state.activeCompany.company_inn}</div>,
 							<Divider key = {13} />,
-							<div key = {14} style = {{margin: "20px 0", padding: "0 10px"}}>Статус обработки: {
+							<div key = {14} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_type_id == 11 ? "ИП" : "ООО"}</div>,
+							<Divider key = {15} />,
+							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && this.props.state.activeCompany.company_banks.join(" ")}</div>,
+							<Divider key = {17} />,
+							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Статус обработки: {
 								[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?
 									(this.props.state.activeCompany.type_id == 15 ? "В процессе" :
 									this.props.state.activeCompany.type_id == 16 ? "Успешно" :
@@ -1275,10 +1279,10 @@ export default class Tinkoff extends React.Component {
 									this.props.state.activeCompany.type_id == 32 && "Отказ клиента") :
 									"–"
 							}</div>,							
-							<Divider key = {17} />,
-							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.activeCompany && this.props.state.activeCompany.company_date_call_back || "–"}</div>,
-							<Divider key = {15} />,
-							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Коментарий: {this.props.state.activeCompany && this.props.state.activeCompany.company_comment || "–"}</div>,
+							<Divider key = {19} />,
+							<div key = {20} style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.activeCompany && this.props.state.activeCompany.company_date_call_back || "–"}</div>,
+							<Divider key = {21} />,
+							<div key = {22} style = {{margin: "20px 0", padding: "0 10px"}}>Коментарий: {this.props.state.activeCompany && this.props.state.activeCompany.company_comment || "–"}</div>,
 						] : "Не удалось найти последний не распределенный вызов"
 					}
 					<br/>
