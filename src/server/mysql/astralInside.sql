@@ -3248,8 +3248,19 @@ CREATE TABLE `companies` (
   `call_id` int(11) DEFAULT NULL,
   `company_ringing` tinyint(1) NOT NULL DEFAULT '0',
   `company_file_user` int(11) DEFAULT NULL,
-  `company_file_type` int(11) DEFAULT NULL
+  `company_file_type` int(11) DEFAULT NULL,
+  `company_bank_status` varchar(120) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+DELIMITER $$
+CREATE TRIGGER `companies_after_insert` AFTER INSERT ON `companies` FOR EACH ROW BEGIN
+  IF NEW.bank_id IS NOT NULL
+    THEN BEGIN 
+      INSERT INTO company_banks (company_id, bank_id) VALUES (NEW.company_id, 1), (NEW.company_id, 2), (NEW.company_id, 3), (NEW.company_id, 4);
+    END;
+  END IF;
+END
+$$
+DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
   DECLARE innLength, templateType INT(11);
@@ -3329,7 +3340,8 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
     'company_doc_gifter', NEW.company_doc_gifter,
     'company_doc_code', NEW.company_doc_code,
     'company_doc_flat', NEW.company_doc_flat,
-    "company_date_call_back", NEW.company_date_call_back
+    "company_date_call_back", NEW.company_date_call_back,
+    "company_banks", IF(NEW.bank_id IS NOT NULL, JSON_ARRAY("Тинькофф", "Модуль", "Промсвязь", "ВТБ"), NULL)
   );
 END
 $$
@@ -3369,6 +3381,12 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
 END
 $$
 DELIMITER ;
+
+CREATE TABLE `company_banks` (
+  `company_bank_id` int(11) NOT NULL,
+  `company_id` int(11) NOT NULL,
+  `bank_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 CREATE TABLE `connections` (
   `connection_id` int(11) NOT NULL,
@@ -4212,6 +4230,11 @@ ALTER TABLE `companies`
   ADD KEY `company_file_user` (`company_file_user`),
   ADD KEY `company_file_type` (`company_file_type`);
 
+ALTER TABLE `company_banks`
+  ADD PRIMARY KEY (`company_bank_id`),
+  ADD KEY `company_id` (`company_id`),
+  ADD KEY `bank_id` (`bank_id`);
+
 ALTER TABLE `connections`
   ADD PRIMARY KEY (`connection_id`),
   ADD UNIQUE KEY `connection_hash` (`connection_hash`),
@@ -4312,6 +4335,9 @@ ALTER TABLE `columns`
 ALTER TABLE `companies`
   MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `company_banks`
+  MODIFY `company_bank_id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `connections`
   MODIFY `connection_id` int(11) NOT NULL AUTO_INCREMENT;
 
@@ -4394,6 +4420,10 @@ ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_7` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_8` FOREIGN KEY (`file_id`) REFERENCES `files` (`file_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `companies_ibfk_9` FOREIGN KEY (`old_type_id`) REFERENCES `types` (`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `company_banks`
+  ADD CONSTRAINT `company_banks_ibfk_1` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `company_banks_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`company_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `connections`
   ADD CONSTRAINT `connections_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
