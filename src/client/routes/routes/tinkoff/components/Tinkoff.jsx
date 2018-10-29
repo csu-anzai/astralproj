@@ -1090,7 +1090,7 @@ export default class Tinkoff extends React.Component {
 	        				}}
 	        				primary
 	        				onClick = {this.nextCall}
-	        				disabled = {this.props.state.activeCompany && ([43,39,34,33].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1 || [43,39,34,33].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1) ? true : false}
+	        				disabled = {this.props.state.activeCompany && ([43,39,34].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1 || [43,39,34,33].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1) ? true : false}
 	      				/>
 	        			<IconButton>
 	        				<NavigationClose onClick = {this.closeWorkDialog}/>
