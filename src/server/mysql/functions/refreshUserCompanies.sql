@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE responce, activeCompany JSON;
+	DECLARE responce, activeCompany, hue JSON;
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE connectionID INT(11);
 	DECLARE done TINYINT(1);
@@ -29,8 +29,9 @@ BEGIN
 					)
 				)
 			));
+			SET hue = responce;
 			ITERATE connectionsLoop;
 		END LOOP;
 	CLOSE connectionsCursor;
-	RETURN responce;
+	RETURN hue;
 END

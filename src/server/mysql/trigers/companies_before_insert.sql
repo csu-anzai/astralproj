@@ -1,17 +1,32 @@
 BEGIN
-	DECLARE innLength, templateType INT(11);
+	DECLARE innLength, templateType, bankID, companyID INT(11);
+	DECLARE cityID INT(11) DEFAULT (SELECT city_id FROM fns_codes WHERE fns_code_value = SUBSTRING(NEW.company_inn, 1, 4));
+	DECLARE companyBanks JSON;
+	DECLARE bankName VARCHAR(128);
+	DECLARE done TINYINT(1);
+	DECLARE banksCursor CURSOR FOR SELECT DISTINCT bank_id FROM bank_cities WHERE city_id = cityID;
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+	SELECT IF(company_id IS NOT NULL, company_id + 1, 1) INTO companyID FROM companies ORDER BY company_id DESC LIMIT 1;
+	SET companyBanks = JSON_ARRAY();
+	OPEN banksCursor;
+		banksLoop: LOOP
+			FETCH banksCursor INTO bankID;
+			IF done
+				THEN LEAVE banksLoop;
+			END IF;
+			SELECT bank_name INTO bankName FROM banks WHERE bank_id = bankID;
+			SET companyBanks = JSON_MERGE(companyBanks, JSON_ARRAY(bankName));
+			ITERATE banksLoop;
+		END LOOP;
+	CLOSE banksCursor;
 	SET NEW.company_date_create = NOW();
 	SET innLength = CHAR_LENGTH(NEW.company_inn);
 	IF innLength = 9 OR innLength = 11
 		THEN SET NEW.company_inn = CONCAT("0", NEW.company_inn);
 	END IF;
+	SET NEW.city_id = cityID;
 	SET NEW.region_id = (SELECT region_id FROM codes WHERE code_value = SUBSTRING(NEW.company_inn, 1, 2));
-	SET NEW.city_id = (SELECT city_id FROM fns_codes WHERE fns_code_value = SUBSTRING(NEW.company_inn, 1, 4));
-	SET NEW.bank_id = (SELECT bank_id FROM bank_cities WHERE city_id = NEW.city_id LIMIT 1);
 	SET NEW.company_phone = REPLACE(CONCAT("+", REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(NEW.company_phone, "(", ""), ")",""), " ", ""), "-", ""), "—", ""), "+", "")), "+8", "+7");
-	IF NEW.bank_id = 1 AND (NEW.company_phone IS NULL OR NEW.company_inn IS NULL)
-		THEN SET NEW.bank_id = NULL;
-	END IF;
 	SELECT type_id INTO templateType FROM templates WHERE template_id = NEW.template_id;
 	IF NEW.company_organization_name IS NULL AND templateType = 11
 		THEN SET NEW.company_organization_name = CONCAT(
@@ -25,7 +40,7 @@ BEGIN
 		'city_name', (SELECT city_name FROM cities WHERE city_id = NEW.city_id),
 		'region_name', (SELECT region_name FROM regions WHERE region_id = NEW.region_id),
 		'type_id', NEW.type_id,
-		'company_id', NEW.company_id,
+		'company_id', companyID,
 		'template_id', NEW.template_id,
 		'template_type_id', (SELECT type_id FROM templates WHERE template_id = NEW.template_id),
 		'city_id', NEW.city_id,
@@ -77,6 +92,6 @@ BEGIN
 		'company_doc_code', NEW.company_doc_code,
 		'company_doc_flat', NEW.company_doc_flat,
 		"company_date_call_back", NEW.company_date_call_back,
-		"company_banks", IF(NEW.bank_id IS NOT NULL, JSON_ARRAY("Тинькофф", "Модуль", "Промсвязь", "ВТБ"), NULL)
+		"company_banks", companyBanks
 	);
 END
