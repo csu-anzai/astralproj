@@ -15,7 +15,7 @@ BEGIN
 			IF companyID IS NOT NULL 
 				THEN UPDATE companies SET company_ringing = 1 WHERE company_id = companyID;
 			END IF;
-			SELECT company_json ->> "$.company_phone", company_json ->> "$.company_id" INTO companyPhone, companyID FROM companies WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 0 ORDER BY type_id LIMIT 1;
+			SELECT company_phone, company_id INTO companyPhone, companyID FROM companies WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 0 ORDER BY type_id ASC, company_date_registration DESC, company_date_create DESC LIMIT 1;
 			IF companyPhone IS NOT NULL
 				THEN BEGIN 
 					INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, 1);
