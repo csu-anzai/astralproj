@@ -12,69 +12,62 @@ BEGIN
 			SET today = DATE(NOW());
 			SET yesterday = SUBDATE(today, INTERVAL 1 DAY);
 			SET hours = HOUR(NOW());
-			SET weekdaynow = WEEKDAY(NOW());
 			IF clearWorkList 
-				THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35);
+				THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35, 44);
 			END IF;
 			UPDATE 
 				companies c 
 				JOIN (
 					SELECT 
-						company_id
-					FROM (
-						SELECT 
-							company_id 
-						FROM 
-							regions_companies_view 
-						WHERE 
-							type_id = 10 AND 
-							old_type_id = 36 AND 
-							date(company_date_update) = today AND
-							company_banks_length > 0 AND
-							(hours + region_msc_timezone) BETWEEN 10 AND 18 
-						ORDER BY company_date_create DESC, region_priority ASC
-					) dialing_companies 
-					UNION 
-					(
-						SELECT 
-							company_id 
-						FROM 
-							regions_companies_view
-						WHERE 
+						company_id,
+						IF(type_id = 10 AND old_type_id = 36, 1, 2) type
+					FROM 
+						regions_companies_view
+					WHERE 
+						(
 							company_banks_length > 0 AND 
-							IF(
-								DATE(company_date_registration) IS NOT NULL, 
-								DATE(company_date_registration) IN (today, yesterday), 
-								DATE(company_date_create) IN (today, yesterday)
-							) AND
-							user_id IS NULL AND 
-							type_id = 10 AND 
-							(old_type_id IS NULL OR old_type_id != 36) AND
-							IF(
-								DATE(company_date_registration) IS NOT NULL,
-								IF(
-									DATE(company_date_registration) = yesterday,
-									IF(
-										hours BETWEEN 9 AND 16,
-										1,
-										0
-									),
-									1
-								),
-								IF(
-									DATE(company_date_create) = yesterday,
-									IF(
-										hours BETWEEN 9 AND 16,
-										1,
-										0
-									),
-									1
-								)
-							) AND
 							(hours + region_msc_timezone) BETWEEN 10 AND 18
-						ORDER BY company_date_registration DESC, company_date_create DESC, region_priority ASC
-					)
-					LIMIT rows
+						) AND
+						(
+							(
+								IF(
+									DATE(company_date_registration) IS NOT NULL, 
+									DATE(company_date_registration) IN (today, yesterday), 
+									DATE(company_date_create) IN (today, yesterday)
+								) AND
+								user_id IS NULL AND 
+								type_id = 10 AND 
+								(old_type_id IS NULL OR old_type_id != 36) AND
+								IF(
+									DATE(company_date_registration) IS NOT NULL,
+									IF(
+										DATE(company_date_registration) = yesterday,
+										IF(
+											hours BETWEEN 9 AND 16,
+											1,
+											0
+										),
+										1
+									),
+									IF(
+										DATE(company_date_create) = yesterday,
+										IF(
+											hours BETWEEN 9 AND 16,
+											1,
+											0
+										),
+										1
+									)
+								)
+							)
+							OR
+							(
+								type_id = 10 AND 
+								old_type_id = 36 AND 
+								date(company_date_update) = today
+							)
+						)
+					ORDER BY type ASC, date(company_date_registration) DESC, date(company_date_create) DESC, region_priority ASC, time(company_date_registration) DESC, time(company_date_create) DESC LIMIT rows
 				) bc ON bc.company_id = c.company_id 
 			SET c.user_id = userID, c.type_id = 44;
 			SELECT COUNT(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 44;

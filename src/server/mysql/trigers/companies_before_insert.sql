@@ -26,7 +26,7 @@ BEGIN
 	END IF;
 	SET NEW.city_id = cityID;
 	SET NEW.region_id = (SELECT region_id FROM codes WHERE code_value = SUBSTRING(NEW.company_inn, 1, 2));
-	SET NEW.company_phone = REPLACE(CONCAT("+", REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(NEW.company_phone, "(", ""), ")",""), " ", ""), "-", ""), "—", ""), "+", "")), "+8", "+7");
+	SET NEW.company_phone = REPLACE(REPLACE(CONCAT("+", REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(NEW.company_phone, "(", ""), ")",""), " ", ""), "-", ""), "—", ""), "+", "")), "+8", "+7"), "#", "");
 	SELECT type_id INTO templateType FROM templates WHERE template_id = NEW.template_id;
 	IF NEW.company_organization_name IS NULL AND templateType = 11
 		THEN SET NEW.company_organization_name = CONCAT(

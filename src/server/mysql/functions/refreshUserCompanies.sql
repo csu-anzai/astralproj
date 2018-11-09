@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE responce, activeCompany, hue JSON;
+	DECLARE responce, activeCompany JSON;
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE connectionID INT(11);
 	DECLARE done TINYINT(1);
@@ -8,6 +8,7 @@ BEGIN
 	SET responce = JSON_ARRAY();
 	SET activeCompany = JSON_OBJECT();
 	SELECT company_json INTO activeCompany FROM working_user_company_view WHERE user_id = userID LIMIT 1;
+	SET done = 0;
 	OPEN connectionsCursor;
 		connectionsLoop: LOOP
 			FETCH connectionsCursor INTO connectionID, connectionApiID;
@@ -29,9 +30,8 @@ BEGIN
 					)
 				)
 			));
-			SET hue = responce;
 			ITERATE connectionsLoop;
 		END LOOP;
 	CLOSE connectionsCursor;
-	RETURN hue;
+	RETURN responce;
 END
