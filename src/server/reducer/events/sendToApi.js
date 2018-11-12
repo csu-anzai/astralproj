@@ -15,7 +15,8 @@ module.exports = modules => (resolve, reject, data) => {
 					source: "Федеральные партнеры",
 					subsource: "API",
 					innOrOgrn: data.companyInn || data.companyOgrn,
-					comment: data.companyComment
+					comment: data.companyComment,
+					isHot: true,
 				}, modules.env.tinkoff.body),
 				url: modules.env.tinkoff.applicationUrl,
 				json: true

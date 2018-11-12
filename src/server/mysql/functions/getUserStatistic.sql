@@ -45,7 +45,7 @@ BEGIN
 						);
 					END IF;
 					IF statisticType = "data"
-						THEN SET statistic = JSON_SET(statistic, "$.data", getDataStatistic(dataDateStart,dataDateEnd, IF(bank, bankID, NULL), free));
+						THEN SET statistic = JSON_SET(statistic, "$.data", getDataStatistic(dataDateStart,dataDateEnd, bank, free));
 					END IF;
 					SET responce = JSON_MERGE(responce, JSON_OBJECT(
 						"type", "sendToSocket",
