@@ -8,6 +8,7 @@ BEGIN
 	SET responce = JSON_ARRAY();
 	SET activeCompany = JSON_OBJECT();
 	SELECT company_json INTO activeCompany FROM working_user_company_view WHERE user_id = userID LIMIT 1;
+	SET done = 0;
 	OPEN connectionsCursor;
 		connectionsLoop: LOOP
 			FETCH connectionsCursor INTO connectionID, connectionApiID;
