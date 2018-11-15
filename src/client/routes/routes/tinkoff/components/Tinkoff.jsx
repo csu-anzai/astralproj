@@ -36,6 +36,7 @@ import CircularProgress from 'material-ui/CircularProgress';
 import Checkbox from 'material-ui/Checkbox';
 import AppBar from 'material-ui/AppBar';
 import NavigationClose from 'material-ui/svg-icons/navigation/close';
+import AutoComplete from 'material-ui/AutoComplete';
 import {
   Table,
   TableBody,
@@ -78,10 +79,12 @@ export default class Tinkoff extends React.Component {
 			comment: "",
 			companyOrganization: "",
 			companyBank: 0,
+			companyCityID: 0,
 			dialogType: 1,
 			dateCallBack: new Date(),
 			timeCallBack: new Date(),
-			workDialog: true
+			workDialog: true,
+			searchFilialValue: ""
 		};
 		this.refresh = this.refresh.bind(this);
 		this.setDistributionFilter = this.setDistributionFilter.bind(this);
@@ -93,6 +96,7 @@ export default class Tinkoff extends React.Component {
 		this.closeWorkDialog = this.closeWorkDialog.bind(this);
 		this.nextCall = this.nextCall.bind(this);
 		this.bankSelect = this.bankSelect.bind(this);
+		this.searchFilialChange = this.searchFilialChange.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -141,7 +145,8 @@ export default class Tinkoff extends React.Component {
 					this.props.state.connectionHash,
 					JSON.stringify(this.state.companyID),
 					this.state.comment,
-					this.state.companyBank
+					this.state.companyBank,
+					this.state.searchFilialValue.length > 0 && this.props.state.bankFilials.find(i => i.bank_filial_name.toLowerCase() == this.state.searchFilialValue.toLowerCase()).bank_filial_id || 0
 				]
 			}
 		});
@@ -193,7 +198,7 @@ export default class Tinkoff extends React.Component {
 		let component = document.querySelector("#app > div > div:nth-child(2) > div > div:nth-child(2) > div");
 		component && (component.style.overflow = "auto");
 	}
-	companyCheck(companyID, organizationName, dialogType){
+	companyCheck(company, dialogType){
 		if (dialogType == 1){
 			const date = new Date();
 			this.setState({
@@ -202,10 +207,11 @@ export default class Tinkoff extends React.Component {
 			});
 		}
 		this.setState({
-			companyID: companyID,
+			companyID: company.company_id,
 			dialog: true,
 			dialogType,
-			companyOrganization: organizationName
+			companyOrganization: company.company_organization_name,
+			companyCityID: company.city_id
 		});
 	}
 	openDialog(dialogType){
@@ -220,7 +226,8 @@ export default class Tinkoff extends React.Component {
 			comment: "",
 			companyID: 0,
 			companyOrganization: "",
-			companyBank: 0
+			companyBank: 0,
+			companyCityID: 0
 		});
 	}
 	comment(text){
@@ -321,7 +328,25 @@ export default class Tinkoff extends React.Component {
 	}
 	bankSelect(event, key, payload){
 		this.setState({
-			companyBank: payload
+			companyBank: payload,
+			searchFilialValue: ""
+		});
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "getBankCityFilials",
+				values: [
+					this.props.state.connectionHash,
+					payload,
+					this.state.companyCityID
+				]
+			}
+		});
+	}
+	searchFilialChange(value){
+		this.setState({
+			searchFilialValue: value
 		});
 	}
 	render(){
@@ -751,7 +776,7 @@ export default class Tinkoff extends React.Component {
 		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
 				                	<IconButton
 				                		title="Оформить заявку"
-				                		onClick = {this.companyCheck.bind(this, company.company_id, company.company_organization_name, 0)}
+				                		onClick = {this.companyCheck.bind(this, company, 0)}
 				                	>
 				                		<Check color = "#a4c639"/>
 				                	</IconButton>
@@ -760,7 +785,7 @@ export default class Tinkoff extends React.Component {
 		                			[0,1,4,5].indexOf(this.state.selectedIndex) > -1 && 
 		                			<IconButton
 		                				title="Перезвонить"
-				                		onClick = {this.companyCheck.bind(this, company.company_id, company.company_organization_name, 1)}
+				                		onClick = {this.companyCheck.bind(this, company, 1)}
 				                	>
 				                		<Phone color = "#EF6C00"/>
 				                	</IconButton>
@@ -1005,7 +1030,7 @@ export default class Tinkoff extends React.Component {
 			      <FlatButton
 			        label= {this.state.dialogType == 2 ? "Сбросить" : "Отправить"}
 			        primary
-			        disabled = {(this.state.dialogType == 0 && this.state.companyBank == 0) ? true : false}
+			        disabled = {(this.state.dialogType == 0 && (this.state.companyBank == 0 || this.props.state.bankFilials && this.props.state.bankFilials.length > 0 && this.props.state.bankFilials.filter(i => i.bank_filial_name.toLowerCase() == this.state.searchFilialValue.toLowerCase()).length == 0)) ? true : false}
 			        onClick={
 			        	this.state.dialogType == 0 ? 
 			        		this.sendToApi :
@@ -1046,7 +1071,23 @@ export default class Tinkoff extends React.Component {
 				    			<MenuItem value={2} primaryText="Модуль" />
 				    			<MenuItem value={3} primaryText="Промсвязь" />
 				    			<MenuItem value={4} primaryText="ВТБ" />
-				    		</SelectField>
+				    		</SelectField>,
+				    		<AutoComplete
+				          floatingLabelText = "Филиал"
+				          searchText={this.state.searchFilialValue}
+				          onUpdateInput={this.searchFilialChange}
+				          dataSource={this.props.state.bankFilials && this.props.state.bankFilials.map(i => i.bank_filial_name.toLowerCase()) || []}
+				          filter={(searchText, key) => (key.indexOf(searchText && searchText.toLowerCase()) !== -1)}
+				          openOnFocus={true}
+				          key = {2}
+				          fullWidth = {true}
+				          menuStyle = {{
+				          	overflowY: "scroll",
+				          	maxHeight: "200px"
+				          }}
+				          errorText = {this.props.state.bankFilials && this.props.state.bankFilials.length > 0 && "Необходимо выбрать филиал"}
+				          disabled = {!this.props.state.bankFilials || this.props.state.bankFilials.length == 0}
+				        />
 			    		] :
 			    		this.state.dialogType == 1 ?
 			    			<div>
@@ -1161,7 +1202,7 @@ export default class Tinkoff extends React.Component {
         		<IconButton 
         			tooltip = "оформить заявку" 
         			tooltipPosition = "top-center"
-        			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name, 0)}
+        			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany, 0)}
         			disabled = {(this.props.state.activeCompany && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1) ? true : false}
       			>
         			<Check color="#a4c639"/>
@@ -1169,7 +1210,7 @@ export default class Tinkoff extends React.Component {
         		<IconButton 
         			tooltip = "перезвонить позднее" 
         			tooltipPosition = "top-center"
-        			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name, 1)}
+        			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany, 1)}
         			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,23].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
       			>
         			<Phone color="#EF6C00"/>
