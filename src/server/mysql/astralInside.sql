@@ -1283,6 +1283,64 @@ BEGIN
   RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `getBankCityFilials` (`connectionHash` VARCHAR(32) CHARSET utf8, `bankID` INT, `cityID` INT) RETURNS JSON NO SQL
+BEGIN
+  DECLARE done, connectionValid TINYINT(1);
+  DECLARE filialName VARCHAR(256);
+  DECLARE connectionApiID VARCHAR(128);
+  DECLARE bankFilialID INT(11);
+  DECLARE responce, bankCityFilials JSON;
+  DECLARE filialsCursor CURSOR FOR SELECT bank_filial_name, bank_filial_id FROM bank_filials WHERE bank_id = bankID AND city_id = cityID;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SELECT connection_api_id INTO connectionApiID FROM connections WHERE connection_hash = connectionHash;
+  SET connectionValid = checkConnection(connectionHash);
+  SET responce = JSON_ARRAY();
+  SET bankCityFilials = JSON_ARRAY();
+  IF connectionValid
+    THEN BEGIN
+      OPEN filialsCursor;
+        filialsLoop: LOOP
+          FETCH filialsCursor INTO filialName, bankFilialID;
+          IF done
+            THEN LEAVE filialsLoop;
+          END IF;
+          SET bankCityFilials = JSON_MERGE(bankCityFilials, JSON_OBJECT(
+            "bank_filial_name", filialName,
+            "bank_filial_id", bankFilialID
+          ));
+          ITERATE filialsLoop;
+        END LOOP;
+      CLOSE filialsCursor;
+      SET responce = JSON_MERGE(responce, JSON_ARRAY(JSON_OBJECT(
+        "type", "sendToSocket",
+        "data", JSON_OBJECT(
+          "socketID", connectionApiID,
+          "data", JSON_ARRAY(JSON_OBJECT(
+            "type", "merge",
+            "data", JSON_OBJECT(
+              "bankFilials", bankCityFilials
+            )
+          ))
+        )
+      )));
+    END;
+    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+      "type", "sendToSocket",
+      "data", JSON_OBJECT(
+        "socketID", connectionApiID,
+        "data", JSON_ARRAY(JSON_OBJECT(
+          "type", "merge",
+          "data", JSON_OBJECT(
+            "auth", 0,
+            "loginMessage", "Требуется ручной вход в систему"
+          )
+        ))
+      )
+    ));
+  END IF;
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `getBankCompanies` (`connectionHash` VARCHAR(32) CHARSET utf8, `bankID` INT(11), `rows` INT(11), `clearWorkList` BOOLEAN) RETURNS JSON NO SQL
 BEGIN
   DECLARE companyID, companiesLength, connectionID, userID, timeID, companiesCount INT(11);
@@ -1575,19 +1633,6 @@ BEGIN
     END LOOP;
   CLOSE regionsCursor;
   RETURN responce;
-END$$
-
-CREATE DEFINER=`root`@`localhost` FUNCTION `getTimeID` (`bankID` INT(11)) RETURNS INT(11) NO SQL
-BEGIN
-  DECLARE timeID INT(11); 
-  SELECT time_id INTO timeID FROM bank_times_view WHERE TIME(time_value) = TIME(now()) AND bank_id = bankID ORDER BY TIME(time_value) LIMIT 1;
-  IF timeID IS NULL
-    THEN SELECT time_id INTO timeID FROM bank_times_view WHERE TIME(time_value) < TIME(NOW()) AND bank_id = bankID ORDER BY TIME(time_value) DESC LIMIT 1;
-  END IF;
-  IF timeID IS NULL
-    THEN SELECT time_id INTO timeID FROM bank_times_view WHERE TIME(time_value) > TIME(NOW()) AND bank_id = bankID ORDER BY TIME(time_value) DESC LIMIT 1;
-  END IF;
-  RETURN timeID;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getUserFiles` (`userID` INT(11)) RETURNS JSON NO SQL
@@ -2229,7 +2274,7 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `sendToApi` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11), `comment` TEXT CHARSET utf8, `bankID` INT(11)) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `sendToApi` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11), `comment` TEXT CHARSET utf8, `bankID` INT(11), `bankFilialID` INT) RETURNS JSON NO SQL
 BEGIN
   DECLARE userID INT(11);
   DECLARE connectionValid TINYINT(1);
@@ -2255,16 +2300,18 @@ BEGIN
           "bankID", c.bank_id,
           "templateTypeID", c.company_json ->> "$.template_type_id",
           "regionCode", cd.code_value,
-          "psbFilialCode", p.psb_code_filial,
-          "psbRegionCode", p.psb_code_region,
-          "companyEmail", c.company_email
+          "companyEmail", c.company_email,
+          "bankFilialApiCode", bf.bank_filial_api_code,
+          "bankFilialRegionApiCode", bf.bank_filial_region_api_code,
+          "bankFilialCityApiCode", bf.bank_filial_city_api_code,
+          "bankFilialName", bf.bank_filial_name
         ) 
       INTO company 
       FROM 
         companies c 
         LEFT JOIN codes cd ON cd.region_id = c.region_id
-        LEFT JOIN psb_codes p ON p.city_id = c.city_id
-      WHERE company_id = companyID LIMIT 1;
+        LEFT JOIN bank_filials bf ON bf.bank_filial_id = bankFilialID
+      WHERE c.company_id = companyID LIMIT 1;
       SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
       SET responce = JSON_MERGE(responce,
         JSON_OBJECT(
@@ -2994,86 +3041,16 @@ CREATE TABLE `bank_cities_company_view` (
 ,`bank_id` int(11)
 );
 
-CREATE TABLE `bank_cities_time_priority` (
-  `bank_city_time_priority_id` int(11) NOT NULL,
+CREATE TABLE `bank_filials` (
+  `bank_filial_id` int(11) NOT NULL,
   `bank_id` int(11) NOT NULL,
-  `time_id` int(11) NOT NULL,
   `city_id` int(11) NOT NULL,
-  `priority` int(11) NOT NULL
+  `region_id` int(11) DEFAULT NULL,
+  `bank_filial_name` varchar(256) COLLATE utf8_bin DEFAULT NULL,
+  `bank_filial_api_code` varchar(32) COLLATE utf8_bin NOT NULL,
+  `bank_filial_region_api_code` varchar(32) COLLATE utf8_bin DEFAULT NULL,
+  `bank_filial_city_api_code` varchar(32) COLLATE utf8_bin DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-CREATE TABLE `bank_cities_time_priority_companies_view` (
-`time_id` int(11)
-,`time_value` varchar(5)
-,`priority` int(11)
-,`region_name` varchar(60)
-,`city_name` varchar(60)
-,`company_id` int(11)
-,`user_id` int(11)
-,`company_date_create` varchar(19)
-,`type_id` int(11)
-,`old_type_id` int(11)
-,`company_date_update` varchar(19)
-,`company_discount` int(11)
-,`company_discount_percent` tinyint(1)
-,`company_ogrn` varchar(15)
-,`company_ogrn_date` varchar(10)
-,`company_person_name` varchar(128)
-,`company_person_surname` varchar(128)
-,`company_person_patronymic` varchar(128)
-,`company_person_birthday` varchar(10)
-,`company_person_birthplace` varchar(1024)
-,`company_inn` varchar(12)
-,`company_address` varchar(1024)
-,`company_doc_number` varchar(120)
-,`company_doc_date` varchar(10)
-,`company_organization_name` varchar(1024)
-,`company_organization_code` varchar(20)
-,`company_phone` varchar(120)
-,`company_email` varchar(1024)
-,`company_okved_code` varchar(8)
-,`company_okved_name` varchar(2048)
-,`purchase_id` int(11)
-,`template_id` int(11)
-,`company_kpp` varchar(9)
-,`company_index` varchar(9)
-,`company_house` varchar(128)
-,`company_region_type` varchar(50)
-,`company_region_name` varchar(120)
-,`company_area_type` varchar(60)
-,`company_area_name` varchar(60)
-,`company_locality_type` varchar(60)
-,`company_locality_name` varchar(60)
-,`company_street_type` varchar(60)
-,`company_street_name` varchar(60)
-,`company_innfl` varchar(12)
-,`company_person_position_type` varchar(60)
-,`company_person_position_name` varchar(512)
-,`company_doc_name` varchar(120)
-,`company_doc_gifter` varchar(256)
-,`company_doc_code` varchar(7)
-,`company_doc_house` varchar(128)
-,`company_doc_flat` varchar(40)
-,`company_doc_region_type` varchar(50)
-,`company_doc_region_name` varchar(120)
-,`company_doc_area_type` varchar(60)
-,`company_doc_area_name` varchar(60)
-,`company_doc_locality_type` varchar(60)
-,`company_doc_locality_name` varchar(60)
-,`company_doc_street_type` varchar(60)
-,`company_doc_street_name` varchar(60)
-,`city_id` int(11)
-,`region_id` int(11)
-,`bank_id` int(11)
-,`company_date_registration` varchar(10)
-,`company_person_sex` int(1)
-,`company_ip_type` varchar(1024)
-,`company_json` json
-);
-CREATE TABLE `bank_times_view` (
-`time_id` int(11)
-,`time_value` varchar(5)
-,`bank_id` int(11)
-);
 
 CREATE TABLE `calls` (
   `call_id` int(11) NOT NULL,
@@ -3515,13 +3492,6 @@ CREATE TABLE `fns_codes` (
 CREATE TABLE `phone_codes` (
   `phone_code_id` int(11) NOT NULL,
   `phone_code_value` varchar(10) COLLATE utf8_bin NOT NULL,
-  `city_id` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
-
-CREATE TABLE `psb_codes` (
-  `psb_code_id` int(11) NOT NULL,
-  `psb_code_filial` int(11) NOT NULL,
-  `psb_code_region` int(11) NOT NULL,
   `city_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
@@ -4180,12 +4150,6 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `bank_cities_company_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bank_cities_company_view`  AS  select `c`.`company_id` AS `company_id`,`bc`.`bank_id` AS `bank_id` from (`companies` `c` join `bank_cities` `bc` on((`bc`.`city_id` = `c`.`city_id`))) ;
-DROP TABLE IF EXISTS `bank_cities_time_priority_companies_view`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bank_cities_time_priority_companies_view`  AS  select `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`priority` AS `priority`,`r`.`region_name` AS `region_name`,`ci`.`city_name` AS `city_name`,`c`.`company_id` AS `company_id`,`c`.`user_id` AS `user_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`type_id` AS `type_id`,`c`.`old_type_id` AS `old_type_id`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_discount` AS `company_discount`,`c`.`company_discount_percent` AS `company_discount_percent`,`c`.`company_ogrn` AS `company_ogrn`,`c`.`company_ogrn_date` AS `company_ogrn_date`,`c`.`company_person_name` AS `company_person_name`,`c`.`company_person_surname` AS `company_person_surname`,`c`.`company_person_patronymic` AS `company_person_patronymic`,`c`.`company_person_birthday` AS `company_person_birthday`,`c`.`company_person_birthplace` AS `company_person_birthplace`,`c`.`company_inn` AS `company_inn`,`c`.`company_address` AS `company_address`,`c`.`company_doc_number` AS `company_doc_number`,`c`.`company_doc_date` AS `company_doc_date`,`c`.`company_organization_name` AS `company_organization_name`,`c`.`company_organization_code` AS `company_organization_code`,`c`.`company_phone` AS `company_phone`,`c`.`company_email` AS `company_email`,`c`.`company_okved_code` AS `company_okved_code`,`c`.`company_okved_name` AS `company_okved_name`,`c`.`purchase_id` AS `purchase_id`,`c`.`template_id` AS `template_id`,`c`.`company_kpp` AS `company_kpp`,`c`.`company_index` AS `company_index`,`c`.`company_house` AS `company_house`,`c`.`company_region_type` AS `company_region_type`,`c`.`company_region_name` AS `company_region_name`,`c`.`company_area_type` AS `company_area_type`,`c`.`company_area_name` AS `company_area_name`,`c`.`company_locality_type` AS `company_locality_type`,`c`.`company_locality_name` AS `company_locality_name`,`c`.`company_street_type` AS `company_street_type`,`c`.`company_street_name` AS `company_street_name`,`c`.`company_innfl` AS `company_innfl`,`c`.`company_person_position_type` AS `company_person_position_type`,`c`.`company_person_position_name` AS `company_person_position_name`,`c`.`company_doc_name` AS `company_doc_name`,`c`.`company_doc_gifter` AS `company_doc_gifter`,`c`.`company_doc_code` AS `company_doc_code`,`c`.`company_doc_house` AS `company_doc_house`,`c`.`company_doc_flat` AS `company_doc_flat`,`c`.`company_doc_region_type` AS `company_doc_region_type`,`c`.`company_doc_region_name` AS `company_doc_region_name`,`c`.`company_doc_area_type` AS `company_doc_area_type`,`c`.`company_doc_area_name` AS `company_doc_area_name`,`c`.`company_doc_locality_type` AS `company_doc_locality_type`,`c`.`company_doc_locality_name` AS `company_doc_locality_name`,`c`.`company_doc_street_type` AS `company_doc_street_type`,`c`.`company_doc_street_name` AS `company_doc_street_name`,`c`.`city_id` AS `city_id`,`c`.`region_id` AS `region_id`,`c`.`bank_id` AS `bank_id`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`company_person_sex` AS `company_person_sex`,`c`.`company_ip_type` AS `company_ip_type`,`c`.`company_json` AS `company_json` from ((((`bank_cities_time_priority` `b` join `companies` `c` on(((`c`.`city_id` = `b`.`city_id`) and (`c`.`bank_id` = `b`.`bank_id`) and (json_unquote(json_extract(`c`.`company_json`,'$.company_id')) = `c`.`company_id`)))) join `times` `t` on((`t`.`time_id` = `b`.`time_id`))) join `cities` `ci` on((`ci`.`city_id` = `b`.`city_id`))) join `regions` `r` on((`r`.`region_id` = `c`.`region_id`))) order by `b`.`time_id`,`b`.`priority` ;
-DROP TABLE IF EXISTS `bank_times_view`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `bank_times_view`  AS  select distinct `b`.`time_id` AS `time_id`,`t`.`time_value` AS `time_value`,`b`.`bank_id` AS `bank_id` from (`bank_cities_time_priority` `b` join `times` `t` on((`t`.`time_id` = `b`.`time_id`))) order by cast(`t`.`time_value` as time(6)) ;
 DROP TABLE IF EXISTS `calls_file_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `calls_file_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`call_internal_file_id` AS `call_internal_file_id`,`c`.`call_destination_file_id` AS `call_destination_file_id`,`inf`.`file_name` AS `internal_file_name`,`df`.`file_name` AS `destination_file_name` from ((`calls` `c` left join `files` `inf` on((`inf`.`file_id` = `c`.`call_internal_file_id`))) left join `files` `df` on((`df`.`file_id` = `c`.`call_destination_file_id`))) where ((`c`.`call_internal_file_id` is not null) or (`c`.`call_destination_file_id` is not null)) ;
@@ -4232,11 +4196,11 @@ ALTER TABLE `bank_cities`
   ADD KEY `bank_id` (`bank_id`),
   ADD KEY `city_id` (`city_id`);
 
-ALTER TABLE `bank_cities_time_priority`
-  ADD PRIMARY KEY (`bank_city_time_priority_id`),
+ALTER TABLE `bank_filials`
+  ADD PRIMARY KEY (`bank_filial_id`),
   ADD KEY `bank_id` (`bank_id`),
-  ADD KEY `time_id` (`time_id`),
-  ADD KEY `city_id` (`city_id`);
+  ADD KEY `city_id` (`city_id`),
+  ADD KEY `region_id` (`region_id`);
 
 ALTER TABLE `calls`
   ADD PRIMARY KEY (`call_id`),
@@ -4305,10 +4269,6 @@ ALTER TABLE `phone_codes`
   ADD PRIMARY KEY (`phone_code_id`),
   ADD KEY `city_id` (`city_id`);
 
-ALTER TABLE `psb_codes`
-  ADD PRIMARY KEY (`psb_code_id`),
-  ADD KEY `city_id` (`city_id`);
-
 ALTER TABLE `purchases`
   ADD PRIMARY KEY (`purchase_id`),
   ADD KEY `user_id` (`user_id`),
@@ -4365,8 +4325,8 @@ ALTER TABLE `banks`
 ALTER TABLE `bank_cities`
   MODIFY `bank_city_id` int(11) NOT NULL AUTO_INCREMENT;
 
-ALTER TABLE `bank_cities_time_priority`
-  MODIFY `bank_city_time_priority_id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `bank_filials`
+  MODIFY `bank_filial_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `calls`
   MODIFY `call_id` int(11) NOT NULL AUTO_INCREMENT;
@@ -4397,9 +4357,6 @@ ALTER TABLE `fns_codes`
 
 ALTER TABLE `phone_codes`
   MODIFY `phone_code_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `psb_codes`
-  MODIFY `psb_code_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `purchases`
   MODIFY `purchase_id` int(11) NOT NULL AUTO_INCREMENT;
@@ -4439,10 +4396,10 @@ ALTER TABLE `bank_cities`
   ADD CONSTRAINT `bank_cities_ibfk_1` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `bank_cities_ibfk_2` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `bank_cities_time_priority`
-  ADD CONSTRAINT `bank_cities_time_priority_ibfk_1` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `bank_cities_time_priority_ibfk_2` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `bank_cities_time_priority_ibfk_3` FOREIGN KEY (`time_id`) REFERENCES `times` (`time_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `bank_filials`
+  ADD CONSTRAINT `bank_filials_ibfk_1` FOREIGN KEY (`bank_id`) REFERENCES `banks` (`bank_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `bank_filials_ibfk_2` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `bank_filials_ibfk_3` FOREIGN KEY (`region_id`) REFERENCES `regions` (`region_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `calls`
   ADD CONSTRAINT `calls_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -4488,9 +4445,6 @@ ALTER TABLE `fns_codes`
 
 ALTER TABLE `phone_codes`
   ADD CONSTRAINT `phone_codes_ibfk_1` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
-ALTER TABLE `psb_codes`
-  ADD CONSTRAINT `psb_codes_ibfk_1` FOREIGN KEY (`city_id`) REFERENCES `cities` (`city_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `purchases`
   ADD CONSTRAINT `purchases_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
