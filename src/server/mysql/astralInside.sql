@@ -339,6 +339,7 @@ BEGIN
               PREPARE mysqlPrepare FROM @mysqlText;
               EXECUTE mysqlPrepare;
               DEALLOCATE PREPARE mysqlPrepare;
+              UPDATE companies SET company_json = json_set(company_json, "$.company_id", company_id) WHERE company_json ->> "$.company_id" != company_id;
               DELETE LOW_PRIORITY c FROM companies c, empty_companies_view ecv WHERE c.company_id = ecv.company_id;
               DELETE LOW_PRIORITY FROM companies WHERE CHAR_LENGTH(company_phone) < 5;
               SELECT count(*) INTO insertCompaniesCount FROM companies WHERE company_id > insertCompaniesCount;
@@ -3034,7 +3035,7 @@ CREATE TABLE `banks` (
 CREATE TABLE `bank_cities` (
   `bank_city_id` int(11) NOT NULL,
   `bank_id` int(11) NOT NULL,
-  `city_id` int(11) NOT NULL
+  `city_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 CREATE TABLE `bank_cities_company_view` (
 `company_id` int(11)
@@ -3251,14 +3252,13 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH ROW BEGIN
-  DECLARE innLength, templateType, bankID, companyID INT(11);
+  DECLARE innLength, templateType, bankID INT(11);
   DECLARE cityID INT(11) DEFAULT (SELECT city_id FROM fns_codes WHERE fns_code_value = SUBSTRING(NEW.company_inn, 1, 4));
   DECLARE companyBanks JSON;
   DECLARE bankName VARCHAR(128);
   DECLARE done TINYINT(1);
-  DECLARE banksCursor CURSOR FOR SELECT DISTINCT bank_id FROM bank_cities WHERE city_id = cityID;
+  DECLARE banksCursor CURSOR FOR SELECT DISTINCT bank_id FROM bank_cities WHERE city_id = cityID OR city_id IS NULL;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SELECT IF(company_id IS NOT NULL, company_id + 1, 1) INTO companyID FROM companies ORDER BY company_id DESC LIMIT 1;
   SET companyBanks = JSON_ARRAY();
   OPEN banksCursor;
     banksLoop: LOOP
@@ -3292,7 +3292,7 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
     'city_name', (SELECT city_name FROM cities WHERE city_id = NEW.city_id),
     'region_name', (SELECT region_name FROM regions WHERE region_id = NEW.region_id),
     'type_id', NEW.type_id,
-    'company_id', companyID,
+    'company_id', NEW.company_id,
     'template_id', NEW.template_id,
     'template_type_id', (SELECT type_id FROM templates WHERE template_id = NEW.template_id),
     'city_id', NEW.city_id,
