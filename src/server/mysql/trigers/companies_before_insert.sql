@@ -1,12 +1,11 @@
 BEGIN
-	DECLARE innLength, templateType, bankID, companyID INT(11);
+	DECLARE innLength, templateType, bankID INT(11);
 	DECLARE cityID INT(11) DEFAULT (SELECT city_id FROM fns_codes WHERE fns_code_value = SUBSTRING(NEW.company_inn, 1, 4));
 	DECLARE companyBanks JSON;
 	DECLARE bankName VARCHAR(128);
 	DECLARE done TINYINT(1);
-	DECLARE banksCursor CURSOR FOR SELECT DISTINCT bank_id FROM bank_cities WHERE city_id = cityID;
+	DECLARE banksCursor CURSOR FOR SELECT DISTINCT bank_id FROM bank_cities WHERE city_id = cityID OR city_id IS NULL;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-	SELECT IF(company_id IS NOT NULL, company_id + 1, 1) INTO companyID FROM companies ORDER BY company_id DESC LIMIT 1;
 	SET companyBanks = JSON_ARRAY();
 	OPEN banksCursor;
 		banksLoop: LOOP
@@ -40,7 +39,7 @@ BEGIN
 		'city_name', (SELECT city_name FROM cities WHERE city_id = NEW.city_id),
 		'region_name', (SELECT region_name FROM regions WHERE region_id = NEW.region_id),
 		'type_id', NEW.type_id,
-		'company_id', companyID,
+		'company_id', NEW.company_id,
 		'template_id', NEW.template_id,
 		'template_type_id', (SELECT type_id FROM templates WHERE template_id = NEW.template_id),
 		'city_id', NEW.city_id,

@@ -88,6 +88,7 @@ BEGIN
 							PREPARE mysqlPrepare FROM @mysqlText;
 							EXECUTE mysqlPrepare;
 							DEALLOCATE PREPARE mysqlPrepare;
+							UPDATE companies SET company_json = json_set(company_json, "$.company_id", company_id) WHERE company_json ->> "$.company_id" != company_id;
 							DELETE LOW_PRIORITY c FROM companies c, empty_companies_view ecv WHERE c.company_id = ecv.company_id;
 							DELETE LOW_PRIORITY FROM companies WHERE CHAR_LENGTH(company_phone) < 5;
 							SELECT count(*) INTO insertCompaniesCount FROM companies WHERE company_id > insertCompaniesCount;
