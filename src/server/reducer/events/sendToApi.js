@@ -184,9 +184,10 @@ module.exports = modules => (resolve, reject, data) => {
 									region: data.regionCode || "",
 									branch: data.bankFilialApiCode || "",
 									contact_phone: data.companyPhone || "",
-									add_info: `Ф.И.О.: ${[data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" ")}\n${data.companyComment}`,
+									add_info: data.companyComment || "",
 									agreement: 1,
-									city: data.cityName || ""
+									city: data.cityName || "",
+									fio: [data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" ")
 								})}`,
 								url: modules.env.vtb.editAnketaUrl.replace("${id}", applicationId)
 							};
