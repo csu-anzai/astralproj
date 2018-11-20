@@ -433,7 +433,7 @@ BEGIN
       SET ordersLength = JSON_LENGTH(orders);
       SET banksLength = JSON_LENGTH(banks); 
       SET @mysqlText = CONCAT(
-        "UPDATE companies SET type_id = IF(type_id = 10, 20, type_id), user_id = IF(type_id != 10, user_id, ", userID, "), company_file_user = ", userID,", company_file_type = 20 WHERE DATE(company_date_create)",
+        "UPDATE companies SET company_file_user = ", userID,", company_file_type = 20 WHERE DATE(company_date_create)",
         IF(dateStart = dateEnd, "=", " BETWEEN "),
         IF(dateStart = dateEnd, CONCAT("DATE('", dateStart, "')"), CONCAT("DATE('", dateStart, "') AND DATE('", dateEnd, "')")),
         IF(typesLength > 0, CONCAT(" AND JSON_CONTAINS('", types, "', JSON_ARRAY(type_id))"), ""),
@@ -2305,13 +2305,15 @@ BEGIN
           "bankFilialApiCode", bf.bank_filial_api_code,
           "bankFilialRegionApiCode", bf.bank_filial_region_api_code,
           "bankFilialCityApiCode", bf.bank_filial_city_api_code,
-          "bankFilialName", bf.bank_filial_name
+          "bankFilialName", bf.bank_filial_name,
+          "cityName", ci.city_name
         ) 
       INTO company 
       FROM 
         companies c 
         LEFT JOIN codes cd ON cd.region_id = c.region_id
         LEFT JOIN bank_filials bf ON bf.bank_filial_id = bankFilialID
+        LEFT JOIN cities ci ON ci.city_id = c.city_id
       WHERE c.company_id = companyID LIMIT 1;
       SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
       SET responce = JSON_MERGE(responce,

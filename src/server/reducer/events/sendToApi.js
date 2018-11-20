@@ -175,25 +175,20 @@ module.exports = modules => (resolve, reject, data) => {
 							options = {
 								method: "post",
 								headers: {
-									'Token': modules.vtb.getToken()
+									'Token': modules.vtb.getToken(),
+									'content-type': 'application/x-www-form-urlencoded'
 								},
-								body: {
-									anketadata: {
-										org_form:"",
-										org_name: data.companyOrganizationName || "",
-										inn: data.companyInn || "",
-										ogrn: data.companyOgrn || "",
-										product: "",
-										tariff_plan: "",
-										region: data.regionCode || "",
-										branch: data.bankFilialApiCode || "",
-										contact_phone: data.companyPhone || "",
-										contact_email: data.companyEmail || "",
-										add_info: `Ф.И.О.: ${[data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" ")}\n${data.companyComment}`,
-										agreement: "1"
-									}
-								},
-								json: true,
+								body: `anketadata=${JSON.stringify({
+									org_name: data.companyOrganizationName || "",
+									inn: data.companyInn || "",
+									region: data.regionCode || "",
+									branch: data.bankFilialApiCode || "",
+									contact_phone: data.companyPhone || "",
+									add_info: data.companyComment || "",
+									agreement: 1,
+									city: data.cityName || "",
+									fio: [data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" ")
+								})}`,
 								url: modules.env.vtb.editAnketaUrl.replace("${id}", applicationId)
 							};
 					modules.log.writeLog("vtb", {
@@ -209,7 +204,7 @@ module.exports = modules => (resolve, reject, data) => {
 								type: "responce",
 								body
 							});
-							if(+body.status == 1){
+							if(+body.status_code == 1){
 								let options = {
 									method: "post",
 									headers: {
