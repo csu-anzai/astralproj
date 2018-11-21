@@ -237,7 +237,7 @@ module.exports = modules => (resolve, reject, data) => {
 													data.companyID,
 													applicationId || "false",
 													null,
-													+body.status == 1 ? 1 : 0
+													+body.status_code == 1 ? 1 : 0
 												]
 											}
 										}).then(resolve).catch(reject);
