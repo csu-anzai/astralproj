@@ -1,21 +1,23 @@
 BEGIN
-	DECLARE banksNames JSON DEFAULT JSON_UNQUOTE(JSON_EXTRACT(NEW.company_json, "$.company_banks"));
-	DECLARE done TINYINT(1);
-	DECLARE bankID INT(11);
-	DECLARE banksCursor CURSOR FOR SELECT bank_id FROM banks WHERE JSON_CONTAINS(banksNames, JSON_ARRAY(bank_name));
-	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-	IF JSON_LENGTH(banksNames) > 0
+	DECLARE iterator, banksLength, bankID INT(11);
+	DECLARE bankKey VARCHAR(12);
+	DECLARE banks, banksKeys JSON;
+	SET banks = JSON_UNQUOTE(JSON_EXTRACT(NEW.company_json, "$.company_banks"));
+	SET iterator = 0;
+	SET banksKeys = JSON_KEYS(banks);
+	SET banksLength = JSON_LENGTH(banksKeys);
+	IF banksLength > 0
 		THEN BEGIN
-			OPEN banksCursor;
-				banksLoop: LOOP
-					FETCH banksCursor INTO bankID;
-					IF done 
-						THEN LEAVE banksLoop;
-					END IF;
-					INSERT INTO company_banks (bank_id, company_id) VALUES (bankID, NEW.company_id);
-					ITERATE banksLoop;
-				END LOOP;
-			CLOSE banksCursor;
+			banksLoop: LOOP
+				IF iterator >= banksLength
+					THEN LEAVE banksLoop;
+				END IF;
+				SET bankKey = JSON_UNQUOTE(JSON_EXTRACT(banksKeys, CONCAT("$[", iterator, "]")));
+				SET bankID = JSON_UNQUOTE(JSON_EXTRACT(banks, CONCAT("$.", bankKey, ".bank_id")));
+				INSERT INTO company_banks (company_id, bank_id) VALUES (NEW.company_id, bankID);
+				SET iterator = iterator + 1;
+				ITERATE banksLoop;
+			END LOOP;
 		END;
 	END IF;
 END

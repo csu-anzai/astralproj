@@ -6,7 +6,7 @@ BEGIN
 	DECLARE done TINYINT(1);
 	DECLARE banksCursor CURSOR FOR SELECT DISTINCT bank_id FROM bank_cities WHERE city_id = cityID OR city_id IS NULL;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-	SET companyBanks = JSON_ARRAY();
+	SET companyBanks = JSON_OBJECT();
 	OPEN banksCursor;
 		banksLoop: LOOP
 			FETCH banksCursor INTO bankID;
@@ -14,7 +14,7 @@ BEGIN
 				THEN LEAVE banksLoop;
 			END IF;
 			SELECT bank_name INTO bankName FROM banks WHERE bank_id = bankID;
-			SET companyBanks = JSON_MERGE(companyBanks, JSON_ARRAY(bankName));
+			SET companyBanks = JSON_SET(companyBanks, CONCAT("$.b", bankID), JSON_OBJECT("bank_id", bankID, "bank_name", bankName, "company_bank_status", NULL));
 			ITERATE banksLoop;
 		END LOOP;
 	CLOSE banksCursor;

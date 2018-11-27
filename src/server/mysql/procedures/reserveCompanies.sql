@@ -1,9 +1,9 @@
 BEGIN
-	DECLARE typesLength, regionsLength, nullColumnsLength, notNullColumnsLength, ordersLength, columnID, regionID, limitOption, offsetOption, iterator, companyID, banksLength, userID INT(11);
+	DECLARE typesLength, regionsLength, nullColumnsLength, notNullColumnsLength, ordersLength, columnID, regionID, limitOption, offsetOption, iterator, companyID, banksLength, banksWithoutNullLength, userID INT(11);
 	DECLARE type INT(2);
 	DECLARE columnName, connectionApiID VARCHAR(128);
 	DECLARE regionName VARCHAR(60);
-	DECLARE types, regions, nullColumns, notNullColumns, company, companies, allColumns, allRegions, orders, orderObject, companiesID, banks JSON;
+	DECLARE types, regions, nullColumns, notNullColumns, company, companies, allColumns, allRegions, orders, orderObject, companiesID, banks, banksWithoutNull JSON;
 	DECLARE dateStart, dateEnd VARCHAR(10);
 	DECLARE done, descOption, connectionValid TINYINT(1);
 	DECLARE companiesCursor CURSOR FOR SELECT company_json, company_id FROM custom_download_view;
@@ -42,19 +42,21 @@ BEGIN
 				limitOption,
 				banks
 			FROM states WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
+			SET banksWithoutNull = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(banks, "null", ""), " ", ""), ",,", ","), ",]", "]"), "[,", "["), "]", '"]'), "[", '["'), ",", '","');
 			SET typesLength = JSON_LENGTH(types);
 			SET regionsLength = JSON_LENGTH(regions);
 			SET nullColumnsLength = JSON_LENGTH(nullColumns);
 			SET notNullColumnsLength = JSON_LENGTH(notNullColumns);
 			SET ordersLength = JSON_LENGTH(orders);
-			SET banksLength = JSON_LENGTH(banks);	
+			SET banksLength = JSON_LENGTH(banks);
+			SET banksWithoutNullLength = JSON_LENGTH(banksWithoutNull);
 			SET @mysqlText = CONCAT(
 				"UPDATE companies SET company_file_user = ", userID,", company_file_type = 20 WHERE DATE(company_date_create)",
 				IF(dateStart = dateEnd, "=", " BETWEEN "),
 				IF(dateStart = dateEnd, CONCAT("DATE('", dateStart, "')"), CONCAT("DATE('", dateStart, "') AND DATE('", dateEnd, "')")),
 				IF(typesLength > 0, CONCAT(" AND JSON_CONTAINS('", types, "', JSON_ARRAY(type_id))"), ""),
 				IF(regionsLength > 0, CONCAT(" AND JSON_CONTAINS('", regions, "', JSON_ARRAY(region_id))"), ""),
-				IF(banksLength > 0, CONCAT(" AND JSON_CONTAINS('", banks, "', JSON_ARRAY(bank_id))"), "")
+				IF(banksLength > 0, CONCAT(" AND (((JSON_CONTAINS('", banksWithoutNull, "', REPLACE(JSON_KEYS(company_json ->> '$.company_banks'), 'b', '')) OR JSON_CONTAINS(REPLACE(JSON_KEYS(company_json ->> '$.company_banks'), 'b', ''), '", banksWithoutNull, "')) AND JSON_LENGTH(JSON_KEYS(company_json ->> '$.company_banks')) > 0)", IF(JSON_CONTAINS(banks, JSON_ARRAY(NULL)), " OR JSON_LENGTH(JSON_KEYS(company_json ->> '$.company_banks')) = 0)", ")")), "")
 			);
 			IF nullColumnsLength > 0 
 				THEN BEGIN

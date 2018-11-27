@@ -713,7 +713,7 @@ export default class Tinkoff extends React.Component {
 		                <TableRowColumn>{company.city_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{company.company_organization_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{`${company.company_person_name} ${company.company_person_surname} ${company.company_person_patronymic}`.split("null").join("")}</TableRowColumn>
-		                <TableRowColumn style={{whiteSpace: "normal"}}>{company.company_banks.join(" ")}</TableRowColumn>
+		                <TableRowColumn style={{whiteSpace: "normal"}}>{Object.keys(company.company_banks).map(i => company.company_banks[i].bank_name).join(" ")}</TableRowColumn>
 		                {
 		                	this.state.selectedIndex == 2 &&
 		                	<TableRowColumn style={{whiteSpace: "normal"}}>{company.company_comment || "–"}</TableRowColumn>
@@ -824,21 +824,16 @@ export default class Tinkoff extends React.Component {
 		                		{
 		                			this.state.selectedIndex == 2 &&
 		                			<span style = {{
-		                				color: company.type_id == 15 ? "inherit" : [16,25,26,27,28,29,30].indexOf(company.type_id) > -1 ? "green" : [17,24,31,32].indexOf(company.type_id) > -1 && "red"
+		                				whiteSpace: "pre"
 		                			}}>
 		                				{
-				                			company.type_id == 15 ? "В процессе" :
-				                			company.type_id == 16 ? "Успешно" :
-				                			company.type_id == 17 ? "Ошибка" :
-				                			company.type_id == 24 ? "Дубликат" :
-				                			company.type_id == 25 ? "Сбор документов" :
-				                			company.type_id == 26 ? "Обработка комплекта" :
-				                			company.type_id == 27 ? "Назначение встречи" :
-				                			company.type_id == 28 ? "Встреча назначена" :
-				                			company.type_id == 29 ? "Постобработка" :
-				                			company.type_id == 30 ? "Счет открыт" :
-				                			company.type_id == 31 ? "Отказ Банка" :
-				                			company.type_id == 32 && "Отказ клиента"
+		                					Object.keys(company.company_banks).map(i => <div
+		                						style = {{
+		                							color: company.company_banks[i].type_id == 15 ? "inherit" : company.company_banks[i].type_id == 16 ? "green" : company.company_banks[i].type_id == 17 && "red"
+		                						}}
+		                					>
+		                						{`${company.company_banks[i].bank_name}: ${company.company_banks[i].company_bank_status}`}
+	                						</div>)
 		                				}
 		                			</span>
 		                		}
@@ -1303,7 +1298,7 @@ export default class Tinkoff extends React.Component {
 							<Divider key = {13} />,
 							<div key = {14} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_type_id == 11 ? "ИП" : "ООО"}</div>,
 							<Divider key = {15} />,
-							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && this.props.state.activeCompany.company_banks.join(" ")}</div>,
+							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(i => this.props.state.activeCompany.company_banks[i].bank_name).join(" ")}</div>,
 							<Divider key = {17} />,
 							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Статус обработки: {
 								[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?
