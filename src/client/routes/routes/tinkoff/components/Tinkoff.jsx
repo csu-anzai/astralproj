@@ -112,7 +112,6 @@ export default class Tinkoff extends React.Component {
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
-					1,
 					this.state.limit,
 					1
 				]
@@ -700,7 +699,7 @@ export default class Tinkoff extends React.Component {
 		              (
 		              	(this.state.selectedIndex == 0 && [9, 35].indexOf(company.type_id) > -1) || 
 		              	(this.state.selectedIndex == 1 && company.type_id == 14) || 
-		              	(this.state.selectedIndex == 2 && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(company.type_id) > -1) ||
+		              	(this.state.selectedIndex == 2 && company.type_id == 13) ||
 		              	(this.state.selectedIndex == 3 && company.type_id == 23) ||
 		              	(this.state.selectedIndex == 4 && company.type_id == 36) ||
 		              	(this.state.selectedIndex == 5 && company.type_id == 37)
@@ -713,7 +712,7 @@ export default class Tinkoff extends React.Component {
 		                <TableRowColumn>{company.city_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{company.company_organization_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{`${company.company_person_name} ${company.company_person_surname} ${company.company_person_patronymic}`.split("null").join("")}</TableRowColumn>
-		                <TableRowColumn style={{whiteSpace: "normal"}}>{Object.keys(company.company_banks).map(i => company.company_banks[i].bank_name).join(" ")}</TableRowColumn>
+		                <TableRowColumn style={{whiteSpace: "normal"}}>{Object.keys(company.company_banks).filter(i => company.company_banks[i].bank_suits != 0).map(i => company.company_banks[i].bank_name).join(" ")}</TableRowColumn>
 		                {
 		                	this.state.selectedIndex == 2 &&
 		                	<TableRowColumn style={{whiteSpace: "normal"}}>{company.company_comment || "–"}</TableRowColumn>
@@ -827,10 +826,11 @@ export default class Tinkoff extends React.Component {
 		                				whiteSpace: "pre"
 		                			}}>
 		                				{
-		                					Object.keys(company.company_banks).map(i => <div
+		                					Object.keys(company.company_banks).map((i, key) => <div
 		                						style = {{
 		                							color: company.company_banks[i].type_id == 15 ? "inherit" : company.company_banks[i].type_id == 16 ? "green" : company.company_banks[i].type_id == 17 && "red"
 		                						}}
+		                						key = {key}
 		                					>
 		                						{`${company.company_banks[i].bank_name}: ${company.company_banks[i].company_bank_status}`}
 	                						</div>)

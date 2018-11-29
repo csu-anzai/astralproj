@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE userID, iterator, banksLength, bankID, bankFilialID INT(11);
+	DECLARE userID, iterator, banksLength, bankFilialID INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE filialApiCode, regionApiCode, cityApiCode VARCHAR(32);

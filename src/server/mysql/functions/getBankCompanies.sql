@@ -13,7 +13,19 @@ BEGIN
 			SET yesterday = SUBDATE(today, INTERVAL 1 DAY);
 			SET hours = HOUR(NOW());
 			IF clearWorkList 
-				THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35, 44);
+				THEN BEGIN 
+					UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35, 44);
+					SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+					SET responce = JSON_MERGE(responce, JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
+						JSON_OBJECT(
+							"type", "merge",
+							"data", JSON_OBJECT(
+								"message", CONCAT("Рабочий список сброшен. На проверке ", rows, " компаний."),
+								"messageType", ""
+							)
+						)
+					))));
+				END;
 			END IF;
 			UPDATE 
 				companies c 
