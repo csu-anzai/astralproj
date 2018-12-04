@@ -37,6 +37,7 @@ import Checkbox from 'material-ui/Checkbox';
 import AppBar from 'material-ui/AppBar';
 import NavigationClose from 'material-ui/svg-icons/navigation/close';
 import AutoComplete from 'material-ui/AutoComplete';
+import Chip from 'material-ui/Chip';
 import {
   Table,
   TableBody,
@@ -74,17 +75,15 @@ export default class Tinkoff extends React.Component {
 			selectedIndex: 0,
 			limit: 10,
 			hash: localStorage.getItem("hash"),
-			companyID: 0,
 			dialog: false,
 			comment: "",
-			companyOrganization: "",
-			companyBank: 0,
-			companyCityID: 0,
+			company: {},
 			dialogType: 1,
 			dateCallBack: new Date(),
 			timeCallBack: new Date(),
+			selectedBanks: [],
 			workDialog: true,
-			searchFilialValue: ""
+			searchFilialsValues: []
 		};
 		this.refresh = this.refresh.bind(this);
 		this.setDistributionFilter = this.setDistributionFilter.bind(this);
@@ -206,11 +205,10 @@ export default class Tinkoff extends React.Component {
 			});
 		}
 		this.setState({
-			companyID: company.company_id,
+			company,
+			comment: company.company_comment || "",
 			dialog: true,
-			dialogType,
-			companyOrganization: company.company_organization_name,
-			companyCityID: company.city_id
+			dialogType
 		});
 	}
 	openDialog(dialogType){
@@ -223,10 +221,15 @@ export default class Tinkoff extends React.Component {
 		this.setState({
 			dialog: false,
 			comment: "",
-			companyID: 0,
-			companyOrganization: "",
-			companyBank: 0,
-			companyCityID: 0
+			company: {},
+			selectedBanks: [],
+			searchFilialsValues: []
+		});
+		this.props.dispatch({
+			type: "merge",
+			data: {
+				banksFilials: {}
+			}
 		});
 	}
 	comment(text){
@@ -248,6 +251,16 @@ export default class Tinkoff extends React.Component {
 				]
 			}
 		})
+	}
+	chipClick(bank_id){
+		let selectedBanks = this.state.selectedBanks,
+				searchFilialsValues = this.state.searchFilialsValues,
+				newSelectedBanks = selectedBanks.filter(selectedBank => selectedBank.bank_id != bank_id),
+				newSearchFilialsValues = searchFilialsValues.filter(searchFilialValue => searchFilialValue.bank_id != bank_id);
+		this.setState({
+			selectedBanks: newSelectedBanks,
+			searchFilialsValues: newSearchFilialsValues
+		});
 	}
 	nextCall(){
 		this.props.dispatch({
@@ -326,9 +339,10 @@ export default class Tinkoff extends React.Component {
 		});
 	}
 	bankSelect(event, key, payload){
+		let selectedBanks = this.state.selectedBanks;
+		selectedBanks.push(this.state.company.company_banks["b"+payload]);
 		this.setState({
-			companyBank: payload,
-			searchFilialValue: ""
+			selectedBanks
 		});
 		this.props.dispatch({
 			type: "query",
@@ -338,14 +352,36 @@ export default class Tinkoff extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					payload,
-					this.state.companyCityID
+					this.state.company.city_id
 				]
 			}
 		});
 	}
-	searchFilialChange(value){
+	searchFilialChange(bank_id, search_text){
+		let searchFilialsValues = this.state.searchFilialsValues,
+				banksFilials = this.props.state.banksFilials,
+				searchKey = Object.keys(searchFilialsValues).find(i => searchFilialsValues[i].bank_id == bank_id),
+				searchObject = searchFilialsValues[searchKey],
+				bankFilials = banksFilials[Object.keys(banksFilials).find(bankFilialKey => banksFilials[bankFilialKey].bank_id == bank_id)].bank_filials,
+				searchFilial = bankFilials.find(bankFilial => bankFilial.bank_filial_name.toLowerCase() == search_text.toLowerCase()),
+				filial_id = searchFilial && searchFilial.bank_filial_id;
+		if (searchObject) {
+			searchObject.search_text = search_text;
+			Object.assign(searchObject, {
+				search_text,
+				filial_id
+			});
+			searchFilialsValues[searchKey] = searchObject;
+		} else {
+			searchObject = {
+				bank_id,
+				search_text,
+				filial_id
+			};
+			searchFilialsValues.push(searchObject);
+		}
 		this.setState({
-			searchFilialValue: value
+			searchFilialsValues
 		});
 	}
 	render(){
@@ -1012,9 +1048,9 @@ export default class Tinkoff extends React.Component {
         <Dialog
           title={
           	this.state.dialogType == 0 ? 
-          		`Оформление заявки – ${this.state.companyOrganization}` : 
+          		`Оформление заявки – ${this.state.company && this.state.company.company_organization_name}` : 
           		this.state.dialogType == 1 && 
-          			`Выбор даты и времени – ${this.state.companyOrganization}`
+          			`Выбор даты и времени – ${this.state.company && this.state.company.company_organization_name}`
           }
           actions={[
 			      <FlatButton
@@ -1025,7 +1061,20 @@ export default class Tinkoff extends React.Component {
 			      <FlatButton
 			        label= {this.state.dialogType == 2 ? "Сбросить" : "Отправить"}
 			        primary
-			        disabled = {(this.state.dialogType == 0 && (this.state.companyBank == 0 || this.props.state.bankFilials && this.props.state.bankFilials.length > 0 && this.props.state.bankFilials.filter(i => i.bank_filial_name.toLowerCase() == this.state.searchFilialValue.toLowerCase()).length == 0)) ? true : false}
+			        disabled = {
+			        	(
+			        		this.state.dialogType == 0 && 
+			        		(
+			        			this.state.selectedBanks.length == 0 || 
+			        			(
+			        				this.props.state.banksFilials && 
+			        				Object.keys(this.props.state.banksFilials).length > 0 &&
+			        				this.state.selectedBanks.filter(selectedBank => Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == selectedBank.bank_id) && Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == selectedBank.bank_id).bank_filials.length > 0).length !=
+			        				this.state.searchFilialsValues.filter(searchFilialValue => Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == searchFilialValue.bank_id) && Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == searchFilialValue.bank_id).bank_filials.length > 0 && searchFilialValue.filial_id >= 0).length
+		        				)
+		        			)
+	        			) ? true : false
+		        	}
 			        onClick={
 			        	this.state.dialogType == 0 ? 
 			        		this.sendToApi :
@@ -1046,6 +1095,7 @@ export default class Tinkoff extends React.Component {
 		          [
 		          	<TextField
 						      floatingLabelText="Коментарий к заявке"
+						      value={this.state.comment || ""}
 						      multiLine={true}
 						      fullWidth={true}
 						      rows={5}
@@ -1055,34 +1105,92 @@ export default class Tinkoff extends React.Component {
 						     	}}
 						     	key = {0}
 				    		/>,
+				    		<div
+				    			key = {1}
+				    			style = {{
+				    				display: "flex",
+    								flexWrap: "wrap"
+				    			}}
+				    		>
+				    			{
+				    				this.state.selectedBanks && this.state.selectedBanks.map((i, key) => (
+				    					<Chip 
+					    					key = {key}
+					    					style = {{
+					    						margin: "4px"
+					    					}}
+					    					onRequestDelete={this.chipClick.bind(this, i.bank_id)}
+				    					>
+				    						{i.bank_name} 
+			    						</Chip>
+		    						))
+				    			}
+				    		</div>,
 				    		<SelectField
 				    			floatingLabelText="Выбор банка"
-				    			value = {this.state.companyBank}
-				    			errorText = {this.state.companyBank == 0 && "Необходимо выбрать банк"}
+				    			errorText = {this.state.selectedBanks.length == 0 && "Необходимо выбрать банк"}
 				    			onChange = {this.bankSelect}
-				    			key = {1}
+				    			key = {2}
+				    			disabled = {this.state.company.company_banks && Object.keys(this.state.company.company_banks).length == this.state.selectedBanks.length}
 				    		>
-				    			<MenuItem value={1} primaryText="Тинькофф" />
-				    			<MenuItem value={2} primaryText="Модуль" />
-				    			<MenuItem value={3} primaryText="Промсвязь" />
-				    			<MenuItem value={4} primaryText="ВТБ" />
+				    			{
+				    				this.state.company && 
+				    				this.state.company.company_banks && 
+				    				Object.keys(this.state.company.company_banks).filter(i => this.state.company.company_banks[i].bank_suits != 0 && this.state.selectedBanks.map(selectedBank => selectedBank.bank_id).indexOf(this.state.company.company_banks[i].bank_id) == -1).map((i, key) => (
+				    					<MenuItem 
+				    						value={this.state.company.company_banks[i].bank_id} 
+				    						primaryText={this.state.company.company_banks[i].bank_name} 
+				    						key={key}
+			    						/>
+		    						))
+				    			}
 				    		</SelectField>,
-				    		<AutoComplete
-				          floatingLabelText = "Филиал"
-				          searchText={this.state.searchFilialValue}
-				          onUpdateInput={this.searchFilialChange}
-				          dataSource={this.props.state.bankFilials && this.props.state.bankFilials.map(i => i.bank_filial_name.toLowerCase()) || []}
-				          filter={(searchText, key) => (key.indexOf(searchText && searchText.toLowerCase()) !== -1)}
-				          openOnFocus={true}
-				          key = {2}
-				          fullWidth = {true}
-				          menuStyle = {{
-				          	overflowY: "scroll",
-				          	maxHeight: "200px"
-				          }}
-				          errorText = {this.props.state.bankFilials && this.props.state.bankFilials.length > 0 && "Необходимо выбрать филиал"}
-				          disabled = {!this.props.state.bankFilials || this.props.state.bankFilials.length == 0}
-				        />
+				    		<div
+				    			key = {3}
+				    		>
+				    			{
+				    				this.state.company && 
+				    				this.state.selectedBanks.length > 0 && 
+				    				!!this.props.state.banksFilials && 
+				    				Object.keys(this.props.state.banksFilials).length > 0 &&
+				    				this.state.selectedBanks.filter(selectedBank => Object.keys(this.props.state.banksFilials).filter(bankFilialKey => this.props.state.banksFilials[bankFilialKey].bank_id == selectedBank.bank_id && this.props.state.banksFilials[bankFilialKey].bank_filials.length > 0)[0]).length > 0 &&
+				    				Object.keys(this.props.state.banksFilials).filter((bankFilialsKey, key) => this.state.selectedBanks.map(selectedBank => selectedBank.bank_id).indexOf(this.props.state.banksFilials[bankFilialsKey].bank_id) > -1 && this.props.state.banksFilials[bankFilialsKey].bank_filials.length > 0).map((bankFilialsKey, key) => (
+			    						<div key = {key}>
+			    							{
+									    		<AutoComplete
+									          floatingLabelText = {`Филиал банка: ${Object.keys(this.state.company.company_banks).map(companyBankKey => this.state.company.company_banks[companyBankKey]).find(bank => bank.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id).bank_name}`}
+									          searchText={this.state.searchFilialsValues.find(i => i.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id) && this.state.searchFilialsValues.find(i => i.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id).search_text}
+									          onUpdateInput={this.searchFilialChange.bind(this, this.props.state.banksFilials[bankFilialsKey].bank_id)}
+									          dataSource={this.props.state.banksFilials[bankFilialsKey].bank_filials.map(i => i.bank_filial_name) || []}
+									          filter={(searchText, key) => (key.toLowerCase().indexOf(searchText && searchText.toLowerCase()) !== -1)}
+									          openOnFocus={true}
+									          fullWidth = {true}
+									          menuStyle = {{
+									          	overflowY: "scroll",
+									          	maxHeight: "300px"
+									          }}
+									          menuProps = {{
+									          	menuItemStyle: {
+									          		whiteSpace: "normal",
+									          		lineHeight: "20px",
+									          		minHeight: "none",
+									          		padding: "10px 0"
+									          	}
+									          }}
+									          popoverProps = {{
+									          	canAutoPosition: true
+									          }}
+									          listStyle = {{
+									          	overflow: "auto"
+									          }}
+									          disableFocusRipple= {false}
+									          errorText = {(this.state.searchFilialsValues.find(i => i.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id) && this.state.searchFilialsValues.find(i => i.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id).filial_id >= 0) ? "" : "Необходимо выбрать филиал из списка" }
+									        />
+			    							}
+			    						</div>
+			    					))
+				    			}
+				    		</div>
 			    		] :
 			    		this.state.dialogType == 1 ?
 			    			<div>
