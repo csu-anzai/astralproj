@@ -5,7 +5,7 @@ BEGIN
 	DECLARE filialApiCode, regionApiCode, cityApiCode VARCHAR(32);
 	DECLARE filialName VARCHAR(256);
 	DECLARE statusText VARCHAR(22);
-	DECLARE responce, company JSON;
+	DECLARE responce, company, banksIDArray JSON;
 	SET responce = JSON_ARRAY();
 	SET statusText = "Ожидание";
 	SET connectionValid = checkConnection(connectionHash);
@@ -15,8 +15,9 @@ BEGIN
 	IF connectionValid 
 		THEN BEGIN
 			UPDATE companies SET company_comment = comment, type_id = 13 WHERE company_id = companyID;
-			CALL checkBanksStatuses(banks, JSON_ARRAY(statusText));
-			UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id WHERE cb.company_id = companyID;  
+			SET banksIDArray = jsonMap(banks, JSON_ARRAY("bank_id"));
+			CALL checkBanksStatuses(banksIDArray, JSON_ARRAY(statusText));
+			UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, CONCAT(cb.bank_id));  
 			banksLoop: LOOP
 				IF iterator >= banksLength
 					THEN LEAVE banksLoop;
@@ -43,7 +44,7 @@ BEGIN
 					"regionCode", cd.code_value,
 					"companyEmail", c.company_email,
 					"cityName", ci.city_name
-				) 
+				)
 			INTO company 
 			FROM 
 				companies c 

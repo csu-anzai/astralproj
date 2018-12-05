@@ -2,7 +2,7 @@ const request = require('request'),
 			xml = require("xml-parse");
 module.exports = modules => (resolve, reject, data) => {
 	data.banks.map(bank => {
-		switch(+bank.bankID){
+		switch(+bank.bank_id){
 			case 1: {
 				let options = {
 					method: 'post',
@@ -36,7 +36,7 @@ module.exports = modules => (resolve, reject, data) => {
 								query: "setApiResponce",
 								values: [
 									data.companyID,
-									bankID,
+									bank.bank_id,
 									body.result ? body.result.applicationId : null,
 									body.requestId,
 									(body.result && (body.result.rejectCode || body.result.resultCode)) || body.errorMessage
@@ -80,7 +80,7 @@ module.exports = modules => (resolve, reject, data) => {
 								query: "setApiResponce",
 								values: [
 									data.companyID,
-									bankID,
+									bank.bank_id,
 									body.applicationId || null,
 									body.requestId,
 									body.errorMessage || body.errorCode || body.resultCode
@@ -166,7 +166,7 @@ module.exports = modules => (resolve, reject, data) => {
 								query: "setApiResponce",
 								values: [
 									data.companyID,
-									bankID,
+									bank.bank_id,
 									leadID || applicationId || null,
 									null,
 									errorMessage || requestStatus || requestResult || null
@@ -266,7 +266,7 @@ module.exports = modules => (resolve, reject, data) => {
 													query: "setApiResponce",
 													values: [
 														data.companyID,
-														bankID,
+														bank.bank_id,
 														applicationId || null,
 														null,
 														body.info || body.status_code || null
@@ -282,7 +282,7 @@ module.exports = modules => (resolve, reject, data) => {
 											query: "setApiResponce",
 											values: [
 												data.companyID,
-												bankID,
+												bank.bank_id,
 												applicationId || null,
 												null,
 												body.info || body.status_code || null

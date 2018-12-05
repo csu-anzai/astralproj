@@ -133,6 +133,13 @@ export default class Tinkoff extends React.Component {
 		this.closeDialog();
 	}
 	sendToApi(){
+		let banks = this.state.selectedBanks.map(selectedBank => {
+			let searchFilialValue = this.state.searchFilialsValues.find(searchFilial => searchFilial.bank_id == selectedBank.bank_id);
+			return {
+				bank_id: selectedBank.bank_id,
+				bank_filial_id: searchFilialValue ? searchFilialValue.filial_id : 0
+			}
+		});
 		this.props.dispatch({
 			type: "query",
 			socket: true,
@@ -141,10 +148,9 @@ export default class Tinkoff extends React.Component {
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
-					JSON.stringify(this.state.companyID),
+					this.state.company.company_id,
 					this.state.comment,
-					this.state.companyBank,
-					this.state.searchFilialValue.length > 0 && this.props.state.bankFilials.find(i => i.bank_filial_name.toLowerCase() == this.state.searchFilialValue.toLowerCase()).bank_filial_id || 0
+					JSON.stringify(banks)
 				]
 			}
 		});
@@ -868,7 +874,7 @@ export default class Tinkoff extends React.Component {
 		                						}}
 		                						key = {key}
 		                					>
-		                						{`${company.company_banks[i].bank_name}: ${company.company_banks[i].company_bank_status}`}
+		                						{`${company.company_banks[i].bank_name}: ${company.company_banks[i].company_bank_status || "–"}`}
 	                						</div>)
 		                				}
 		                			</span>
@@ -1131,7 +1137,7 @@ export default class Tinkoff extends React.Component {
 				    			errorText = {this.state.selectedBanks.length == 0 && "Необходимо выбрать банк"}
 				    			onChange = {this.bankSelect}
 				    			key = {2}
-				    			disabled = {this.state.company.company_banks && Object.keys(this.state.company.company_banks).length == this.state.selectedBanks.length}
+				    			disabled = {this.state.company.company_banks && Object.keys(this.state.company.company_banks).filter(companyBankKey => this.state.company.company_banks[companyBankKey].bank_suits != 0).length == this.state.selectedBanks.length}
 				    		>
 				    			{
 				    				this.state.company && 
