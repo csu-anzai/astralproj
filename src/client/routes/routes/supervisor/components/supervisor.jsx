@@ -38,6 +38,36 @@ const datePickerStyle = {
   overflowX: "hidden",
   margin: "-18px 10px"
 };
+const typeNames = [
+	{
+		type_id: 13,
+		type_name: "Утверждено"
+	},
+	{
+		type_id: 14,
+		type_name: "Не интересно"
+	},
+	{
+		type_id: 36,
+		type_name: "Нет связи"
+	},
+	{
+		type_id: 23,
+		type_name: "Перезвонить"
+	},
+	{
+		type_id: 37,
+		type_name: "Сложные"
+	},
+	{
+		type_id: 35,
+		type_name: "Рабочий список: первичный недозвон"
+	},
+	{
+		type_id: 9,
+		type_name: "Рабочий список: в работе"
+	}
+];
 export default class Supervisor extends React.Component {
 	constructor(props){
 		super(props);
@@ -55,7 +85,7 @@ export default class Supervisor extends React.Component {
 			],
 			selectedIndex: 0
 		}
-		this.changeTypeToView = this.changeTypeToView.bind(this);
+		this.changeType = this.changeType.bind(this);
 		this.changePeriod = this.changePeriod.bind(this);
 		this.changeUser = this.changeUser.bind(this);
 		this.changeDataPeriod = this.changeDataPeriod.bind(this);
@@ -66,6 +96,8 @@ export default class Supervisor extends React.Component {
 		this.refresh = this.refresh.bind(this);
 		this.resetStatisticArr = this.resetStatisticArr.bind(this);
 		this.createFile = this.createFile.bind(this);
+		this.changeStatus = this.changeStatus.bind(this);
+		this.changeDataBanks = this.changeDataBanks.bind(this);
 	}
 	createFile(){
 		this.props.dispatch({
@@ -79,17 +111,17 @@ export default class Supervisor extends React.Component {
 			}
 		})
 	}
-	changeTypeToView(event, key, payload) {
+	changeType(event, key, payload) {
 		this.props.dispatch({
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						typeToView: payload,
+						types: payload,
 						workingCompaniesOffset: 0
 					})
 				]
@@ -124,7 +156,7 @@ export default class Supervisor extends React.Component {
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
@@ -143,12 +175,12 @@ export default class Supervisor extends React.Component {
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						user: payload,
+						selectedUsers: payload,
 						workingCompaniesOffset: 0
 					})
 				]
@@ -162,7 +194,7 @@ export default class Supervisor extends React.Component {
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
@@ -179,7 +211,7 @@ export default class Supervisor extends React.Component {
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
@@ -191,29 +223,50 @@ export default class Supervisor extends React.Component {
 		});
 		this.resetStatisticArr("data");
 	}
-	changeBank(obj, data){
+	changeBank(event, key, payload){
 		this.props.dispatch({
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
 					JSON.stringify({
-						dataBank: data ? 1 : 0
+						banks: payload.map(i => ({
+							bank_id: i
+						}))
 					})
 				]
 			}
 		});
-		this.resetStatisticArr("data");
+		this.resetStatisticArr("working");
+		this.resetStatisticArr("workingCompanies");
+	}
+	changeStatus(event, key, payload){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setStatisticFilter",
+				priority: true,
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						bankStatuses: payload
+					})
+				]
+			}
+		});
+		this.resetStatisticArr("working");
+		this.resetStatisticArr("workingCompanies");
 	}
 	changeDate(date, dateStartBool){
 		this.props.dispatch({
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
@@ -233,7 +286,7 @@ export default class Supervisor extends React.Component {
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
@@ -244,6 +297,23 @@ export default class Supervisor extends React.Component {
 				]
 			}
 		});
+		this.resetStatisticArr("data");
+	}
+	changeDataBanks(event, key, payload){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "setStatisticfilter",
+				priority: true,
+				values: [
+					this.props.state.connectionHash,
+					JSON.stringify({
+						dataBanks: payload
+					})
+				]
+			}
+		})
 		this.resetStatisticArr("data");
 	}
 	getFormated(type, template){
@@ -291,7 +361,7 @@ export default class Supervisor extends React.Component {
 			type: "query",
 			socket: true,
 			data: {
-				query: "setBankStatisticFilter",
+				query: "setStatisticFilter",
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
@@ -347,38 +417,61 @@ export default class Supervisor extends React.Component {
 					<div key = {1} style = {partStyle}>
 					<SelectField
 	          floatingLabelText="Тип компаний"
-	          value={this.props.state.statistic && this.props.state.statistic.typeToView != undefined ? +this.props.state.statistic.typeToView : +this.state.typeToView}
-	          onChange={this.changeTypeToView}
+	          value={this.props.state.statistic && this.props.state.statistic.types}
+	          onChange={this.changeType}
 	          autoWidth = {true}
+	          multiple = {true}
+	          floatingLabelFixed = {true}
+	          selectionRenderer = {values => values.length == 0 ? "Все типы" : values.length == 1 ? typeNames.find(i => i.type_id == values[0]).type_name : `Выбрано типов: ${values.length}`}
 	        >
-	        	<MenuItem value = {0} primaryText = "Все" />
+	        	<MenuItem value = {13} primaryText = "Утверждено" />
+	        	{
+	        		this.props.state.statistic && this.props.state.statistic.types.indexOf(13) > -1 && 
+		        	<SelectField
+		        		style = {{
+		        			margin: "0 24px"
+		        		}}
+		        		floatingLabelText = "Для банков"
+		        		multiple = {true}
+		        		autoWidth = {true}
+		        		onChange={this.changeBank}
+		        		floatingLabelFixed = {true}
+		        		value = {this.props.state.statistic && this.props.state.statistic.banks && this.props.state.statistic.banks.map(bank => bank.bank_id)}
+		        		selectionRenderer = {values => values.length == 0 ? "Все банки и все статусы" : values.length == 1 ? this.props.state.banks.find(i => i.id == values[0]).name : `Выбрано банков: ${values.length}`}
+		        	>
+		        		{this.props.state.banks && this.props.state.banks.map((bank, key) => (
+		        			<MenuItem value = {bank.id} primaryText = {bank.name} key = {key}/>
+		        		))}
+		        	</SelectField>
+	        	}
+	        	{this.props.state.statistic && this.props.state.statistic.banks && this.props.state.statistic.banks.map((bank, key) => [
+        			<br />,
+        			<SelectField
+        				floatingLabelText = {`Статусы банка: ${bank.bank_name}`}
+        				style = {{
+		        			margin: "0 24px"
+		        		}}
+        				multiple = {true}
+        				autoWidth = {true}
+        				onChange = {this.changeStatus}
+        				value = {this.props.state.statistic && this.props.state.statistic.bankStatuses}
+        				key = {key}
+        				floatingLabelFixed = {true}
+        				selectionRenderer = {values => values.length == 0 ? (this.props.state.statistic.bankStatuses && this.props.state.statistic.bankStatuses.length > 0 ? "Только выбранные" : "Все статусы") : values.length == 1 ? this.props.state.statistic.banks.find(i => i.bank_statuses.map(status => status.bank_status_id).indexOf(values[0]) > -1).bank_statuses.find(status => status.bank_status_id == values[0]).bank_status_text : `Выбрано статусов: ${values.length}`}
+        			>
+        				{this.props.state.statistic && this.props.state.statistic.banks && this.props.state.statistic.banks.find(statisticBank => statisticBank.bank_id == bank.bank_id).bank_statuses.map((status, key) => (
+        					<MenuItem key = {key} value = {status.bank_status_id} primaryText = {status.bank_status_text} />
+        				))}
+        			</SelectField>
+        		])}
 	        	<Divider/>
-	        	<MenuItem value = {7} primaryText = "Утвержденные все" />
-	        	<MenuItem value = {2} primaryText = "Утвержденные в обработке" />
-	        	<MenuItem value = {1} primaryText = "Утвержденные с ошибкой все" />
-	        	<MenuItem value = {20} primaryText = "Утвержденные с ошибкой запросе" />
-	        	<MenuItem value = {11} primaryText = "Утвержденные дубликаты" />
-	        	<MenuItem value = {18} primaryText = "Утвержденные с отказом банка" />
-	        	<MenuItem value = {19} primaryText = "Утвержденные с отказом клиента" />
-	        	<MenuItem value = {3} primaryText = "Утвержденные успешные все" />
-	        	<MenuItem value = {21} primaryText = "Утвержденные с успехом в запросе" />
-	        	<MenuItem value = {12} primaryText = "Утвержденные со сбором документов" />
-	        	<MenuItem value = {13} primaryText = "Утвержденные с обработкой комплекта" />
-	        	<MenuItem value = {14} primaryText = "Утвержденные с назначением встречи" />
-	        	<MenuItem value = {15} primaryText = "Утвержденные с назначенной встречей" />
-	        	<MenuItem value = {16} primaryText = "Утвержденные в постобработке" />
-	        	<MenuItem value = {17} primaryText = "Утвержденные с открытым счетом" />
+	        	<MenuItem value = {14} primaryText = "Не интересно" />
+	        	<MenuItem value = {36} primaryText = "Нет связи" />
+	        	<MenuItem value = {23} primaryText = "Перезвонить" />
+	        	<MenuItem value = {37} primaryText = "Сложные" />
 	        	<Divider/>
-	        	<MenuItem value = {9} primaryText = "Обработанные все" />
-	        	<MenuItem value = {4} primaryText = "Обработанные интересные" />
-	        	<MenuItem value = {5} primaryText = "Обработанные не интересные" />
-	        	<MenuItem value = {8} primaryText = "Обработанные не утвержденные" />
-	        	<MenuItem value = {10} primaryText = "Обработанные на перезвон" />
-	        	<MenuItem value = {22} primaryText = "Обработанные на первичном недозвоне" />
-	        	<MenuItem value = {23} primaryText = "Обработанные на вторичном недозвоне" />
-	        	<MenuItem value = {24} primaryText = "Обработанные сложные" />
-	        	<Divider/>
-	        	<MenuItem value = {6} primaryText = "Необработанные в работе" />
+	        	<MenuItem value = {35} primaryText = "Рабочий список: первичный недозвон" />
+	        	<MenuItem value = {9} primaryText = "Рабочий список: в работе" />
 	        </SelectField>
 	        <SelectField
 	          floatingLabelText="Период"
@@ -396,11 +489,13 @@ export default class Supervisor extends React.Component {
 	        </SelectField>
 	        <SelectField
 	          floatingLabelText="Сотрудники"
-	          value={this.props.state.statistic && this.props.state.statistic.user != undefined ? +this.props.state.statistic.user : this.state.user}
+	          floatingLabelFixed = {true}
+	          value={this.props.state.statistic && this.props.state.statistic.selectedUsers}
 	          onChange={this.changeUser}
 	          autoWidth = {true}
+	          multiple = {true}
+	          selectionRenderer = {values => values.length == 0 ? "Все сотрудники" : values.length == 1 ? this.props.state.statistic.users.find(i => i.userID == values[0]).userName : `Выбрано сотрудников: ${values.length}`}
 	        >
-	        	<MenuItem value = {0} primaryText = "Все сотрудники"/>
 	        	{
 	        		this.props.state.statistic && this.props.state.statistic.users.map((user, key) => (
 	        			<MenuItem value = {user.userID} key = {key} primaryText = {user.userName}/>
@@ -631,18 +726,19 @@ export default class Supervisor extends React.Component {
 		        	<MenuItem value = {5} primaryText = "Сегодня" />
 		        	<MenuItem value = {6} primaryText = "Собственный" />
 		        </SelectField>
-		        <Checkbox 
-		        	label = "Подходящие для Банка"
-		        	checked = {this.props.state.statistic && this.props.state.statistic.dataBank != undefined ? (+this.props.state.statistic.dataBank ? true : false) : this.state.dataBank}
-		        	onCheck = {this.changeBank}
-		        	style = {{
-		        		display: "inline-block",
-		        		width: "auto",
-		        		verticalAlign: "super",
-		        		whiteSpace: "nowrap",
-		        		marginLeft: "10px"
-		        	}}
-		        />
+		        <SelectField
+		          floatingLabelText="Подходят для банков"
+		          value={this.props.state.statistic && this.props.state.statistic.dataBanks}
+		          onChange={this.changeDataBanks}
+		          autoWidth = {true}
+		          multiple = {true}
+		          floatingLabelFixed = {true}
+		          selectionRenderer = {values => values.length == 0 ? "Не подходит ни к одному" : values.length == 1 ? this.props.state.banks.find(bank => bank.id == values[0]).name : `Выбрано банков: ${values.length}`}
+		        >
+		        	{this.props.state.banks && this.props.state.banks.map((bank, key) => (
+		        		<MenuItem value = {bank.id} primaryText = {bank.name} key = {key} />
+		        	))}
+		        </SelectField>
 		        <Checkbox 
 		        	label = "Только свободные"
 		        	checked = {this.props.state.statistic && this.props.state.statistic.dataFree != undefined ? (+this.props.state.statistic.dataFree ? true : false) : this.state.dataFree}

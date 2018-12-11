@@ -1,42 +1,46 @@
 BEGIN
-	DECLARE typeToView, period, type INT(11);
+	DECLARE typeToView, period, type, bankID INT(11);
 	DECLARE firstDate VARCHAR(19);
-	DECLARE dataFree, dataBank TINYINT(11);
-	DECLARE types JSON;
+	DECLARE dataFree, dataBank, done TINYINT(11);
+	DECLARE types, bank, banks, status, statuses JSON;
+	DECLARE banksCursor CURSOR FOR SELECT bank_json, bank_id FROM banks_statistic_view WHERE JSON_CONTAINS(@banks, JSON_ARRAY(CONCAT(bank_id)));
+	DECLARE banksStatusesCursor CURSOR FOR SELECT status_json FROM bank_status_translate WHERE bank_id = @bankID;
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1; 
 	SET NEW.state_date_update = NOW();
 	IF JSON_EXTRACT(NEW.state_json, "$.statistic") IS NOT NULL
 		THEN BEGIN
-			SET typeToView = JSON_EXTRACT(NEW.state_json, "$.statistic.typeToView");
+			SET @banks = jsonMap(JSON_EXTRACT(NEW.state_json, "$.statistic.banks"), JSON_ARRAY("bank_id"));
+			SET banks = JSON_ARRAY();
+			OPEN banksCursor;
+				banksLoop: LOOP
+					FETCH banksCursor INTO bank, bankID;
+					IF done 
+						THEN LEAVE banksLoop;
+					END IF;
+					SET statuses = JSON_ARRAY();
+					SET @bankID = bankID;
+					OPEN banksStatusesCursor;
+						banksStatusesLoop: LOOP
+							FETCH banksStatusesCursor INTO status;
+							IF done 
+								THEN LEAVE banksStatusesLoop;
+							END IF;
+							SET statuses = JSON_MERGE(statuses, status);
+							ITERATE banksStatusesLoop;
+						END LOOP;
+					CLOSE banksStatusesCursor;
+					SET bank = JSON_SET(bank, "$.bank_statuses", statuses);
+					SET banks = JSON_MERGE(banks, bank);
+					SET done = 0;
+					ITERATE banksLoop;
+				END LOOP;
+			CLOSE banksCursor;
+			SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.banks", banks);
 			SET period = JSON_EXTRACT(NEW.state_json, "$.statistic.period");
-			CASE typeToView
-				WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
-				WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(17, 24, 31, 32));
-				WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(15));
-				WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(16, 25, 26, 27, 28, 29, 30));
-				WHEN 4 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13));
-				WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(14));
-				WHEN 6 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9));
-				WHEN 7 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32));
-				WHEN 8 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13, 14, 23, 35, 36, 37));
-				WHEN 9 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
-				WHEN 10 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(23));
-				WHEN 11 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(24));
-				WHEN 12 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(25));
-				WHEN 13 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(26));
-				WHEN 14 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(27));
-				WHEN 15 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(28));
-				WHEN 16 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(29));
-				WHEN 17 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(30));
-				WHEN 18 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(31));
-				WHEN 19 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(32));
-				WHEN 20 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(17));
-				WHEN 21 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(16));
-				WHEN 22 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(35));
-				WHEN 23 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(36));
-				WHEN 24 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(37));
-				ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.types", JSON_ARRAY(9, 13, 14, 15, 16, 17, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 36, 37));
-			END CASE;
-			SET types = JSON_EXTRACT(NEW.state_json, "$.statistic.types");
+			SET types = JSON_UNQUOTE(JSON_EXTRACT(NEW.state_json, "$.statistic.types"));
+			IF !JSON_CONTAINS(types, JSON_ARRAY(13))
+				THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.banks", JSON_ARRAY(), "$.statistic.bankStatuses", JSON_ARRAY());
+			END IF;
 			CASE period
 				WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.statistic.dateEnd", DATE(NOW()));
 				WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.statistic.dateEnd", DATE(NOW()));

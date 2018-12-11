@@ -18,18 +18,19 @@ BEGIN
 					THEN LEAVE keysLoop;
 				END IF;
 				SET keyName = JSON_UNQUOTE(JSON_EXTRACT(filtersKeys, CONCAT("$[", iterator, "]")));
-				SET userFilters = JSON_SET(userFilters, CONCAT("$.", keyName), JSON_UNQUOTE(JSON_EXTRACT(filters, CONCAT("$.", keyName))));
+				SET userFilters = JSON_SET(userFilters, CONCAT("$.", keyName), JSON_EXTRACT(filters, CONCAT("$.", keyName)));
 				SET iterator = iterator + 1;
 				ITERATE keysLoop;
 			END LOOP;
 			UPDATE states SET state_json = JSON_SET(state_json, "$.statistic", userFilters) WHERE state_id = stateID;
+			SELECT state_json ->> "$.statistic" INTO userFilters FROM states WHERE state_id = stateID LIMIT 1;
 			SET userFilters = JSON_SET(userFilters, "$.users", getUsers(bankID));
 			SET responce = JSON_MERGE(responce, JSON_OBJECT(
 				"type", "sendToSocket",
 				"data", JSON_OBJECT(
 					"socketID", connectionApiID,
 					"data", JSON_ARRAY(JSON_OBJECT(
-						"type", "mergeDeep",
+						"type", "merge",
 						"data", JSON_OBJECT(
 							"statistic", userFilters
 						)

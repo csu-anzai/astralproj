@@ -14,7 +14,7 @@ BEGIN
 				THEN LEAVE banksLoop;
 			END IF;
 			SELECT bank_name INTO bankName FROM banks WHERE bank_id = bankID;
-			SET companyBanks = JSON_SET(companyBanks, CONCAT("$.b", bankID), JSON_OBJECT("bank_id", bankID, "bank_name", bankName, "company_bank_status", NULL));
+			SET companyBanks = JSON_SET(companyBanks, CONCAT("$.b", bankID), JSON_OBJECT("bank_id", bankID, "bank_name", bankName, "company_bank_status", NULL, "bank_status_id", NULL));
 			ITERATE banksLoop;
 		END LOOP;
 	CLOSE banksCursor;

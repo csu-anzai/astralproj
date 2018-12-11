@@ -62,7 +62,7 @@ const categories = [
 const categoriesTypes = [
 	[35,9],
 	[14],
-	[15,16,17,24,25,26,27,28,29,30,31,32],
+	[13],
 	[23],
 	[36],
 	[37]
@@ -82,7 +82,7 @@ export default class Tinkoff extends React.Component {
 			dateCallBack: new Date(),
 			timeCallBack: new Date(),
 			selectedBanks: [],
-			workDialog: true,
+			workDialog: false,
 			searchFilialsValues: []
 		};
 		this.refresh = this.refresh.bind(this);
@@ -670,7 +670,7 @@ export default class Tinkoff extends React.Component {
 	            				this.props.state.companies.filter(company => (
 	            					this.state.selectedIndex == 0 ? [9, 35] :
 	            					this.state.selectedIndex == 1 ? [14] :
-	            					this.state.selectedIndex == 2 ? [15,16,17,24,25,26,27,28,29,30,31,32] :
+	            					this.state.selectedIndex == 2 ? [13] :
 	            					this.state.selectedIndex == 3 ? [23] :
 	            					this.state.selectedIndex == 4 ? [36] :
 	            					this.state.selectedIndex == 5 && [37]
@@ -1013,7 +1013,7 @@ export default class Tinkoff extends React.Component {
 	            				this.props.state.companies.filter(company => (
 	            					this.state.selectedIndex == 0 ? [9, 35] :
 	            					this.state.selectedIndex == 1 ? [14] :
-	            					this.state.selectedIndex == 2 ? [15,16,17,24,25,26,27,28,29,30,31,32] :
+	            					this.state.selectedIndex == 2 ? [13] :
 	            					this.state.selectedIndex == 3 ? [23] :
 	            					this.state.selectedIndex == 4 ? [36] :
 	            					this.state.selectedIndex == 5 && [37]
@@ -1085,7 +1085,7 @@ export default class Tinkoff extends React.Component {
 			        	this.state.dialogType == 0 ? 
 			        		this.sendToApi :
 			        		this.state.dialogType == 1 ? 
-			        			this.changeType.bind(this, this.state.companyID, 23, [this.state.dateCallBack, this.state.timeCallBack]) :
+			        			this.changeType.bind(this, this.state.company.company_id, 23, [this.state.dateCallBack, this.state.timeCallBack]) :
 			        			this.state.dialogType == 2 ?
 			        				this.reset.bind(this, this.state.selectedIndex == 1 ? 14 : 23) :
 			        				this.deleteCompany.bind(this, this.state.companyID)
@@ -1262,7 +1262,7 @@ export default class Tinkoff extends React.Component {
         				(
         					([38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1 ||
         					[38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1) &&
-        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) == -1
+        					this.props.state.activeCompany.type_id != 13
       					) ?
       					false :
       					true
@@ -1299,7 +1299,7 @@ export default class Tinkoff extends React.Component {
         				(
         					([34,39,33,43].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1 ||
         					[34,39,33,43].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1) &&
-        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) == -1
+        					this.props.state.activeCompany.type_id != 13
         				) ?
         				false : 
         				true
@@ -1312,7 +1312,7 @@ export default class Tinkoff extends React.Component {
         			tooltip = "оформить заявку" 
         			tooltipPosition = "top-center"
         			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany, 0)}
-        			disabled = {(this.props.state.activeCompany && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1) ? true : false}
+        			disabled = {(this.props.state.activeCompany && this.props.state.activeCompany.type_id == 13) ? true : false}
       			>
         			<Check color="#a4c639"/>
         		</IconButton>,
@@ -1320,7 +1320,7 @@ export default class Tinkoff extends React.Component {
         			tooltip = "перезвонить позднее" 
         			tooltipPosition = "top-center"
         			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany, 1)}
-        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,23].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+        			disabled = {this.props.state.activeCompany.type_id == 13 ? true : false}
       			>
         			<Phone color="#EF6C00"/>
         		</IconButton>,
@@ -1333,7 +1333,7 @@ export default class Tinkoff extends React.Component {
         			} 
         			tooltipPosition = "top-center"
         			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, this.props.state.activeCompany && this.props.state.activeCompany.type_id == 35 ? 36 : 35)}
-        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+        			disabled = {this.props.state.activeCompany.type_id == 13 ? true : false}
       			>
         			{
         				this.props.state.activeCompany &&
@@ -1346,7 +1346,7 @@ export default class Tinkoff extends React.Component {
         			tooltip = "не подходит" 
         			tooltipPosition = "top-center"
         			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, 14)}
-        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,14].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+        			disabled = {this.props.state.activeCompany.type_id == 13 ? true : false}
       			>
         			<DeleteForever color="#E53935"/>
         		</IconButton>,
@@ -1354,7 +1354,7 @@ export default class Tinkoff extends React.Component {
         			tooltip = "трудный клиент" 
         			tooltipPosition = "top-center"
         			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, 37)}
-        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,37].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+        			disabled = {this.props.state.activeCompany.type_id == 13 ? true : false}
       			>
         			<SadFace color="#607D8B"/>
         		</IconButton>,
@@ -1388,7 +1388,7 @@ export default class Tinkoff extends React.Component {
         					"В работе" :
         				this.props.state.activeCompany.type_id == 14 ?
         					"Не интересно" :
-        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?
+        					this.props.state.activeCompany.type_id == 13 ?
         					"Утверждено" :
       						this.props.state.activeCompany.type_id == 23 ?
       							"Перезвонить" :
@@ -1414,21 +1414,8 @@ export default class Tinkoff extends React.Component {
 							<Divider key = {15} />,
 							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(i => this.props.state.activeCompany.company_banks[i].bank_name).join(" ")}</div>,
 							<Divider key = {17} />,
-							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Статус обработки: {
-								[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?
-									(this.props.state.activeCompany.type_id == 15 ? "В процессе" :
-									this.props.state.activeCompany.type_id == 16 ? "Успешно" :
-									this.props.state.activeCompany.type_id == 17 ? "Ошибка" :
-									this.props.state.activeCompany.type_id == 24 ? "Дубликат" :
-									this.props.state.activeCompany.type_id == 25 ? "Сбор документов" :
-									this.props.state.activeCompany.type_id == 26 ? "Обработка комплекта" :
-									this.props.state.activeCompany.type_id == 27 ? "Назначение встречи" :
-									this.props.state.activeCompany.type_id == 28 ? "Встреча назначена" :
-									this.props.state.activeCompany.type_id == 29 ? "Постобработка" :
-									this.props.state.activeCompany.type_id == 30 ? "Счет открыт" :
-									this.props.state.activeCompany.type_id == 31 ? "Отказ Банка" :
-									this.props.state.activeCompany.type_id == 32 && "Отказ клиента") :
-									"–"
+							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Статусы обработки: {
+								this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(key => this.props.state.activeCompany.company_banks[key]).map((bank, key) => (<div style = {{margin: "5px 0", color: bank.type_id == 15 ? "inherit" : bank.type_id == 16 ? "green" : "red"}} key = {key}>{`${bank.bank_name}: ${bank.company_bank_status || "–"}`}</div>))
 							}</div>,							
 							<Divider key = {19} />,
 							<div key = {20} style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.activeCompany && this.props.state.activeCompany.company_date_call_back || "–"}</div>,
