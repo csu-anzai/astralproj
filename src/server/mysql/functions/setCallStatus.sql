@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE callID, userID, companyTypeID, companyOldTypeID, bankID, callCount, companyID, callInternalTypeID, callDestinationTypeID INT(11);
+	DECLARE callID, userID, companyTypeID, companyOldTypeID, callCount, companyID, callInternalTypeID, callDestinationTypeID INT(11);
 	DECLARE typeTranslate VARCHAR(128);
 	DECLARE nextPhone, companyPhone VARCHAR(120);
 	DECLARE ringing, notDial, callEnd, callProcess TINYINT(1);
@@ -86,10 +86,10 @@ BEGIN
 	SET callProcess = IF(callDestinationTypeID = 34, 1, 0);
 	SET notDial = IF((callInternalTypeID IN (42,47,48,49,50) OR callDestinationTypeID IN (42,47,48,49,50)) AND callEnd = 1, 1, 0);
 	UPDATE companies SET type_id = IF(notDial = 1, IF(type_id = 9, 35, 36), IF(type_id IN (35, 36) AND callEnd = 1, 9, type_id)), company_ringing = IF(ringing = 1 AND callEnd = 1, IF(type_id = 35, 0, 1), 0) WHERE company_id = companyID;
-	SELECT type_id, old_type_id, bank_id, company_id, company_phone INTO companyTypeID, companyOldTypeID, bankID, companyID, companyPhone FROM companies WHERE call_id = callID;
+	SELECT type_id, old_type_id, company_id, company_phone INTO companyTypeID, companyOldTypeID, companyID, companyPhone FROM companies WHERE call_id = callID;
 	SELECT tr.translate_to INTO typeTranslate FROM translates tr JOIN types t ON t.type_id = typeID AND t.type_name = tr.translate_from;
-	IF companyTypeID = 36 AND bankID
-		THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+	IF companyTypeID = 36
+		THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies());
 		ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 	END IF;
 	SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(

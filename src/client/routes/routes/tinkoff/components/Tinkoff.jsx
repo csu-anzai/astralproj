@@ -594,6 +594,7 @@ export default class Tinkoff extends React.Component {
 		              				style = {{
 				                		marginBottom: "8px"
 				                	}}
+				                	disabled = {true}
 		              			/>
 		              		}
 		              	</div>

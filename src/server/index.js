@@ -57,7 +57,7 @@ reducer.dispatch({
 	}
 }).then(then).catch(err);
 
-setTimeout(() => {
+/*setTimeout(() => {
 	reducer.dispatch({
 		type: "checkCompaniesStatus",
 		data: [
@@ -74,7 +74,7 @@ setTimeout(() => {
 		}, 86400000);
 		then(responce);
 	}).catch(err);
-}, timeoutCheckMilliseconds);
+}, timeoutCheckMilliseconds);*/
 
 setTimeout(() => {
 	reducer.dispatch({
@@ -118,7 +118,7 @@ setTimeout(() => {
 		}, 86400000);
 		then(responce);
 	}).catch(err);
-}, timeoutStatisticMilliseconds);
+}, 1/*timeoutStatisticMilliseconds*/);
 
 setTimeout(() => {
 	reducer.dispatch({
