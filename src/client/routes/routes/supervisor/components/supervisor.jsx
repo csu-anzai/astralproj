@@ -431,7 +431,7 @@ export default class Supervisor extends React.Component {
 		        		style = {{
 		        			margin: "0 24px"
 		        		}}
-		        		floatingLabelText = "Для банков"
+		        		floatingLabelText = "Хотябы для одного из банков"
 		        		multiple = {true}
 		        		autoWidth = {true}
 		        		onChange={this.changeBank}
@@ -727,7 +727,7 @@ export default class Supervisor extends React.Component {
 		        	<MenuItem value = {6} primaryText = "Собственный" />
 		        </SelectField>
 		        <SelectField
-		          floatingLabelText="Подходят для банков"
+		          floatingLabelText="Подходит к одному из банков"
 		          value={this.props.state.statistic && this.props.state.statistic.dataBanks}
 		          onChange={this.changeDataBanks}
 		          autoWidth = {true}

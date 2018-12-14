@@ -6,6 +6,7 @@ BEGIN
 	FROM 
 		working_statistic_companies_view 
 	WHERE 
+		type_id != 10 AND
 		JSON_LENGTH(company_banks) > 0 AND 
 		IF(companiesTypes IS NOT NULL AND JSON_LENGTH(companiesTypes) > 0, JSON_CONTAINS(companiesTypes, CONCAT(type_id)), 1) AND 
 		IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, JSON_CONTAINS(users, CONCAT(user_id)), 1) AND

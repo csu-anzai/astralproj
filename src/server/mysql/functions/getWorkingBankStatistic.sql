@@ -15,6 +15,7 @@ BEGIN
 		JOIN templates t ON t.template_id = c.template_id 
 		JOIN types ty ON ty.type_id = t.type_id
 	WHERE 
+		c.type_id != 10 AND
 		JSON_LENGTH(company_json ->> "$.company_banks") > 0 AND 
 		IF(companiesTypes IS NOT NULL AND JSON_LENGTH(companiesTypes) > 0, JSON_CONTAINS(companiesTypes, CONCAT(c.type_id)), 1) AND 
 		IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, JSON_CONTAINS(users, JSON_ARRAY(c.user_id)), 1) AND 

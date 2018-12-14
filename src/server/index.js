@@ -82,7 +82,7 @@ setTimeout(() => {
 		data: {
 			query: "resetNotDialAllCompanies",
 			values: [
-				1
+				
 			]
 		}
 	}).then(responce => {
@@ -92,7 +92,7 @@ setTimeout(() => {
 				data: {
 					query: "resetNotDialAllCompanies",
 					values: [
-						1
+						
 					]
 				}
 			}).then(then).catch(err);
@@ -118,7 +118,7 @@ setTimeout(() => {
 		}, 86400000);
 		then(responce);
 	}).catch(err);
-}, 1/*timeoutStatisticMilliseconds*/);
+}, timeoutStatisticMilliseconds);
 
 setTimeout(() => {
 	reducer.dispatch({

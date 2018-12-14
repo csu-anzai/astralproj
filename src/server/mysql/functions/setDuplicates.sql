@@ -32,6 +32,7 @@ BEGIN
 					"bank_id", b.bank_id,
 					"bank_name", b.bank_name,
 					"company_bank_status", IF(tr.translate_to IS NOT NULL, tr.translate_to, statusText),
+					"bank_status_id", statusID,
 					"type_id", statusTypeID,
 					"bank_suits", 0
 				)) WHERE company_id = companyID;

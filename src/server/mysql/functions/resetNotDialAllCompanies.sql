@@ -8,7 +8,8 @@ BEGIN
 	SET responce = JSON_MERGE(responce, JSON_OBJECT(
 		"type", "print",
 		"data", JSON_OBJECT(
-			"message", CONCAT("Сброшено в свободный доступ ", companiesCount, " компаний. Дата: ", NOW())
+			"message", CONCAT("Сброшено в свободный доступ ", companiesCount, " компаний из общего списка недозвона за все время."),
+			"telegram", 1
 		)
 	));
 	RETURN responce;
