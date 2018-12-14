@@ -588,7 +588,6 @@ BEGIN
         END;
       END IF;
       SET @mysqlText = CONCAT(@mysqlText, " LIMIT ", limitOption);
-      SET @mysqlText3 = @mysqlText;
       PREPARE mysqlPrepare FROM @mysqlText;
       EXECUTE mysqlPrepare;
       DEALLOCATE PREPARE mysqlPrepare;
@@ -4272,8 +4271,6 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
 END
 $$
 DELIMITER ;
-CREATE TABLE `statistic_view` (
-);
 
 CREATE TABLE `telegrams` (
   `telegram_id` int(11) NOT NULL,
@@ -4557,9 +4554,6 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `regions_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `regions_companies_view`  AS  select `c`.`company_id` AS `company_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`type_id` AS `type_id`,`c`.`old_type_id` AS `old_type_id`,`c`.`user_id` AS `user_id`,json_length(json_keys(json_unquote(json_extract(`c`.`company_json`,'$.company_banks')))) AS `company_banks_length`,`r`.`region_msc_timezone` AS `region_msc_timezone`,`r`.`region_priority` AS `region_priority` from (`companies` `c` join `regions` `r` on((`r`.`region_id` = `c`.`region_id`))) ;
-DROP TABLE IF EXISTS `statistic_view`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `statistic_view`  AS  select `companies`.`bank_id` AS `bank_id`,cast(`companies`.`company_date_update` as date) AS `date`,cast(`companies`.`company_date_update` as time(6)) AS `time`,`companies`.`type_id` AS `type_id` from `companies` group by `companies`.`bank_id`,`date`,`time`,`companies`.`type_id` order by `companies`.`bank_id`,`date`,`time`,`companies`.`type_id` ;
 DROP TABLE IF EXISTS `templates_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `templates_view`  AS  select `tm`.`template_id` AS `template_id`,`tm`.`type_id` AS `type_id`,`tm`.`template_columns_count` AS `template_columns_count`,`tp`.`type_name` AS `type_name` from (`templates` `tm` join `types` `tp` on((`tp`.`type_id` = `tm`.`type_id`))) ;

@@ -122,7 +122,6 @@ BEGIN
 				END;
 			END IF;
 			SET @mysqlText = CONCAT(@mysqlText, " LIMIT ", limitOption);
-			SET @mysqlText3 = @mysqlText;
 			PREPARE mysqlPrepare FROM @mysqlText;
 			EXECUTE mysqlPrepare;
 			DEALLOCATE PREPARE mysqlPrepare;
