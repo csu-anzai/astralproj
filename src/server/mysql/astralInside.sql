@@ -3152,8 +3152,8 @@ BEGIN
       SET statusText = JSON_UNQUOTE(JSON_EXTRACT(companyBank, "$.status_text"));
       SET bankID = JSON_UNQUOTE(JSON_EXTRACT(companyBank, "$.bank_id"));
       CALL checkBanksStatuses(JSON_ARRAY(bankID), JSON_ARRAY(statusText));
-      SELECT type_id, bank_status_id INTO statusTypeID, statusID FROM bank_statuses WHERE bank_id = bankID AND bank_status_text = statusText;
-      SET companyBankID = (SELECT company_bank_id FROM company_banks WHERE bank_id = bankID AND company_id = companyID);
+      SELECT type_id, bank_status_id INTO statusTypeID, statusID FROM bank_statuses WHERE bank_id = bankID AND bank_status_text = statusText LIMIT 1;
+      SET companyBankID = (SELECT company_bank_id FROM company_banks WHERE bank_id = bankID AND company_id = companyID LIMIT 1);
       IF companyBankID IS NOT NULL
         THEN UPDATE company_banks SET bank_status_id = statusID WHERE company_bank_id = companyBankID;
         ELSE UPDATE companies c LEFT JOIN translates tr ON tr.translate_from = statusText JOIN banks b ON b.bank_id = bankID SET c.company_json = JSON_SET(c.company_json, CONCAT("$.company_banks.b", bankID), JSON_OBJECT(
