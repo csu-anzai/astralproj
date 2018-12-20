@@ -30,9 +30,14 @@ BEGIN
 				"data", JSON_OBJECT(
 					"socketID", connectionApiID,
 					"data", JSON_ARRAY(JSON_OBJECT(
-						"type", "merge",
+						"type", "mergeDeep",
 						"data", JSON_OBJECT(
-							"bankFilials", bankCityFilials
+							"banksFilials", JSON_OBJECT(
+								CONCAT("b", bankID), JSON_OBJECT(
+									"bank_id", bankID,
+									"bank_filials", bankCityFilials
+								)
+							)
 						)
 					))
 				)

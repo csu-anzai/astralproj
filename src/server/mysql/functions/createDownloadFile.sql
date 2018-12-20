@@ -28,7 +28,14 @@ BEGIN
 						"$.company_id",
 						"$.region_id",
 						"$.template_id",
-						"$.type_id"
+						"$.type_id",
+						"$.call_destination_type_id",
+						"$.call_internal_type_id",
+						"$.company_banks",
+						"$.company_comment",
+						"$.file_name",
+						"$.template_type_id",
+						"$.company_date_call_back"
 					);
 					SET companyKeys = JSON_KEYS(company);
 					SET iterator = 0;

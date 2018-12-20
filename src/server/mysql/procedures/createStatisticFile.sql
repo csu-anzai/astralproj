@@ -1,8 +1,8 @@
 BEGIN
-	DECLARE userID, connectionID, fileID INT(11);
+	DECLARE connectionID, fileID, userID INT(11);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE dateStart, dateEnd VARCHAR(10);
-	DECLARE state, types, company, companies, statistic JSON;
+	DECLARE state, types, company, companies, statistic, users, banks, statuses JSON;
 	DECLARE done TINYINT(1);
 	DECLARE companiesCursor CURSOR FOR SELECT company_json FROM custom_statistic_file_view;
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
@@ -18,8 +18,10 @@ BEGIN
 	));
 	SELECT connection_id, connection_api_id INTO connectionID, connectionApiID FROM connections WHERE connection_hash = connectionHash;
 	SELECT state_json ->> "$.statistic" INTO statistic FROM states WHERE connection_id = connectionID;
-	SET userID = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.user"));
-	SET types = JSON_EXTRACT(statistic, "$.types");
+	SET users = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.users"));
+	SET types = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.types"));
+	SET banks = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.banks[*].bank_id"));
+	SET statuses = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.bankStatuses"));
 	SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.dateStart"));
 	SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.dateEnd"));
 	SET @mysqlText = CONCAT("CREATE VIEW custom_statistic_file_view AS 
@@ -39,11 +41,14 @@ BEGIN
 		FROM  
 			companies c  
 			JOIN types t ON t.type_id = c.type_id  
-			JOIN translates tr ON tr.translate_from = t.type_name  
+			LEFT JOIN translates tr ON tr.translate_from = t.type_name
 		WHERE 
-			JSON_CONTAINS('", types, "', CONCAT(c.type_id)) AND 
-			DATE(c.company_date_update) BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "') AND ", 
-			IF(userID IS NOT NULL AND userID > 0, CONCAT("c.user_id = ", userID), "1")
+			c.type_id != 10 AND 
+			DATE(c.company_date_update) BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "')", 
+			IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, CONCAT(" AND JSON_CONTAINS('",users,"', JSON_ARRAY(c.user_id))"), ""),
+			IF(types IS NOT NULL AND JSON_LENGTH(types) > 0, CONCAT(" AND JSON_CONTAINS('",types,"', JSON_ARRAY(c.type_id))"), ""),
+			IF(banks IS NOT NULL AND JSON_LENGTH(banks) > 0, CONCAT(" AND jsonContainsLeastOne('",banks,"', c.company_json ->> '$.company_banks.*.bank_id')"), ""),
+			IF(statuses IS NOT NULL AND JSON_LENGTH(statuses) > 0, CONCAT(" AND jsonContainsLeastOne('",statuses,"', c.company_json ->> '$.company_banks.*.bank_status_id')"), "")
 	);
 	PREPARE mysqlPrepare FROM @mysqlText;
 	EXECUTE mysqlPrepare;

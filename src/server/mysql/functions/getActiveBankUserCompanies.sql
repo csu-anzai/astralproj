@@ -9,7 +9,7 @@ BEGIN
 		FROM (
 			SELECT 
 				company_json, 
-				@apiCount:=IF(type_id IN (15,16,17,24,25,26,27,28,29,30,31,32), @apiCount+1, @apiCount) apiCount, 
+				@apiCount:=IF(type_id = 13, @apiCount+1, @apiCount) apiCount, 
 				@invalidateCount:=IF(type_id = 14, @invalidateCount+1, @invalidateCount) invalidateCount, 
 				@difficultCount:=IF(type_id = 37, @difficultCount+1, @difficultCount) difficultCount, 
 				@callbackCount:=IF(type_id = 23, @callbackCount+1, @callbackCount) callbackCount, 
@@ -21,7 +21,7 @@ BEGIN
 			WHERE 
 				(
 					(
-						(type_id IN (15,16,17,24,25,26,27,28,29,30,31,32) AND DATE(company_date_create) BETWEEN DATE(@apiDateStart) AND DATE(@apiDateEnd)) OR 
+						(type_id = 13 AND DATE(company_date_create) BETWEEN DATE(@apiDateStart) AND DATE(@apiDateEnd)) OR 
 						(type_id = 14 AND DATE(company_date_create) BETWEEN DATE(@invalidateDateStart) AND DATE(@invalidateDateEnd)) OR 
 						(type_id = 37 AND DATE(company_date_create) BETWEEN DATE(@difficultDateStart) AND DATE(@difficultDateEnd)) OR 
 						(type_id = 23 AND DATE(company_date_create) BETWEEN DATE(@callbackDateStart) AND DATE(@callbackDateEnd)) OR 
@@ -32,7 +32,7 @@ BEGIN
 			ORDER BY type_id ASC, company_date_registration DESC, company_date_create DESC
 		) c
 		WHERE 
-			(apiCount BETWEEN @apiRowStart AND @apiRowLimit AND type_id IN (15,16,17,24,25,26,27,28,29,30,31,32)) OR
+			(apiCount BETWEEN @apiRowStart AND @apiRowLimit AND type_id = 13) OR
 			(invalidateCount BETWEEN @invalidateRowStart AND @invalidateRowLimit AND type_id = 14) OR
 			(difficultCount BETWEEN @difficultRowStart AND @difficultRowLimit AND type_id = 37) OR
 			(callbackCount BETWEEN @callbackRowStart AND @callbackRowLimit AND type_id = 23) OR

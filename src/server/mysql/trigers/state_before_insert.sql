@@ -10,16 +10,13 @@ BEGIN
 					JSON_OBJECT(
 						"dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)),
 						"dateEnd", DATE(NOW()),
-						"typeToView", 3,
 						"period", 0,
-						"types", JSON_ARRAY(
-							16
-						),
-						"user", 0,
-						"dataDateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)),
+						"types", JSON_ARRAY(),
+						"users", JSON_ARRAY(),
+						"dataDateStart", DATE(NOW()),
 						"dataDateEnd", DATE(NOW()),
-						"dataPeriod", 0,
-						"dataBank", 1,
+						"dataPeriod", 5,
+						"dataBanks", JSON_EXTRACT(getBanks(), "$[*].id"),
 						"dataFree", 1,
 						"workingCompaniesLimit", 10,
 						"workingCompaniesOffset", 0
@@ -30,7 +27,6 @@ BEGIN
 				THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.download", JSON_OBJECT(
 					"dateStart", DATE(NOW()),
 					"dateEnd", DATE(NOW()),
-					"type", 10,
 					"types", JSON_ARRAY(
 						10
 					),

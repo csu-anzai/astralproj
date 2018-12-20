@@ -57,7 +57,7 @@ reducer.dispatch({
 	}
 }).then(then).catch(err);
 
-setTimeout(() => {
+/*setTimeout(() => {
 	reducer.dispatch({
 		type: "checkCompaniesStatus",
 		data: [
@@ -74,7 +74,7 @@ setTimeout(() => {
 		}, 86400000);
 		then(responce);
 	}).catch(err);
-}, timeoutCheckMilliseconds);
+}, timeoutCheckMilliseconds);*/
 
 setTimeout(() => {
 	reducer.dispatch({
@@ -82,7 +82,7 @@ setTimeout(() => {
 		data: {
 			query: "resetNotDialAllCompanies",
 			values: [
-				1
+				
 			]
 		}
 	}).then(responce => {
@@ -92,7 +92,7 @@ setTimeout(() => {
 				data: {
 					query: "resetNotDialAllCompanies",
 					values: [
-						1
+						
 					]
 				}
 			}).then(then).catch(err);

@@ -1,10 +1,10 @@
 BEGIN
-	DECLARE userID, bankID, connectionID, lastTypeID INT(11);
+	DECLARE userID, connectionID, lastTypeID INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE responce JSON;
 	SET connectionValid = checkConnection(connectionHash);
-	SELECT connection_api_id, user_id, bank_id, connection_id INTO connectionApiID, userID, bankID, connectionID FROM users_connections_view WHERE connection_hash = connectionHash;
+	SELECT connection_api_id, user_id, connection_id INTO connectionApiID, userID, connectionID FROM users_connections_view WHERE connection_hash = connectionHash;
 	SET responce = JSON_ARRAY();
 	IF connectionValid
 		THEN BEGIN
@@ -14,7 +14,7 @@ BEGIN
 				ELSE UPDATE companies SET type_id = typeID, user_id = userID WHERE company_id = companyID;
 			END IF;
 			IF typeID = 36 OR lastTypeID = 36 
-				THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+				THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies());
 				ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 			END IF;
 			SET responce = JSON_MERGE(responce, JSON_ARRAY(

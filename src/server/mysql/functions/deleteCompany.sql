@@ -1,6 +1,6 @@
 BEGIN
 	DECLARE connectionApiID VARCHAR(128);
-	DECLARE typeID, bankID, userID INT(11);
+	DECLARE typeID, userID INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE responce JSON;
 	SET responce = JSON_ARRAY();
@@ -8,10 +8,10 @@ BEGIN
 	SELECT connection_api_id, user_id INTO connectionApiID, userID FROM connections WHERE connection_hash = connectionHash; 
 	IF connectionValid
 		THEN BEGIN
-			SELECT type_id, bank_id INTO typeID, bankID FROM companies WHERE company_id = companyID;
+			SELECT type_id INTO typeID FROM companies WHERE company_id = companyID;
 			DELETE FROM companies WHERE company_id = companyID;
 			IF typeID = 36
-				THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies(bankID));
+				THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies());
 				ELSE BEGIN 
 					SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 					SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(

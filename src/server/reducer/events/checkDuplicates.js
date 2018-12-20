@@ -27,28 +27,34 @@ module.exports = modules => (resolve, reject, data) => {
 		type: "checkDuplicates",
 		data
 	});
-	companies && data.companies.length > 0 && Promise.all(data.companies.map(company => new Promise((resolve, reject) => {
-		request({
-			url: modules.env.tinkoff.checkInnUrl,
-			json: true,
-			body: { 
-				fields: { 
-					inn: company.company_inn
-				}
-	   	}
-		}, (err, responce, body) => {
-				err ? reject(err) : resolve(body);
-		});
-	}))).then(responce => {
-		let keys = [];
+	companies && data.companies.length > 0 && Promise.all(data.companies.map(company =>
+		Promise.all([
+			new Promise((resolve, reject) => {
+				request({
+					url: modules.env.tinkoff.checkInnUrl,
+					json: true,
+					body: { 
+						fields: { 
+							inn: company.company_inn
+						}
+			   	}
+				}, (err, responce, body) => {
+						err ? reject(err) : resolve(body.result);
+				});
+			})
+		]) 
+	)).then(responce => {
 		modules.log.writeLog("system", {
 			type: "checkDuplicatesResponce",
 			responce
 		});
-		responce.forEach((item, key) => {
-			item.result != "Success" && keys.push(key);
-		});
-		const companies = keys.length > 0 ? keys.map(key => data.companies[key].company_id) : keys;
+		const companies = responce.map((arr, key) => ({
+			company_id: data.companies[key].company_id,
+			banks: arr.map((item, key) => ({
+				bank_id: +key + 1,
+				status_text: item 
+			}))
+		}));
 		modules.reducer.dispatch({
 			type: "query",
 			data: {

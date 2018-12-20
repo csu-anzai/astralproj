@@ -25,6 +25,40 @@ let selectorsStyle = {
 	marginLeft: "5px",
 	textAlign: "left"
 }
+const typeNames = [
+	{
+		type_id: 13,
+		type_name: "Утверждено"
+	},
+	{
+		type_id: 14,
+		type_name: "Не интересно"
+	},
+	{
+		type_id: 36,
+		type_name: "Нет связи"
+	},
+	{
+		type_id: 23,
+		type_name: "Перезвонить"
+	},
+	{
+		type_id: 37,
+		type_name: "Сложные"
+	},
+	{
+		type_id: 35,
+		type_name: "Рабочий список: первичный недозвон"
+	},
+	{
+		type_id: 9,
+		type_name: "Рабочий список: в работе"
+	},
+	{
+		type_id: 10,
+		type_name: "Свободные"
+	}
+];
 export default class Download extends React.Component {
 	constructor(props){
 		super(props);
@@ -228,38 +262,22 @@ export default class Download extends React.Component {
 						        </SelectField>
 						        <SelectField
 						          floatingLabelText="Тип"
-						          value = {this.props.state.download && this.props.state.download.type || 0}
+						          value = {this.props.state.download && this.props.state.download.types}
 						          style = {selectorsStyle}
-						          onChange = {this.changeSingleFilter.bind(this, "type")}
+						          onChange = {this.changeMultipleFilter.bind(this, "types")}
 						          autoWidth = {true}
+						          multiple = {true}
+						          floatingLabelFixed = {true}
+						          selectionRenderer = {values => values.length == 0 ? "Не учитывать" : values.length == 1 ? typeNames.find(i => i.type_id == values[0]).type_name : `Выбрано типов: ${values.length}`}
 						        >
-						        	<MenuItem value = {0} primaryText = "Все" />
 						        	<MenuItem value = {10} primaryText = "Свободные" />
-						        	<Divider/>
-						        	<MenuItem value = {7} primaryText = "Утвержденные все" />
-						        	<MenuItem value = {2} primaryText = "Утвержденные в обработке" />
-						        	<MenuItem value = {1} primaryText = "Утвержденные с ошибкой все" />
-						        	<MenuItem value = {21} primaryText = "Утвержденные с ошибкой запросе" />
-						        	<MenuItem value = {12} primaryText = "Утвержденные дубликаты" />
-						        	<MenuItem value = {3} primaryText = "Утвержденные успешные все" />
-						        	<MenuItem value = {22} primaryText = "Утвержденные с успехом в запросе" />
-						        	<MenuItem value = {13} primaryText = "Утвержденные со сбором документов" />
-						        	<MenuItem value = {14} primaryText = "Утвержденные с обработкой комплекта" />
-						        	<MenuItem value = {15} primaryText = "Утвержденные с назначением встречи" />
-						        	<MenuItem value = {16} primaryText = "Утвержденные с назначенной встречей" />
-						        	<MenuItem value = {17} primaryText = "Утвержденные в постобработке" />
-						        	<MenuItem value = {18} primaryText = "Утвержденные с открытым счетом" />
-						        	<Divider/>
-						        	<MenuItem value = {9} primaryText = "Обработанные все" />
-						        	<MenuItem value = {4} primaryText = "Обработанные интересные" />
-						        	<MenuItem value = {5} primaryText = "Обработанные не интересные" />
-						        	<MenuItem value = {8} primaryText = "Обработанные не утвержденные" />
-						        	<MenuItem value = {11} primaryText = "Обработанные перезвон" />
-						        	<MenuItem value = {23} primaryText = "Обработанные на первичном недозвоне" />
-						        	<MenuItem value = {24} primaryText = "Обработанные на вторичном недозвоне" />
-						        	<MenuItem value = {25} primaryText = "Обработанные сложные" />
-						        	<Divider/>
-						        	<MenuItem value = {6} primaryText = "Необработанные в работе" />
+						        	<MenuItem value = {13} primaryText = "Утверждено" />
+						        	<MenuItem value = {14} primaryText = "Не интересно" />
+						        	<MenuItem value = {36} primaryText = "Нет связи" />
+						        	<MenuItem value = {23} primaryText = "Перезвонить" />
+						        	<MenuItem value = {37} primaryText = "Сложные" />
+						        	<MenuItem value = {35} primaryText = "Рабочий список: первичный недозвон" />
+						        	<MenuItem value = {9} primaryText = "Рабочий список: в работе" />
 						        </SelectField>
 						        <div>
 							        <DatePicker 

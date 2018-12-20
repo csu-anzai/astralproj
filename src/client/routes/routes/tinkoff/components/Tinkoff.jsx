@@ -37,6 +37,7 @@ import Checkbox from 'material-ui/Checkbox';
 import AppBar from 'material-ui/AppBar';
 import NavigationClose from 'material-ui/svg-icons/navigation/close';
 import AutoComplete from 'material-ui/AutoComplete';
+import Chip from 'material-ui/Chip';
 import {
   Table,
   TableBody,
@@ -61,7 +62,7 @@ const categories = [
 const categoriesTypes = [
 	[35,9],
 	[14],
-	[15,16,17,24,25,26,27,28,29,30,31,32],
+	[13],
 	[23],
 	[36],
 	[37]
@@ -74,17 +75,15 @@ export default class Tinkoff extends React.Component {
 			selectedIndex: 0,
 			limit: 10,
 			hash: localStorage.getItem("hash"),
-			companyID: 0,
 			dialog: false,
 			comment: "",
-			companyOrganization: "",
-			companyBank: 0,
-			companyCityID: 0,
+			company: {},
 			dialogType: 1,
 			dateCallBack: new Date(),
 			timeCallBack: new Date(),
-			workDialog: true,
-			searchFilialValue: ""
+			selectedBanks: [],
+			workDialog: false,
+			searchFilialsValues: []
 		};
 		this.refresh = this.refresh.bind(this);
 		this.setDistributionFilter = this.setDistributionFilter.bind(this);
@@ -112,7 +111,6 @@ export default class Tinkoff extends React.Component {
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
-					1,
 					this.state.limit,
 					1
 				]
@@ -135,6 +133,13 @@ export default class Tinkoff extends React.Component {
 		this.closeDialog();
 	}
 	sendToApi(){
+		let banks = this.state.selectedBanks.map(selectedBank => {
+			let searchFilialValue = this.state.searchFilialsValues.find(searchFilial => searchFilial.bank_id == selectedBank.bank_id);
+			return {
+				bank_id: selectedBank.bank_id,
+				bank_filial_id: searchFilialValue ? searchFilialValue.filial_id : 0
+			}
+		});
 		this.props.dispatch({
 			type: "query",
 			socket: true,
@@ -143,10 +148,9 @@ export default class Tinkoff extends React.Component {
 				priority: true,
 				values: [
 					this.props.state.connectionHash,
-					JSON.stringify(this.state.companyID),
+					this.state.company.company_id,
 					this.state.comment,
-					this.state.companyBank,
-					this.state.searchFilialValue.length > 0 && this.props.state.bankFilials.find(i => i.bank_filial_name.toLowerCase() == this.state.searchFilialValue.toLowerCase()).bank_filial_id || 0
+					JSON.stringify(banks)
 				]
 			}
 		});
@@ -207,11 +211,10 @@ export default class Tinkoff extends React.Component {
 			});
 		}
 		this.setState({
-			companyID: company.company_id,
+			company,
+			comment: company.company_comment || "",
 			dialog: true,
-			dialogType,
-			companyOrganization: company.company_organization_name,
-			companyCityID: company.city_id
+			dialogType
 		});
 	}
 	openDialog(dialogType){
@@ -224,10 +227,15 @@ export default class Tinkoff extends React.Component {
 		this.setState({
 			dialog: false,
 			comment: "",
-			companyID: 0,
-			companyOrganization: "",
-			companyBank: 0,
-			companyCityID: 0
+			company: {},
+			selectedBanks: [],
+			searchFilialsValues: []
+		});
+		this.props.dispatch({
+			type: "merge",
+			data: {
+				banksFilials: {}
+			}
 		});
 	}
 	comment(text){
@@ -249,6 +257,16 @@ export default class Tinkoff extends React.Component {
 				]
 			}
 		})
+	}
+	chipClick(bank_id){
+		let selectedBanks = this.state.selectedBanks,
+				searchFilialsValues = this.state.searchFilialsValues,
+				newSelectedBanks = selectedBanks.filter(selectedBank => selectedBank.bank_id != bank_id),
+				newSearchFilialsValues = searchFilialsValues.filter(searchFilialValue => searchFilialValue.bank_id != bank_id);
+		this.setState({
+			selectedBanks: newSelectedBanks,
+			searchFilialsValues: newSearchFilialsValues
+		});
 	}
 	nextCall(){
 		this.props.dispatch({
@@ -327,9 +345,10 @@ export default class Tinkoff extends React.Component {
 		});
 	}
 	bankSelect(event, key, payload){
+		let selectedBanks = this.state.selectedBanks;
+		selectedBanks.push(this.state.company.company_banks["b"+payload]);
 		this.setState({
-			companyBank: payload,
-			searchFilialValue: ""
+			selectedBanks
 		});
 		this.props.dispatch({
 			type: "query",
@@ -339,14 +358,36 @@ export default class Tinkoff extends React.Component {
 				values: [
 					this.props.state.connectionHash,
 					payload,
-					this.state.companyCityID
+					this.state.company.city_id
 				]
 			}
 		});
 	}
-	searchFilialChange(value){
+	searchFilialChange(bank_id, search_text){
+		let searchFilialsValues = this.state.searchFilialsValues,
+				banksFilials = this.props.state.banksFilials,
+				searchKey = Object.keys(searchFilialsValues).find(i => searchFilialsValues[i].bank_id == bank_id),
+				searchObject = searchFilialsValues[searchKey],
+				bankFilials = banksFilials[Object.keys(banksFilials).find(bankFilialKey => banksFilials[bankFilialKey].bank_id == bank_id)].bank_filials,
+				searchFilial = bankFilials.find(bankFilial => bankFilial.bank_filial_name.toLowerCase() == search_text.toLowerCase()),
+				filial_id = searchFilial && searchFilial.bank_filial_id;
+		if (searchObject) {
+			searchObject.search_text = search_text;
+			Object.assign(searchObject, {
+				search_text,
+				filial_id
+			});
+			searchFilialsValues[searchKey] = searchObject;
+		} else {
+			searchObject = {
+				bank_id,
+				search_text,
+				filial_id
+			};
+			searchFilialsValues.push(searchObject);
+		}
 		this.setState({
-			searchFilialValue: value
+			searchFilialsValues
 		});
 	}
 	render(){
@@ -553,6 +594,7 @@ export default class Tinkoff extends React.Component {
 		              				style = {{
 				                		marginBottom: "8px"
 				                	}}
+				                	disabled = {true}
 		              			/>
 		              		}
 		              	</div>
@@ -629,7 +671,7 @@ export default class Tinkoff extends React.Component {
 	            				this.props.state.companies.filter(company => (
 	            					this.state.selectedIndex == 0 ? [9, 35] :
 	            					this.state.selectedIndex == 1 ? [14] :
-	            					this.state.selectedIndex == 2 ? [15,16,17,24,25,26,27,28,29,30,31,32] :
+	            					this.state.selectedIndex == 2 ? [13] :
 	            					this.state.selectedIndex == 3 ? [23] :
 	            					this.state.selectedIndex == 4 ? [36] :
 	            					this.state.selectedIndex == 5 && [37]
@@ -700,7 +742,7 @@ export default class Tinkoff extends React.Component {
 		              (
 		              	(this.state.selectedIndex == 0 && [9, 35].indexOf(company.type_id) > -1) || 
 		              	(this.state.selectedIndex == 1 && company.type_id == 14) || 
-		              	(this.state.selectedIndex == 2 && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(company.type_id) > -1) ||
+		              	(this.state.selectedIndex == 2 && company.type_id == 13) ||
 		              	(this.state.selectedIndex == 3 && company.type_id == 23) ||
 		              	(this.state.selectedIndex == 4 && company.type_id == 36) ||
 		              	(this.state.selectedIndex == 5 && company.type_id == 37)
@@ -713,7 +755,7 @@ export default class Tinkoff extends React.Component {
 		                <TableRowColumn>{company.city_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{company.company_organization_name || "–"}</TableRowColumn>
 		                <TableRowColumn style={{whiteSpace: "normal"}}>{`${company.company_person_name} ${company.company_person_surname} ${company.company_person_patronymic}`.split("null").join("")}</TableRowColumn>
-		                <TableRowColumn style={{whiteSpace: "normal"}}>{company.company_banks.join(" ")}</TableRowColumn>
+		                <TableRowColumn style={{whiteSpace: "normal"}}>{Object.keys(company.company_banks).filter(i => company.company_banks[i].bank_suits != 0).map(i => company.company_banks[i].bank_name).join(" ")}</TableRowColumn>
 		                {
 		                	this.state.selectedIndex == 2 &&
 		                	<TableRowColumn style={{whiteSpace: "normal"}}>{company.company_comment || "–"}</TableRowColumn>
@@ -824,21 +866,17 @@ export default class Tinkoff extends React.Component {
 		                		{
 		                			this.state.selectedIndex == 2 &&
 		                			<span style = {{
-		                				color: company.type_id == 15 ? "inherit" : [16,25,26,27,28,29,30].indexOf(company.type_id) > -1 ? "green" : [17,24,31,32].indexOf(company.type_id) > -1 && "red"
+		                				whiteSpace: "pre"
 		                			}}>
 		                				{
-				                			company.type_id == 15 ? "В процессе" :
-				                			company.type_id == 16 ? "Успешно" :
-				                			company.type_id == 17 ? "Ошибка" :
-				                			company.type_id == 24 ? "Дубликат" :
-				                			company.type_id == 25 ? "Сбор документов" :
-				                			company.type_id == 26 ? "Обработка комплекта" :
-				                			company.type_id == 27 ? "Назначение встречи" :
-				                			company.type_id == 28 ? "Встреча назначена" :
-				                			company.type_id == 29 ? "Постобработка" :
-				                			company.type_id == 30 ? "Счет открыт" :
-				                			company.type_id == 31 ? "Отказ Банка" :
-				                			company.type_id == 32 && "Отказ клиента"
+		                					Object.keys(company.company_banks).map((i, key) => <div
+		                						style = {{
+		                							color: company.company_banks[i].type_id == 15 ? "inherit" : company.company_banks[i].type_id == 16 ? "green" : company.company_banks[i].type_id == 17 && "red"
+		                						}}
+		                						key = {key}
+		                					>
+		                						{`${company.company_banks[i].bank_name}: ${company.company_banks[i].company_bank_status || "–"}`}
+	                						</div>)
 		                				}
 		                			</span>
 		                		}
@@ -976,7 +1014,7 @@ export default class Tinkoff extends React.Component {
 	            				this.props.state.companies.filter(company => (
 	            					this.state.selectedIndex == 0 ? [9, 35] :
 	            					this.state.selectedIndex == 1 ? [14] :
-	            					this.state.selectedIndex == 2 ? [15,16,17,24,25,26,27,28,29,30,31,32] :
+	            					this.state.selectedIndex == 2 ? [13] :
 	            					this.state.selectedIndex == 3 ? [23] :
 	            					this.state.selectedIndex == 4 ? [36] :
 	            					this.state.selectedIndex == 5 && [37]
@@ -1017,9 +1055,9 @@ export default class Tinkoff extends React.Component {
         <Dialog
           title={
           	this.state.dialogType == 0 ? 
-          		`Оформление заявки – ${this.state.companyOrganization}` : 
+          		`Оформление заявки – ${this.state.company && this.state.company.company_organization_name}` : 
           		this.state.dialogType == 1 && 
-          			`Выбор даты и времени – ${this.state.companyOrganization}`
+          			`Выбор даты и времени – ${this.state.company && this.state.company.company_organization_name}`
           }
           actions={[
 			      <FlatButton
@@ -1030,12 +1068,25 @@ export default class Tinkoff extends React.Component {
 			      <FlatButton
 			        label= {this.state.dialogType == 2 ? "Сбросить" : "Отправить"}
 			        primary
-			        disabled = {(this.state.dialogType == 0 && (this.state.companyBank == 0 || this.props.state.bankFilials && this.props.state.bankFilials.length > 0 && this.props.state.bankFilials.filter(i => i.bank_filial_name.toLowerCase() == this.state.searchFilialValue.toLowerCase()).length == 0)) ? true : false}
+			        disabled = {
+			        	(
+			        		this.state.dialogType == 0 && 
+			        		(
+			        			this.state.selectedBanks.length == 0 || 
+			        			(
+			        				this.props.state.banksFilials && 
+			        				Object.keys(this.props.state.banksFilials).length > 0 &&
+			        				this.state.selectedBanks.filter(selectedBank => Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == selectedBank.bank_id) && Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == selectedBank.bank_id).bank_filials.length > 0).length !=
+			        				this.state.searchFilialsValues.filter(searchFilialValue => Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == searchFilialValue.bank_id) && Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == searchFilialValue.bank_id).bank_filials.length > 0 && searchFilialValue.filial_id >= 0).length
+		        				)
+		        			)
+	        			) ? true : false
+		        	}
 			        onClick={
 			        	this.state.dialogType == 0 ? 
 			        		this.sendToApi :
 			        		this.state.dialogType == 1 ? 
-			        			this.changeType.bind(this, this.state.companyID, 23, [this.state.dateCallBack, this.state.timeCallBack]) :
+			        			this.changeType.bind(this, this.state.company.company_id, 23, [this.state.dateCallBack, this.state.timeCallBack]) :
 			        			this.state.dialogType == 2 ?
 			        				this.reset.bind(this, this.state.selectedIndex == 1 ? 14 : 23) :
 			        				this.deleteCompany.bind(this, this.state.companyID)
@@ -1051,6 +1102,7 @@ export default class Tinkoff extends React.Component {
 		          [
 		          	<TextField
 						      floatingLabelText="Коментарий к заявке"
+						      value={this.state.comment || ""}
 						      multiLine={true}
 						      fullWidth={true}
 						      rows={5}
@@ -1060,34 +1112,92 @@ export default class Tinkoff extends React.Component {
 						     	}}
 						     	key = {0}
 				    		/>,
+				    		<div
+				    			key = {1}
+				    			style = {{
+				    				display: "flex",
+    								flexWrap: "wrap"
+				    			}}
+				    		>
+				    			{
+				    				this.state.selectedBanks && this.state.selectedBanks.map((i, key) => (
+				    					<Chip 
+					    					key = {key}
+					    					style = {{
+					    						margin: "4px"
+					    					}}
+					    					onRequestDelete={this.chipClick.bind(this, i.bank_id)}
+				    					>
+				    						{i.bank_name} 
+			    						</Chip>
+		    						))
+				    			}
+				    		</div>,
 				    		<SelectField
 				    			floatingLabelText="Выбор банка"
-				    			value = {this.state.companyBank}
-				    			errorText = {this.state.companyBank == 0 && "Необходимо выбрать банк"}
+				    			errorText = {this.state.selectedBanks.length == 0 && "Необходимо выбрать банк"}
 				    			onChange = {this.bankSelect}
-				    			key = {1}
+				    			key = {2}
+				    			disabled = {this.state.company.company_banks && Object.keys(this.state.company.company_banks).filter(companyBankKey => this.state.company.company_banks[companyBankKey].bank_suits != 0).length == this.state.selectedBanks.length}
 				    		>
-				    			<MenuItem value={1} primaryText="Тинькофф" />
-				    			<MenuItem value={2} primaryText="Модуль" />
-				    			<MenuItem value={3} primaryText="Промсвязь" />
-				    			<MenuItem value={4} primaryText="ВТБ" />
+				    			{
+				    				this.state.company && 
+				    				this.state.company.company_banks && 
+				    				Object.keys(this.state.company.company_banks).filter(i => this.state.company.company_banks[i].bank_suits != 0 && this.state.selectedBanks.map(selectedBank => selectedBank.bank_id).indexOf(this.state.company.company_banks[i].bank_id) == -1).map((i, key) => (
+				    					<MenuItem 
+				    						value={this.state.company.company_banks[i].bank_id} 
+				    						primaryText={this.state.company.company_banks[i].bank_name} 
+				    						key={key}
+			    						/>
+		    						))
+				    			}
 				    		</SelectField>,
-				    		<AutoComplete
-				          floatingLabelText = "Филиал"
-				          searchText={this.state.searchFilialValue}
-				          onUpdateInput={this.searchFilialChange}
-				          dataSource={this.props.state.bankFilials && this.props.state.bankFilials.map(i => i.bank_filial_name.toLowerCase()) || []}
-				          filter={(searchText, key) => (key.indexOf(searchText && searchText.toLowerCase()) !== -1)}
-				          openOnFocus={true}
-				          key = {2}
-				          fullWidth = {true}
-				          menuStyle = {{
-				          	overflowY: "scroll",
-				          	maxHeight: "200px"
-				          }}
-				          errorText = {this.props.state.bankFilials && this.props.state.bankFilials.length > 0 && "Необходимо выбрать филиал"}
-				          disabled = {!this.props.state.bankFilials || this.props.state.bankFilials.length == 0}
-				        />
+				    		<div
+				    			key = {3}
+				    		>
+				    			{
+				    				this.state.company && 
+				    				this.state.selectedBanks.length > 0 && 
+				    				!!this.props.state.banksFilials && 
+				    				Object.keys(this.props.state.banksFilials).length > 0 &&
+				    				this.state.selectedBanks.filter(selectedBank => Object.keys(this.props.state.banksFilials).filter(bankFilialKey => this.props.state.banksFilials[bankFilialKey].bank_id == selectedBank.bank_id && this.props.state.banksFilials[bankFilialKey].bank_filials.length > 0)[0]).length > 0 &&
+				    				Object.keys(this.props.state.banksFilials).filter((bankFilialsKey, key) => this.state.selectedBanks.map(selectedBank => selectedBank.bank_id).indexOf(this.props.state.banksFilials[bankFilialsKey].bank_id) > -1 && this.props.state.banksFilials[bankFilialsKey].bank_filials.length > 0).map((bankFilialsKey, key) => (
+			    						<div key = {key}>
+			    							{
+									    		<AutoComplete
+									          floatingLabelText = {`Филиал банка: ${Object.keys(this.state.company.company_banks).map(companyBankKey => this.state.company.company_banks[companyBankKey]).find(bank => bank.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id).bank_name}`}
+									          searchText={this.state.searchFilialsValues.find(i => i.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id) && this.state.searchFilialsValues.find(i => i.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id).search_text}
+									          onUpdateInput={this.searchFilialChange.bind(this, this.props.state.banksFilials[bankFilialsKey].bank_id)}
+									          dataSource={this.props.state.banksFilials[bankFilialsKey].bank_filials.map(i => i.bank_filial_name) || []}
+									          filter={(searchText, key) => (key.toLowerCase().indexOf(searchText && searchText.toLowerCase()) !== -1)}
+									          openOnFocus={true}
+									          fullWidth = {true}
+									          menuStyle = {{
+									          	overflowY: "scroll",
+									          	maxHeight: "300px"
+									          }}
+									          menuProps = {{
+									          	menuItemStyle: {
+									          		whiteSpace: "normal",
+									          		lineHeight: "20px",
+									          		minHeight: "none",
+									          		padding: "10px 0"
+									          	}
+									          }}
+									          popoverProps = {{
+									          	canAutoPosition: true
+									          }}
+									          listStyle = {{
+									          	overflow: "auto"
+									          }}
+									          disableFocusRipple= {false}
+									          errorText = {(this.state.searchFilialsValues.find(i => i.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id) && this.state.searchFilialsValues.find(i => i.bank_id == this.props.state.banksFilials[bankFilialsKey].bank_id).filial_id >= 0) ? "" : "Необходимо выбрать филиал из списка" }
+									        />
+			    							}
+			    						</div>
+			    					))
+				    			}
+				    		</div>
 			    		] :
 			    		this.state.dialogType == 1 ?
 			    			<div>
@@ -1153,7 +1263,7 @@ export default class Tinkoff extends React.Component {
         				(
         					([38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1 ||
         					[38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1) &&
-        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) == -1
+        					this.props.state.activeCompany.type_id != 13
       					) ?
       					false :
       					true
@@ -1190,7 +1300,7 @@ export default class Tinkoff extends React.Component {
         				(
         					([34,39,33,43].indexOf(this.props.state.activeCompany.call_destination_type_id) > -1 ||
         					[34,39,33,43].indexOf(this.props.state.activeCompany.call_internal_type_id) > -1) &&
-        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) == -1
+        					this.props.state.activeCompany.type_id != 13
         				) ?
         				false : 
         				true
@@ -1203,7 +1313,7 @@ export default class Tinkoff extends React.Component {
         			tooltip = "оформить заявку" 
         			tooltipPosition = "top-center"
         			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany, 0)}
-        			disabled = {(this.props.state.activeCompany && [15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1) ? true : false}
+        			disabled = {(this.props.state.activeCompany && this.props.state.activeCompany.type_id == 13) ? true : false}
       			>
         			<Check color="#a4c639"/>
         		</IconButton>,
@@ -1211,7 +1321,7 @@ export default class Tinkoff extends React.Component {
         			tooltip = "перезвонить позднее" 
         			tooltipPosition = "top-center"
         			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany, 1)}
-        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,23].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+        			disabled = {this.props.state.activeCompany.type_id == 13 ? true : false}
       			>
         			<Phone color="#EF6C00"/>
         		</IconButton>,
@@ -1224,7 +1334,7 @@ export default class Tinkoff extends React.Component {
         			} 
         			tooltipPosition = "top-center"
         			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, this.props.state.activeCompany && this.props.state.activeCompany.type_id == 35 ? 36 : 35)}
-        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+        			disabled = {this.props.state.activeCompany.type_id == 13 ? true : false}
       			>
         			{
         				this.props.state.activeCompany &&
@@ -1237,7 +1347,7 @@ export default class Tinkoff extends React.Component {
         			tooltip = "не подходит" 
         			tooltipPosition = "top-center"
         			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, 14)}
-        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,14].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+        			disabled = {this.props.state.activeCompany.type_id == 13 ? true : false}
       			>
         			<DeleteForever color="#E53935"/>
         		</IconButton>,
@@ -1245,7 +1355,7 @@ export default class Tinkoff extends React.Component {
         			tooltip = "трудный клиент" 
         			tooltipPosition = "top-center"
         			onClick = {this.changeType.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id, 37)}
-        			disabled = {[15,16,17,24,25,26,27,28,29,30,31,32,37].indexOf(this.props.state.activeCompany.type_id) > -1 ? true : false}
+        			disabled = {this.props.state.activeCompany.type_id == 13 ? true : false}
       			>
         			<SadFace color="#607D8B"/>
         		</IconButton>,
@@ -1279,7 +1389,7 @@ export default class Tinkoff extends React.Component {
         					"В работе" :
         				this.props.state.activeCompany.type_id == 14 ?
         					"Не интересно" :
-        					[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?
+        					this.props.state.activeCompany.type_id == 13 ?
         					"Утверждено" :
       						this.props.state.activeCompany.type_id == 23 ?
       							"Перезвонить" :
@@ -1303,23 +1413,10 @@ export default class Tinkoff extends React.Component {
 							<Divider key = {13} />,
 							<div key = {14} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_type_id == 11 ? "ИП" : "ООО"}</div>,
 							<Divider key = {15} />,
-							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && this.props.state.activeCompany.company_banks.join(" ")}</div>,
+							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(i => this.props.state.activeCompany.company_banks[i].bank_name).join(" ")}</div>,
 							<Divider key = {17} />,
-							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Статус обработки: {
-								[15,16,17,24,25,26,27,28,29,30,31,32].indexOf(this.props.state.activeCompany.type_id) > -1 ?
-									(this.props.state.activeCompany.type_id == 15 ? "В процессе" :
-									this.props.state.activeCompany.type_id == 16 ? "Успешно" :
-									this.props.state.activeCompany.type_id == 17 ? "Ошибка" :
-									this.props.state.activeCompany.type_id == 24 ? "Дубликат" :
-									this.props.state.activeCompany.type_id == 25 ? "Сбор документов" :
-									this.props.state.activeCompany.type_id == 26 ? "Обработка комплекта" :
-									this.props.state.activeCompany.type_id == 27 ? "Назначение встречи" :
-									this.props.state.activeCompany.type_id == 28 ? "Встреча назначена" :
-									this.props.state.activeCompany.type_id == 29 ? "Постобработка" :
-									this.props.state.activeCompany.type_id == 30 ? "Счет открыт" :
-									this.props.state.activeCompany.type_id == 31 ? "Отказ Банка" :
-									this.props.state.activeCompany.type_id == 32 && "Отказ клиента") :
-									"–"
+							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Статусы обработки: {
+								this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(key => this.props.state.activeCompany.company_banks[key]).map((bank, key) => (<div style = {{margin: "5px 0", color: bank.type_id == 15 ? "inherit" : bank.type_id == 16 ? "green" : "red"}} key = {key}>{`${bank.bank_name}: ${bank.company_bank_status || "–"}`}</div>))
 							}</div>,							
 							<Divider key = {19} />,
 							<div key = {20} style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.activeCompany && this.props.state.activeCompany.company_date_call_back || "–"}</div>,
