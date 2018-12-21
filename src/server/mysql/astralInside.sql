@@ -1815,7 +1815,7 @@ BEGIN
   DECLARE userID, countLength, companyBanksLength,bankTypesLength, iterator, companyBankType, userObjectBanksTypeCount INT(11);
   DECLARE responce, userObject, typesArray, companyBanksTypes, companyBank, userObjectBanksTypes JSON;
   DECLARE companiesCursor CURSOR FOR SELECT translate_to, user_name, user_id, count FROM day_statistic_view;
-  DECLARE statusesCursor CURSOR FOR SELECT user_id, jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id") FROM companies WHERE DATE(company_date_update) = DATE(NOW()) AND JSON_LENGTH(jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id")) > 0 AND user_id IS NOT NULL;
+  DECLARE statusesCursor CURSOR FOR SELECT user_id, jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id") FROM companies WHERE DATE(company_date_update) = DATE(NOW()) AND JSON_LENGTH(jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id")) > 0 AND user_id IS NOT NULL AND type_id = 13;
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
   SET responce = JSON_ARRAY();
   OPEN companiesCursor;
