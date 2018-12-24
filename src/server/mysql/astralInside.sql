@@ -1092,137 +1092,137 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `checkCompaniesInn` (`userID` INT(11)) RETURNS JSON NO SQL
 BEGIN
-  DECLARE companyID INT(11);
-  DECLARE companyInn VARCHAR(12);
-  DECLARE responce, company, companies JSON;
-  DECLARE done TINYINT(1);
-  DECLARE companiesCursor CURSOR FOR SELECT company_id, company_inn FROM companies WHERE user_id = userID AND type_id = 44;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  SET companies = JSON_ARRAY();
-  OPEN companiesCursor;
-    companiesLoop: LOOP
-      FETCH companiesCursor INTO companyID, companyInn;
-      IF done
-        THEN LEAVE companiesLoop;
-      END IF;
-      SET company = JSON_OBJECT(
-        "company_id", companyID,
-        "company_inn", companyInn
-      );
-      SET companies = JSON_MERGE(companies, company);
-      ITERATE companiesLoop;
-    END LOOP;
-  CLOSE companiesCursor;
-  IF JSON_LENGTH(companies) > 0
-    THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
-      "type", "checkDuplicates",
-      "data", JSON_OBJECT(
-        "companies", companies,
-        "user_id", userID
-      )
-    ));
-  END IF;
-  RETURN responce;
+    DECLARE companyID INT(11);
+    DECLARE companyInn VARCHAR(12);
+    DECLARE responce, company, companies JSON;
+    DECLARE done TINYINT(1);
+    DECLARE companiesCursor CURSOR FOR SELECT company_id, company_inn FROM companies WHERE user_id = userID AND type_id = 44;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    SET companies = JSON_ARRAY();
+    OPEN companiesCursor;
+        companiesLoop: LOOP
+            FETCH companiesCursor INTO companyID, companyInn;
+            IF done
+                THEN LEAVE companiesLoop;
+            END IF;
+            SET company = JSON_OBJECT(
+                "company_id", companyID,
+                "company_inn", companyInn
+            );
+            SET companies = JSON_MERGE(companies, company);
+            ITERATE companiesLoop;
+        END LOOP;
+    CLOSE companiesCursor;
+    IF JSON_LENGTH(companies) > 0
+        THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "checkDuplicates",
+            "data", JSON_OBJECT(
+                "companies", companies,
+                "user_id", userID
+            )
+        ));
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `checkConnection` (`connectionHash` VARCHAR(32) CHARSET utf8) RETURNS TINYINT(1) NO SQL
 BEGIN
-  DECLARE userID, userAuth INT(11);
-  DECLARE connectionEnd, responce TINYINT(1);
-  SELECT user_id, user_auth, connection_end INTO userID, userAuth, connectionEnd FROM users_connections_view WHERE connection_hash = connectionHash;
-  IF userID IS NOT NULL AND userAuth = 1 AND connectionEnd = 0
-    THEN SET responce = 1;
-    ELSE SET responce = 0;
-  END IF;
-  RETURN responce;
+    DECLARE userID, userAuth INT(11);
+    DECLARE connectionEnd, responce TINYINT(1);
+    SELECT user_id, user_auth, connection_end INTO userID, userAuth, connectionEnd FROM users_connections_view WHERE connection_hash = connectionHash;
+    IF userID IS NOT NULL AND userAuth = 1 AND connectionEnd = 0
+        THEN SET responce = 1;
+        ELSE SET responce = 0;
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `checkRootConnection` (`connectionHash` VARCHAR(32) CHARSET utf8) RETURNS TINYINT(1) NO SQL
 BEGIN
-  DECLARE userID, userAuth, typeID INT(11);
-  DECLARE connectionEnd, responce TINYINT(1);
-  SELECT user_id, user_auth, connection_end INTO userID, userAuth, connectionEnd FROM users_connections_view WHERE connection_hash = connectionHash;
-  SELECT type_id INTO typeID FROM users WHERE user_id = userID;
-  IF userID IS NOT NULL AND userAuth = 1 AND connectionEnd = 0 AND typeID = 1
-    THEN SET responce = 1;
-    ELSE SET responce = 0;
-  END IF;
-  RETURN responce;
+    DECLARE userID, userAuth, typeID INT(11);
+    DECLARE connectionEnd, responce TINYINT(1);
+    SELECT user_id, user_auth, connection_end INTO userID, userAuth, connectionEnd FROM users_connections_view WHERE connection_hash = connectionHash;
+    SELECT type_id INTO typeID FROM users WHERE user_id = userID;
+    IF userID IS NOT NULL AND userAuth = 1 AND connectionEnd = 0 AND typeID = 1
+        THEN SET responce = 1;
+        ELSE SET responce = 0;
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `companiesCleaning` () RETURNS JSON NO SQL
 BEGIN
-  DECLARE responce JSON;
-  DECLARE companyInn VARCHAR(12);
-  DECLARE companyOgrn VARCHAR(15);
-  DECLARE companiesLength, deleteDuplicateCompaniesLength INT(11);
-  DECLARE done TINYINT(1);
-  DECLARE innCursor CURSOR FOR SELECT company_inn, length FROM duplicate_companies_inn_view;
-  DECLARE ogrnCursor CURSOR FOR SELECT company_ogrn, length FROM duplicate_companies_ogrn_view;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET deleteDuplicateCompaniesLength = 0;
-  SET responce = JSON_OBJECT();
-  OPEN innCursor;
-    innLoop: LOOP
-      FETCH innCursor INTO companyInn, companiesLength;
-      IF done 
-        THEN LEAVE innLoop;
-      END IF;
-      SET companiesLength = companiesLength - 1;
-      DELETE FROM companies WHERE company_inn = companyInn ORDER BY company_date_create DESC LIMIT companiesLength;
-      SET deleteDuplicateCompaniesLength = deleteDuplicateCompaniesLength + companiesLength;
-      ITERATE innLoop;
-    END LOOP;
-  CLOSE innCursor;
-  SET done = 0;
-  OPEN ogrnCursor;
-    innLoop: LOOP
-      FETCH ogrnCursor INTO companyOgrn, companiesLength;
-      IF done 
-        THEN LEAVE innLoop;
-      END IF;
-      SET companiesLength = companiesLength - 1;
-      DELETE FROM companies WHERE company_ogrn = companyOgrn ORDER BY company_date_create DESC LIMIT companiesLength;
-      SET deleteDuplicateCompaniesLength = deleteDuplicateCompaniesLength + companiesLength;
-      ITERATE innLoop;
-    END LOOP;
-  CLOSE ogrnCursor;
-  SELECT COUNT(*) INTO companiesLength FROM empty_companies_view;
-  DELETE c FROM empty_companies_view ecv JOIN companies c ON c.company_id = ecv.company_id;
-  SET responce = JSON_SET(responce,
-    "$.deleteDuplicateCompanies", deleteDuplicateCompaniesLength,
-    "$.deleteEmptyCompanies", companiesLength
-  );
-  RETURN responce;
+    DECLARE responce JSON;
+    DECLARE companyInn VARCHAR(12);
+    DECLARE companyOgrn VARCHAR(15);
+    DECLARE companiesLength, deleteDuplicateCompaniesLength INT(11);
+    DECLARE done TINYINT(1);
+    DECLARE innCursor CURSOR FOR SELECT company_inn, length FROM duplicate_companies_inn_view;
+    DECLARE ogrnCursor CURSOR FOR SELECT company_ogrn, length FROM duplicate_companies_ogrn_view;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET deleteDuplicateCompaniesLength = 0;
+    SET responce = JSON_OBJECT();
+    OPEN innCursor;
+        innLoop: LOOP
+            FETCH innCursor INTO companyInn, companiesLength;
+            IF done 
+                THEN LEAVE innLoop;
+            END IF;
+            SET companiesLength = companiesLength - 1;
+            DELETE FROM companies WHERE company_inn = companyInn ORDER BY company_date_create DESC LIMIT companiesLength;
+            SET deleteDuplicateCompaniesLength = deleteDuplicateCompaniesLength + companiesLength;
+            ITERATE innLoop;
+        END LOOP;
+    CLOSE innCursor;
+    SET done = 0;
+    OPEN ogrnCursor;
+        innLoop: LOOP
+            FETCH ogrnCursor INTO companyOgrn, companiesLength;
+            IF done 
+                THEN LEAVE innLoop;
+            END IF;
+            SET companiesLength = companiesLength - 1;
+            DELETE FROM companies WHERE company_ogrn = companyOgrn ORDER BY company_date_create DESC LIMIT companiesLength;
+            SET deleteDuplicateCompaniesLength = deleteDuplicateCompaniesLength + companiesLength;
+            ITERATE innLoop;
+        END LOOP;
+    CLOSE ogrnCursor;
+    SELECT COUNT(*) INTO companiesLength FROM empty_companies_view;
+    DELETE c FROM empty_companies_view ecv JOIN companies c ON c.company_id = ecv.company_id;
+    SET responce = JSON_SET(responce,
+        "$.deleteDuplicateCompanies", deleteDuplicateCompaniesLength,
+        "$.deleteEmptyCompanies", companiesLength
+    );
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `confirmTelegram` (`chatID` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE responce JSON;
-  DECLARE telegramID INT(11);
-  SET responce = JSON_ARRAY();
-  SELECT telegram_id INTO telegramID FROM telegrams WHERE telegram_chat_id = chatID;
-  IF telegramID IS NOT NULL
-    THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
-      "type", "sendToTelegram",
-      "data", JSON_OBJECT(
-        "chats", JSON_ARRAY(chatID),
-        "message", "Вы уже зарегестрированы в системе"
-      )
-    ));
-    ELSE BEGIN
-      INSERT INTO telegrams (telegram_chat_id) VALUES (chatID);
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "type", "sendToTelegram",
-        "data", JSON_OBJECT(
-          "chats", JSON_ARRAY(chatID),
-          "message", "Подписка на обновления установлена"
-        )
-      ));
-    END;
-  END IF;
-  RETURN responce;
+    DECLARE responce JSON;
+    DECLARE telegramID INT(11);
+    SET responce = JSON_ARRAY();
+    SELECT telegram_id INTO telegramID FROM telegrams WHERE telegram_chat_id = chatID;
+    IF telegramID IS NOT NULL
+        THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "sendToTelegram",
+            "data", JSON_OBJECT(
+                "chats", JSON_ARRAY(chatID),
+                "message", "Вы уже зарегестрированы в системе"
+            )
+        ));
+        ELSE BEGIN
+            INSERT INTO telegrams (telegram_chat_id) VALUES (chatID);
+            SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                "type", "sendToTelegram",
+                "data", JSON_OBJECT(
+                    "chats", JSON_ARRAY(chatID),
+                    "message", "Подписка на обновления установлена"
+                )
+            ));
+        END;
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `createDownloadFile` (`connectionHash` VARCHAR(32) CHARSET utf8) RETURNS JSON NO SQL
@@ -1685,52 +1685,52 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getBanks` () RETURNS JSON NO SQL
 BEGIN
-  DECLARE bankID INT(11);
-  DECLARE bankName VARCHAR(128);
-  DECLARE responce JSON;
-  DECLARE done TINYINT(1);
-  DECLARE banksCursor CURSOR FOR SELECT bank_id, bank_name FROM banks;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN banksCursor;
-    banksLoop: LOOP
-      FETCH banksCursor INTO bankID, bankName;
-      IF done 
-        THEN LEAVE banksLoop;
-      END IF;
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "name", bankName,
-        "id", bankID
-      ));
-      ITERATE banksLoop;
-    END LOOP;
-  CLOSE banksCursor;
-  RETURN responce;
+    DECLARE bankID INT(11);
+    DECLARE bankName VARCHAR(128);
+    DECLARE responce JSON;
+    DECLARE done TINYINT(1);
+    DECLARE banksCursor CURSOR FOR SELECT bank_id, bank_name FROM banks;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    OPEN banksCursor;
+        banksLoop: LOOP
+            FETCH banksCursor INTO bankID, bankName;
+            IF done 
+                THEN LEAVE banksLoop;
+            END IF;
+            SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                "name", bankName,
+                "id", bankID
+            ));
+            ITERATE banksLoop;
+        END LOOP;
+    CLOSE banksCursor;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getColumns` () RETURNS JSON NO SQL
 BEGIN
-  DECLARE columnID INT(11);
-  DECLARE columnName VARCHAR(128);
-  DECLARE responce JSON;
-  DECLARE done TINYINT(1);
-  DECLARE columnsCursor CURSOR FOR SELECT column_id, translate_to FROM columns_translates_view;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN columnsCursor;
-    columnsLoop: LOOP
-      FETCH columnsCursor INTO columnID, columnName;
-      IF done 
-        THEN LEAVE columnsLoop;
-      END IF;
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "name", columnName,
-        "id", columnID
-      ));
-      ITERATE columnsLoop;
-    END LOOP;
-  CLOSE columnsCursor;
-  RETURN responce;
+    DECLARE columnID INT(11);
+    DECLARE columnName VARCHAR(128);
+    DECLARE responce JSON;
+    DECLARE done TINYINT(1);
+    DECLARE columnsCursor CURSOR FOR SELECT column_id, translate_to FROM columns_translates_view;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    OPEN columnsCursor;
+        columnsLoop: LOOP
+            FETCH columnsCursor INTO columnID, columnName;
+            IF done 
+                THEN LEAVE columnsLoop;
+            END IF;
+            SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                "name", columnName,
+                "id", columnID
+            ));
+            ITERATE columnsLoop;
+        END LOOP;
+    CLOSE columnsCursor;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getCompaniesToCheckStatus` (`connectionHash` VARCHAR(32) CHARSET utf8) RETURNS JSON NO SQL
@@ -1808,86 +1808,86 @@ BEGIN
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getDayStatistic` () RETURNS JSON NO SQL
-BEGIN 
-  DECLARE done TINYINT(1);
-  DECLARE translateTo, searchResult, searchResult2 VARCHAR(128);
-  DECLARE userName VARCHAR(64);
-  DECLARE userID, countLength, companyBanksLength,bankTypesLength, iterator, companyBankType, userObjectBanksTypeCount INT(11);
-  DECLARE responce, userObject, typesArray, companyBanksTypes, companyBank, userObjectBanksTypes JSON;
-  DECLARE companiesCursor CURSOR FOR SELECT translate_to, user_name, user_id, count FROM day_statistic_view;
-  DECLARE statusesCursor CURSOR FOR SELECT user_id, jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id") FROM companies WHERE DATE(company_date_update) = DATE(NOW()) AND JSON_LENGTH(jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id")) > 0 AND user_id IS NOT NULL AND type_id = 13;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN companiesCursor;
-    companiesLoop: LOOP
-      FETCH companiesCursor INTO translateTo, userName, userID, countLength;
-      IF done 
-        THEN LEAVE companiesLoop;
-      END IF;
-      SET searchResult = REPLACE(JSON_UNQUOTE(JSON_SEARCH(responce, "one", CONCAT(userID), NULL, "$[*].user_id")), ".user_id", "");
-      IF searchResult IS NULL
-        THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
-          "user_id", CONCAT(userID),
-          "user_name", userName,
-          "types", JSON_ARRAY(JSON_OBJECT(
-            "type_name", translateTo,
-            "count", countLength
-          )),
-          "bank_types", JSON_ARRAY()
-        ));
-        ELSE BEGIN 
-          SET userObject = JSON_UNQUOTE(JSON_EXTRACT(responce, searchResult));
-          SET typesArray = JSON_UNQUOTE(JSON_EXTRACT(userObject, "$.types"));
-          SET userObject = JSON_SET(userObject, "$.types", JSON_MERGE(typesArray, JSON_OBJECT(
-            "type_name", translateTo,
-            "count", countLength
-          )));
-          SET responce = JSON_SET(responce, searchResult, userObject);
-        END;
-      END IF;
-      SET done = 0;
-      ITERATE companiesLoop;
-    END LOOP;
-  CLOSE companiesCursor;
-  SET done = 0;
-  OPEN statusesCursor;
-    statusesLoop: LOOP
-      FETCH statusesCursor INTO userID, companyBanksTypes;
-      IF done 
-        THEN LEAVE statusesLoop;
-      END IF;
-      SET searchResult = REPLACE(JSON_UNQUOTE(JSON_SEARCH(responce, "one", CONCAT(userID), NULL, "$[*].user_id")), ".user_id", "");
-      SET userObject = JSON_UNQUOTE(JSON_EXTRACT(responce, searchResult));
-      SET userObjectBanksTypes = JSON_UNQUOTE(JSON_EXTRACT(userObject, "$.bank_types"));
-      SET iterator = 0;
-      SET bankTypesLength = JSON_LENGTH(companyBanksTypes);
-      bankTypesLoop: LOOP
-        IF iterator >= bankTypesLength
-          THEN LEAVE bankTypesLoop;
-        END IF;
-        SET companyBankType = JSON_UNQUOTE(JSON_EXTRACT(companyBanksTypes, CONCAT("$[", iterator, "]")));
-        SET searchResult2 = REPLACE(JSON_UNQUOTE(JSON_SEARCH(userObjectBanksTypes, "one", CONCAT(companyBankType), NULL, "$[*].type_id")), ".type_id", "");
-        IF searchResult2 IS NULL
-          THEN SET userObjectBanksTypes = JSON_MERGE(userObjectBanksTypes, JSON_OBJECT(
-            "type_id", CONCAT(companyBankType),
-            "count", 1
-          ));
-          ELSE BEGIN
-            SET userObjectBanksTypeCount = JSON_UNQUOTE(JSON_EXTRACT(userObjectBanksTypes, CONCAT(searchResult2, ".count")));
-            SET userObjectBanksTypeCount = userObjectBanksTypeCount + 1;
-            SET userObjectBanksTypes = JSON_SET(userObjectBanksTypes, CONCAT(searchResult2, ".count"), userObjectBanksTypeCount);
-          END;
-        END IF;
-        SET iterator = iterator + 1;
-        ITERATE bankTypesLoop;
-      END LOOP;
-      SET userObject = JSON_SET(userObject, "$.bank_types", userObjectBanksTypes);
-      SET responce = JSON_SET(responce, searchResult, userObject);
-      SET done = 0;
-      ITERATE statusesLoop;
-    END LOOP;
-  CLOSE statusesCursor;
-  RETURN responce;
+BEGIN   
+    DECLARE done TINYINT(1);
+    DECLARE translateTo, searchResult, searchResult2 VARCHAR(128);
+    DECLARE userName VARCHAR(64);
+    DECLARE userID, countLength, companyBanksLength,bankTypesLength, iterator, companyBankType, userObjectBanksTypeCount INT(11);
+    DECLARE responce, userObject, typesArray, companyBanksTypes, companyBank, userObjectBanksTypes JSON;
+    DECLARE companiesCursor CURSOR FOR SELECT translate_to, user_name, user_id, count FROM day_statistic_view;
+    DECLARE statusesCursor CURSOR FOR SELECT user_id, jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id") FROM companies WHERE DATE(company_date_update) = DATE(NOW()) AND JSON_LENGTH(jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id")) > 0 AND user_id IS NOT NULL AND type_id = 13;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    OPEN companiesCursor;
+        companiesLoop: LOOP
+            FETCH companiesCursor INTO translateTo, userName, userID, countLength;
+            IF done 
+                THEN LEAVE companiesLoop;
+            END IF;
+            SET searchResult = REPLACE(JSON_UNQUOTE(JSON_SEARCH(responce, "one", CONCAT(userID), NULL, "$[*].user_id")), ".user_id", "");
+            IF searchResult IS NULL
+                THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                    "user_id", CONCAT(userID),
+                    "user_name", userName,
+                    "types", JSON_ARRAY(JSON_OBJECT(
+                        "type_name", translateTo,
+                        "count", countLength
+                    )),
+                    "bank_types", JSON_ARRAY()
+                ));
+                ELSE BEGIN 
+                    SET userObject = JSON_UNQUOTE(JSON_EXTRACT(responce, searchResult));
+                    SET typesArray = JSON_UNQUOTE(JSON_EXTRACT(userObject, "$.types"));
+                    SET userObject = JSON_SET(userObject, "$.types", JSON_MERGE(typesArray, JSON_OBJECT(
+                        "type_name", translateTo,
+                        "count", countLength
+                    )));
+                    SET responce = JSON_SET(responce, searchResult, userObject);
+                END;
+            END IF;
+            SET done = 0;
+            ITERATE companiesLoop;
+        END LOOP;
+    CLOSE companiesCursor;
+    SET done = 0;
+    OPEN statusesCursor;
+        statusesLoop: LOOP
+            FETCH statusesCursor INTO userID, companyBanksTypes;
+            IF done 
+                THEN LEAVE statusesLoop;
+            END IF;
+            SET searchResult = REPLACE(JSON_UNQUOTE(JSON_SEARCH(responce, "one", CONCAT(userID), NULL, "$[*].user_id")), ".user_id", "");
+            SET userObject = JSON_UNQUOTE(JSON_EXTRACT(responce, searchResult));
+            SET userObjectBanksTypes = JSON_UNQUOTE(JSON_EXTRACT(userObject, "$.bank_types"));
+            SET iterator = 0;
+            SET bankTypesLength = JSON_LENGTH(companyBanksTypes);
+            bankTypesLoop: LOOP
+                IF iterator >= bankTypesLength
+                    THEN LEAVE bankTypesLoop;
+                END IF;
+                SET companyBankType = JSON_UNQUOTE(JSON_EXTRACT(companyBanksTypes, CONCAT("$[", iterator, "]")));
+                SET searchResult2 = REPLACE(JSON_UNQUOTE(JSON_SEARCH(userObjectBanksTypes, "one", CONCAT(companyBankType), NULL, "$[*].type_id")), ".type_id", "");
+                IF searchResult2 IS NULL
+                    THEN SET userObjectBanksTypes = JSON_MERGE(userObjectBanksTypes, JSON_OBJECT(
+                        "type_id", CONCAT(companyBankType),
+                        "count", 1
+                    ));
+                    ELSE BEGIN
+                        SET userObjectBanksTypeCount = JSON_UNQUOTE(JSON_EXTRACT(userObjectBanksTypes, CONCAT(searchResult2, ".count")));
+                        SET userObjectBanksTypeCount = userObjectBanksTypeCount + 1;
+                        SET userObjectBanksTypes = JSON_SET(userObjectBanksTypes, CONCAT(searchResult2, ".count"), userObjectBanksTypeCount);
+                    END;
+                END IF;
+                SET iterator = iterator + 1;
+                ITERATE bankTypesLoop;
+            END LOOP;
+            SET userObject = JSON_SET(userObject, "$.bank_types", userObjectBanksTypes);
+            SET responce = JSON_SET(responce, searchResult, userObject);
+            SET done = 0;
+            ITERATE statusesLoop;
+        END LOOP;
+    CLOSE statusesCursor;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getHash` (`max` INT(3)) RETURNS VARCHAR(999) CHARSET utf8 NO SQL
@@ -1912,75 +1912,75 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getRegions` () RETURNS JSON NO SQL
 BEGIN
-  DECLARE regionID INT(11);
-  DECLARE regionName VARCHAR(128);
-  DECLARE responce JSON;
-  DECLARE done TINYINT(1);
-  DECLARE regionsCursor CURSOR FOR SELECT region_id, region_name FROM regions;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN regionsCursor;
-    regionsLoop: LOOP
-      FETCH regionsCursor INTO regionID, regionName;
-      IF done 
-        THEN LEAVE regionsLoop;
-      END IF;
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "name", regionName,
-        "id", regionID
-      ));
-      ITERATE regionsLoop;
-    END LOOP;
-  CLOSE regionsCursor;
-  RETURN responce;
+    DECLARE regionID INT(11);
+    DECLARE regionName VARCHAR(128);
+    DECLARE responce JSON;
+    DECLARE done TINYINT(1);
+    DECLARE regionsCursor CURSOR FOR SELECT region_id, region_name FROM regions;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    OPEN regionsCursor;
+        regionsLoop: LOOP
+            FETCH regionsCursor INTO regionID, regionName;
+            IF done 
+                THEN LEAVE regionsLoop;
+            END IF;
+            SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                "name", regionName,
+                "id", regionID
+            ));
+            ITERATE regionsLoop;
+        END LOOP;
+    CLOSE regionsCursor;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getUserFiles` (`userID` INT(11)) RETURNS JSON NO SQL
 BEGIN
-  DECLARE fileName VARCHAR(128);
-  DECLARE responce JSON;
-  DECLARE done TINYINT(1);
-  DECLARE filesCursor CURSOR FOR SELECT file_name FROM files WHERE type_id = 21 AND user_id = userID ORDER BY file_id DESC;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN filesCursor;
-    filesLoop: LOOP
-      FETCH filesCursor INTO fileName;
-      IF done 
-        THEN LEAVE filesLoop;
-      END IF;
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "name", fileName
-      ));
-      ITERATE filesLoop;
-    END LOOP;
-  CLOSE filesCursor;
-  RETURN responce;
+    DECLARE fileName VARCHAR(128);
+    DECLARE responce JSON;
+    DECLARE done TINYINT(1);
+    DECLARE filesCursor CURSOR FOR SELECT file_name FROM files WHERE type_id = 21 AND user_id = userID ORDER BY file_id DESC;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    OPEN filesCursor;
+        filesLoop: LOOP
+            FETCH filesCursor INTO fileName;
+            IF done 
+                THEN LEAVE filesLoop;
+            END IF;
+            SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                "name", fileName
+            ));
+            ITERATE filesLoop;
+        END LOOP;
+    CLOSE filesCursor;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getUsers` (`bankID` INT(11)) RETURNS JSON NO SQL
 BEGIN
-  DECLARE responce JSON;
-  DECLARE done TINYINT(1);
-  DECLARE userID INT(11);
-  DECLARE userName VARCHAR(64);
-  DECLARE usersCursor CURSOR FOR SELECT user_id, user_name FROM users WHERE IF(bankID IS NOT NULL AND bankID > 0, bank_id = bankID, bank_id IS NULL);
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN usersCursor;
-    usersLoop: LOOP
-      FETCH usersCursor INTO userID, userName;
-      IF done
-        THEN LEAVE usersLoop;
-      END IF;
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "userName", userName,
-        "userID", userID
-      ));
-      ITERATE usersLoop;
-    END LOOP;
-  CLOSE usersCursor;
-  RETURN responce;
+    DECLARE responce JSON;
+    DECLARE done TINYINT(1);
+    DECLARE userID INT(11);
+    DECLARE userName VARCHAR(64);
+    DECLARE usersCursor CURSOR FOR SELECT user_id, user_name FROM users WHERE IF(bankID IS NOT NULL AND bankID > 0, bank_id = bankID, bank_id IS NULL);
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    OPEN usersCursor;
+        usersLoop: LOOP
+            FETCH usersCursor INTO userID, userName;
+            IF done
+                THEN LEAVE usersLoop;
+            END IF;
+            SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                "userName", userName,
+                "userID", userID
+            ));
+            ITERATE usersLoop;
+        END LOOP;
+    CLOSE usersCursor;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getUserStatistic` (`connectionHash` VARCHAR(32) CHARSET utf8, `statisticType` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
@@ -2311,11 +2311,11 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `newConnection` (`typeID` INT(11), `connectionApiID` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE connectionHash VARCHAR(32);
+    DECLARE connectionHash VARCHAR(32);
     INSERT INTO connections (type_id, connection_api_id) VALUES (typeID, connectionApiID);
     SELECT connection_hash INTO connectionHash FROM connections ORDER BY connection_id DESC LIMIT 1;
     RETURN JSON_ARRAY(JSON_OBJECT(
-      "type", "sendToSocket",
+        "type", "sendToSocket",
         "data", JSON_OBJECT(
             "socketID", connectionApiID,
             "data", JSON_ARRAY(
@@ -2566,51 +2566,51 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `resetCompanies` (`connectionHash` VARCHAR(32) CHARSET utf8, `typeID` INT(11)) RETURNS JSON NO SQL
 BEGIN
-  DECLARE userID, connectionID INT(11);
-  DECLARE connectionValid TINYINT(1);
-  DECLARE connectionApiID VARCHAR(128);
-  DECLARE dateStart, dateEnd VARCHAR(19);
-  DECLARE responce, filter JSON;
-  SET responce = JSON_ARRAY();
-  SET connectionValid = checkConnection(connectionHash);
-  SELECT connection_api_id, user_id, connection_id INTO connectionApiID, userID, connectionID FROM users_connections_view WHERE connection_hash = connectionHash;
-  IF connectionValid
-    THEN BEGIN
-      IF typeID = 14 OR typeID = 23
-        THEN BEGIN 
-          SELECT JSON_EXTRACT(state_json, CONCAT("$.distribution.", IF(typeID = 14, "invalidate", "callBack"))) INTO filter FROM states WHERE connection_id = connectionID;
-          SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(filter, "$.dateStart"));
-          SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(filter, "$.dateEnd"));
+    DECLARE userID, connectionID INT(11);
+    DECLARE connectionValid TINYINT(1);
+    DECLARE connectionApiID VARCHAR(128);
+    DECLARE dateStart, dateEnd VARCHAR(19);
+    DECLARE responce, filter JSON;
+    SET responce = JSON_ARRAY();
+    SET connectionValid = checkConnection(connectionHash);
+    SELECT connection_api_id, user_id, connection_id INTO connectionApiID, userID, connectionID FROM users_connections_view WHERE connection_hash = connectionHash;
+    IF connectionValid
+        THEN BEGIN
+            IF typeID = 14 OR typeID = 23
+                THEN BEGIN 
+                    SELECT JSON_EXTRACT(state_json, CONCAT("$.distribution.", IF(typeID = 14, "invalidate", "callBack"))) INTO filter FROM states WHERE connection_id = connectionID;
+                    SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(filter, "$.dateStart"));
+                    SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(filter, "$.dateEnd"));
+                END;
+                ELSE BEGIN
+                    SET dateStart = NOW();
+                    SET dateEnd = NOW();
+                END;
+            END IF;
+            UPDATE companies SET type_id = 10 AND user_id = NULL WHERE user_id = userID AND type_id = typeID AND DATE(company_date_create) BETWEEN DATE(dateStart) AND DATE(dateEnd);
+            SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+            SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+                "type", "merge",
+                "data", JSON_OBJECT(
+                    "message", "Список удачно очищен"
+                )
+            ))));
         END;
-        ELSE BEGIN
-          SET dateStart = NOW();
-          SET dateEnd = NOW();
-        END;
-      END IF;
-      UPDATE companies SET type_id = 10 AND user_id = NULL WHERE user_id = userID AND type_id = typeID AND DATE(company_date_create) BETWEEN DATE(dateStart) AND DATE(dateEnd);
-      SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
-      SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-        "type", "merge",
-        "data", JSON_OBJECT(
-          "message", "Список удачно очищен"
-        )
-      ))));
-    END;
-    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
-      "type", "sendToSocket",
-      "data", JSON_OBJECT(
-        "socketID", connectionApiID,
-        "data", JSON_ARRAY(JSON_OBJECT(
-          "type", "merge",
-          "data", JSON_OBJECT(
-            "auth", 0,
-            "loginMessage", "Требуется ручной вход в систему"
-          )
-        ))
-      )
-    ));
-  END IF;
-  RETURN responce;
+        ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "sendToSocket",
+            "data", JSON_OBJECT(
+                "socketID", connectionApiID,
+                "data", JSON_ARRAY(JSON_OBJECT(
+                    "type", "merge",
+                    "data", JSON_OBJECT(
+                        "auth", 0,
+                        "loginMessage", "Требуется ручной вход в систему"
+                    )
+                ))
+            )
+        ));
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `resetNotDialAllCompanies` () RETURNS JSON NO SQL
@@ -2633,81 +2633,81 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `sendPasswordToEmail` (`connectionHash` VARCHAR(32) CHARSET utf8, `userEmail` VARCHAR(512) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE userPassword, connectionApiID VARCHAR(128);
-  DECLARE responce JSON;
-  SET responce = JSON_ARRAY();
-  SELECT user_password INTO userPassword FROM users WHERE user_email = userEmail;
-  SELECT connection_api_id INTO connectionApiID FROM connections WHERE connection_hash = connectionHash;
-  IF userPassword IS NOT NULL
-    THEN SET responce = JSON_MERGE(responce, JSON_ARRAY(
-      JSON_OBJECT(
-        "type", "sendEmail",
-        "data", JSON_OBJECT(
-          "emails", JSON_ARRAY(
-            userEmail
-          ),
-          "subject", "Восстановление пароля",
-          "text", CONCAT("Ваш пароль: ", userPassword)
-        )
-      ),
-      JSON_OBJECT(
-        "type", "sendToSocket",
-        "data", JSON_OBJECT(
-          "socketID", connectionApiID,
-          "data", JSON_ARRAY(
+    DECLARE userPassword, connectionApiID VARCHAR(128);
+    DECLARE responce JSON;
+    SET responce = JSON_ARRAY();
+    SELECT user_password INTO userPassword FROM users WHERE user_email = userEmail;
+    SELECT connection_api_id INTO connectionApiID FROM connections WHERE connection_hash = connectionHash;
+    IF userPassword IS NOT NULL
+        THEN SET responce = JSON_MERGE(responce, JSON_ARRAY(
             JSON_OBJECT(
-              "type", "merge",
-              "data", JSON_OBJECT(
-                "loginMessage", CONCAT("Сообщение направлено на почту: ", userEmail) 
-              )
+                "type", "sendEmail",
+                "data", JSON_OBJECT(
+                    "emails", JSON_ARRAY(
+                        userEmail
+                    ),
+                    "subject", "Восстановление пароля",
+                    "text", CONCAT("Ваш пароль: ", userPassword)
+                )
+            ),
+            JSON_OBJECT(
+                "type", "sendToSocket",
+                "data", JSON_OBJECT(
+                    "socketID", connectionApiID,
+                    "data", JSON_ARRAY(
+                        JSON_OBJECT(
+                            "type", "merge",
+                            "data", JSON_OBJECT(
+                                "loginMessage", CONCAT("Сообщение направлено на почту: ", userEmail) 
+                            )
+                        )
+                    )
+                )
             )
-          )
-        )
-      )
-    ));
-    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
-      "type", "sendToSocket",
-      "data", JSON_OBJECT(
-        "socketID", connectionApiID,
-        "data", JSON_ARRAY(
-          JSON_OBJECT(
-            "type", "merge",
+        ));
+        ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "sendToSocket",
             "data", JSON_OBJECT(
-              "loginMessage", CONCAT("Пользователь с таким email не существует: ", userEmail)
+                "socketID", connectionApiID,
+                "data", JSON_ARRAY(
+                    JSON_OBJECT(
+                        "type", "merge",
+                        "data", JSON_OBJECT(
+                            "loginMessage", CONCAT("Пользователь с таким email не существует: ", userEmail)
+                        )
+                    )
+                )
             )
-          )
-        )
-      )
-    )); 
-  END IF;
-  RETURN responce;
+        )); 
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `sendToAllUserSockets` (`userID` INT(11), `sendArray` JSON) RETURNS JSON NO SQL
 BEGIN
-  DECLARE connectionApiID VARCHAR(128);
-  DECLARE done TINYINT(1);
-  DECLARE responce JSON;
-  DECLARE socketsCursor CURSOR FOR SELECT connection_api_id FROM users_connections_view WHERE user_id = userID AND connection_type_id = 3 AND connection_end = 0;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  OPEN socketsCursor;
-    socketsLoop: LOOP
-      FETCH socketsCursor INTO connectionApiID;
-      IF done
-        THEN LEAVE socketsLoop;
-      END IF; 
-      SET responce = JSON_MERGE(responce, JSON_OBJECT(
-        "type", "sendToSocket",
-        "data", JSON_OBJECT(
-          "socketID", connectionApiID,
-          "data", sendArray
-        )
-      ));
-      ITERATE socketsLoop;
-    END LOOP;
-  CLOSE socketsCursor;
-  RETURN responce;
+    DECLARE connectionApiID VARCHAR(128);
+    DECLARE done TINYINT(1);
+    DECLARE responce JSON;
+    DECLARE socketsCursor CURSOR FOR SELECT connection_api_id FROM users_connections_view WHERE user_id = userID AND connection_type_id = 3 AND connection_end = 0;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    OPEN socketsCursor;
+        socketsLoop: LOOP
+            FETCH socketsCursor INTO connectionApiID;
+            IF done
+                THEN LEAVE socketsLoop;
+            END IF; 
+            SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                "type", "sendToSocket",
+                "data", JSON_OBJECT(
+                    "socketID", connectionApiID,
+                    "data", sendArray
+                )
+            ));
+            ITERATE socketsLoop;
+        END LOOP;
+    CLOSE socketsCursor;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `sendToApi` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11), `comment` TEXT CHARSET utf8, `banks` JSON) RETURNS JSON NO SQL
@@ -2791,39 +2791,39 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `sendToTelegram` (`message` TEXT CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE chatID VARCHAR(128);
-  DECLARE done TINYINT(1);
-  DECLARE responce, telegramsArray JSON;
-  DECLARE telegramCursor CURSOR FOR SELECT telegram_chat_id FROM telegrams WHERE telegram_chat_id IS NOT NULL;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
-  SET responce = JSON_ARRAY();
-  SET telegramsArray = JSON_ARRAY();
-  OPEN telegramCursor;
-    telegramLoop: LOOP
-      FETCH telegramCursor INTO chatID;
-      IF done
-        THEN LEAVE telegramLoop;
-      END IF;
-      SET telegramsArray = JSON_MERGE(telegramsArray, CONCAT(chatID));
-      ITERATE telegramLoop;
-    END LOOP;
-  CLOSE telegramCursor;
-  IF JSON_LENGTH(telegramsArray) > 0
-    THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
-      "type", "sendToTelegram",
-      "data", JSON_OBJECT(
-        "chats", telegramsArray,
-        "message", message
-      )
-    ));
-    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
-      "type", "print",
-      "data", JSON_OBJECT(
-        "message", CONCAT("нет чатов для рассылки в телеграм (", message, ")")
-      )
-    ));
-  END IF;
-  RETURN responce;
+    DECLARE chatID VARCHAR(128);
+    DECLARE done TINYINT(1);
+    DECLARE responce, telegramsArray JSON;
+    DECLARE telegramCursor CURSOR FOR SELECT telegram_chat_id FROM telegrams WHERE telegram_chat_id IS NOT NULL;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    SET telegramsArray = JSON_ARRAY();
+    OPEN telegramCursor;
+        telegramLoop: LOOP
+            FETCH telegramCursor INTO chatID;
+            IF done
+                THEN LEAVE telegramLoop;
+            END IF;
+            SET telegramsArray = JSON_MERGE(telegramsArray, CONCAT(chatID));
+            ITERATE telegramLoop;
+        END LOOP;
+    CLOSE telegramCursor;
+    IF JSON_LENGTH(telegramsArray) > 0
+        THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "sendToTelegram",
+            "data", JSON_OBJECT(
+                "chats", telegramsArray,
+                "message", message
+            )
+        ));
+        ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "print",
+            "data", JSON_OBJECT(
+                "message", CONCAT("нет чатов для рассылки в телеграм (", message, ")")
+            )
+        ));
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `serverStart` () RETURNS JSON NO SQL
@@ -2858,12 +2858,72 @@ BEGIN
     RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `setBankFilials` (`bankID` INT(11), `filials` JSON, `deleteFilials` BOOLEAN) RETURNS JSON NO SQL
+BEGIN
+    DECLARE iterator, filialsLength, regionCode, regionID, cityID, bankFilialsCountBefore, bankFilialsCountAfter INT(11);
+    DECLARE cityName, regionName VARCHAR(60);
+    DECLARE bankFilialApiCode, bankFilialRegionApiCode, bankFilialCityApiCode VARCHAR(32);
+    DECLARE bankFilialName VARCHAR(256);
+    DECLARE bankName VARCHAR(128);
+    DECLARE filial, responce JSON;
+    SET responce = JSON_ARRAY();
+    SET iterator = 0;
+    SET filialsLength = JSON_LENGTH(filials);
+    SELECT bank_name INTO bankName FROM banks WHERE bank_id = bankID;
+    SELECT count(*) INTO bankFilialsCountBefore FROM bank_filials WHERE bank_id = bankID;
+    IF deleteFilials 
+        THEN DELETE FROM bank_filials WHERE bank_id = bankID;
+    END IF;
+    filialsLoop: LOOP
+        IF iterator >= filialsLength
+            THEN LEAVE filialsLoop;
+        END IF;
+        SET filial = JSON_UNQUOTE(JSON_EXTRACT(filials, CONCAT("$[", iterator, "]")));
+        IF filial IS NOT NULL
+            THEN BEGIN
+                SET cityName = JSON_UNQUOTE(JSON_EXTRACT(filial, "$.city_name"));
+                SET regionCode = JSON_UNQUOTE(JSON_EXTRACT(filial, "$.region_code"));
+                SET regionName = JSON_UNQUOTE(JSON_EXTRACT(filial, "$.region_name"));
+                SET bankFilialApiCode = JSON_UNQUOTE(JSON_EXTRACT(filial, "$.bank_filial_api_code"));
+                SET bankFilialName = JSON_UNQUOTE(JSON_EXTRACT(filial, "$.bank_filial_name"));
+                SET bankFilialRegionApiCode = JSON_UNQUOTE(JSON_EXTRACT(filial, "$.bank_filial_region_api_code"));
+                SET bankFilialCityApiCode = JSON_UNQUOTE(JSON_EXTRACT(filial, "$.bank_filial_city_api_code"));
+                IF regionCode IS NOT NULL
+                    THEN SELECT region_id INTO regionID FROM codes WHERE code_value = regionCode;
+                    ELSE IF regionName IS NOT NULL
+                        THEN SELECT region_id INTO regionID FROM regions WHERE LOWER(region_name) = LOWER(regionName);
+                    END IF;
+                END IF;
+                IF cityName IS NOT NULL
+                    THEN SELECT city_id INTO cityID FROM cities WHERE LOWER(city_name) = LOWER(cityName);
+                END IF;
+                IF bankFilialName IS NULL AND cityName IS NOT NULL
+                    THEN SET bankFilialName = cityName;
+                END IF;
+                IF bankFilialName IS NOT NULL AND cityID IS NOT NULL AND bankFilialApiCode IS NOT NULL AND bankID IS NOT NULL
+                    THEN INSERT INTO bank_filials (bank_id, city_id, region_id, bank_filial_name, bank_filial_api_code, bank_filial_region_api_code, bank_filial_city_api_code) VALUES (bankID, cityID, regionID, bankFilialName, bankFilialApiCode, bankFilialRegionApiCode, bankFilialCityApiCode);
+                END IF;
+            END;
+        END IF;
+        SET iterator = iterator + 1;
+        ITERATE filialsLoop; 
+    END LOOP;
+    SELECT count(*) INTO bankFilialsCountAfter FROM bank_filials WHERE bank_id = bankID;
+    SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "type", "print",
+        "data", JSON_OBJECT(
+            "message", CONCAT("Обновление филиалов банка ", bankName, ". Было филиалов ", bankFilialsCountBefore, ". Стало ", bankFilialsCountAfter, ".")
+        )
+    ));
+    RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `setCallRecord` (`callApiIDWithRec` VARCHAR(128) CHARSET utf8, `callApiID` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE responce JSON;
-  SET responce = JSON_ARRAY();
-  UPDATE calls SET call_record = 1 WHERE call_api_id_with_rec = callApiIDWithRec OR call_api_id_1 = callApiID OR call_api_id_2 = callApiID;
-  RETURN responce;
+    DECLARE responce JSON;
+    SET responce = JSON_ARRAY();
+    UPDATE calls SET call_record = 1 WHERE call_api_id_with_rec = callApiIDWithRec OR call_api_id_1 = callApiID OR call_api_id_2 = callApiID;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setCallStatus` (`userSip` VARCHAR(20) CHARSET utf8, `callApiID` VARCHAR(128) CHARSET utf8, `callApiIDWithRec` VARCHAR(128) CHARSET utf8, `typeID` INT(11)) RETURNS JSON NO SQL
@@ -3186,132 +3246,132 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setDownloadFilter` (`connectionHash` VARCHAR(32) CHARSET utf8, `filters` JSON) RETURNS JSON NO SQL
 BEGIN
-  DECLARE connectionValid TINYINT(1);
-  DECLARE keyName VARCHAR(128);
-  DECLARE connectionApiID VARCHAR(32);
-  DECLARE userID, connectionID, keysLength, iterator, stateID INT(11);
-  DECLARE responce, filtersKeys, userFilters JSON;
-  SELECT user_id, connection_id, connection_api_id INTO userID, connectionID, connectionApiID FROM users_connections_view WHERE connection_hash = connectionHash;
-  SET connectionValid = checkConnection(connectionHash);
-  SET responce = JSON_ARRAY();
-  IF connectionValid
-    THEN BEGIN
-      SET filtersKeys = JSON_KEYS(filters);
-      SET keysLength = JSON_LENGTH(filtersKeys);
-      SET iterator = 0;
-      SELECT state_json ->> "$.download", state_id INTO userFilters, stateID FROM states WHERE user_id = userID AND connection_id = connectionID LIMIT 1;
-      keysLoop: LOOP
-        IF iterator >= keysLength
-          THEN LEAVE keysLoop;
-        END IF;
-        SET keyName = JSON_UNQUOTE(JSON_EXTRACT(filtersKeys, CONCAT("$[", iterator, "]")));
-        SET userFilters = JSON_REMOVE(userFilters, CONCAT("$.", keyName));
-        SET iterator = iterator + 1;
-        ITERATE keysLoop;
-      END LOOP;
-      SET userFilters = JSON_MERGE(userFilters, filters);
-      UPDATE states SET state_json = JSON_SET(state_json, "$.download", userFilters) WHERE state_id = stateID;
-      SET responce = JSON_MERGE(responce, sendToAlluserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-        "type", "merge",
-        "data", JSON_OBJECT(
-          "download", userFilters
-        )
-      ))));
-      IF JSON_CONTAINS(filtersKeys, JSON_ARRAY("limit")) OR JSON_CONTAINS(filtersKeys, JSON_ARRAY("offset"))
-        THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
-          "type", "procedure",
-          "data", JSON_OBJECT(
-            "query", "getDownloadPreview",
-            "values", JSON_ARRAY(
-              userID
+    DECLARE connectionValid TINYINT(1);
+    DECLARE keyName VARCHAR(128);
+    DECLARE connectionApiID VARCHAR(32);
+    DECLARE userID, connectionID, keysLength, iterator, stateID INT(11);
+    DECLARE responce, filtersKeys, userFilters JSON;
+    SELECT user_id, connection_id, connection_api_id INTO userID, connectionID, connectionApiID FROM users_connections_view WHERE connection_hash = connectionHash;
+    SET connectionValid = checkConnection(connectionHash);
+    SET responce = JSON_ARRAY();
+    IF connectionValid
+        THEN BEGIN
+            SET filtersKeys = JSON_KEYS(filters);
+            SET keysLength = JSON_LENGTH(filtersKeys);
+            SET iterator = 0;
+            SELECT state_json ->> "$.download", state_id INTO userFilters, stateID FROM states WHERE user_id = userID AND connection_id = connectionID LIMIT 1;
+            keysLoop: LOOP
+                IF iterator >= keysLength
+                    THEN LEAVE keysLoop;
+                END IF;
+                SET keyName = JSON_UNQUOTE(JSON_EXTRACT(filtersKeys, CONCAT("$[", iterator, "]")));
+                SET userFilters = JSON_REMOVE(userFilters, CONCAT("$.", keyName));
+                SET iterator = iterator + 1;
+                ITERATE keysLoop;
+            END LOOP;
+            SET userFilters = JSON_MERGE(userFilters, filters);
+            UPDATE states SET state_json = JSON_SET(state_json, "$.download", userFilters) WHERE state_id = stateID;
+            SET responce = JSON_MERGE(responce, sendToAlluserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+                "type", "merge",
+                "data", JSON_OBJECT(
+                    "download", userFilters
+                )
+            ))));
+            IF JSON_CONTAINS(filtersKeys, JSON_ARRAY("limit")) OR JSON_CONTAINS(filtersKeys, JSON_ARRAY("offset"))
+                THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+                    "type", "procedure",
+                    "data", JSON_OBJECT(
+                        "query", "getDownloadPreview",
+                        "values", JSON_ARRAY(
+                            userID
+                        )
+                    )
+                ));
+            END IF;
+        END;
+        ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "sendToSocket",
+            "data", JSON_OBJECT(
+                "socketID", connectionApiID,
+                "data", JSON_ARRAY(JSON_OBJECT(
+                    "type", "merge",
+                    "data", JSON_OBJECT(
+                        "auth", 0,
+                        "loginMessage", "Требуется ручной вход в систему"
+                    )
+                ))
             )
-          )
         ));
-      END IF;
-    END;
-    ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
-      "type", "sendToSocket",
-      "data", JSON_OBJECT(
-        "socketID", connectionApiID,
-        "data", JSON_ARRAY(JSON_OBJECT(
-          "type", "merge",
-          "data", JSON_OBJECT(
-            "auth", 0,
-            "loginMessage", "Требуется ручной вход в систему"
-          )
-        ))
-      )
-    ));
-  END IF;
-  RETURN responce;
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setDuplicates` (`userID` INT(11), `companiesArray` JSON) RETURNS JSON NO SQL
 BEGIN
-  DECLARE companiesLength, bankID, companiesIterator, banksIterator, banksLength, companyID, statusTypeID, statusID, companyBankID, negativeCompaniesLength INT(11);
-  DECLARE connectionHash VARCHAR(32);
-  DECLARE statusText VARCHAR(256);
-  DECLARE responce, company, companyBanksArray, companyBank JSON;
-  SET responce = JSON_ARRAY();
-  SET companiesLength = JSON_LENGTH(companiesArray);
-  SET negativeCompaniesLength = 0;
-  SET companiesIterator = 0;
-  companiesLoop: LOOP
-    IF companiesIterator >= companiesLength
-      THEN LEAVE companiesLoop;
-    END IF;
-    SET company = JSON_UNQUOTE(JSON_EXTRACT(companiesArray, CONCAT("$[", companiesIterator, "]")));
-    SET companyID = JSON_UNQUOTE(JSON_EXTRACT(company, "$.company_id"));
-    SET companyBanksArray = JSON_UNQUOTE(JSON_EXTRACT(company, "$.banks"));
-    SET banksIterator = 0;
-    SET banksLength = JSON_LENGTH(companyBanksArray);
-    companyBanksLoop:LOOP
-      IF banksIterator >= banksLength
-        THEN LEAVE companyBanksLoop;
-      END IF;
-      SET companyBank = JSON_UNQUOTE(JSON_EXTRACT(companyBanksArray, CONCAT("$[", banksIterator, "]")));
-      SET statusText = JSON_UNQUOTE(JSON_EXTRACT(companyBank, "$.status_text"));
-      SET bankID = JSON_UNQUOTE(JSON_EXTRACT(companyBank, "$.bank_id"));
-      CALL checkBanksStatuses(JSON_ARRAY(bankID), JSON_ARRAY(statusText));
-      SELECT type_id, bank_status_id INTO statusTypeID, statusID FROM bank_statuses WHERE bank_id = bankID AND bank_status_text = statusText LIMIT 1;
-      SET companyBankID = (SELECT company_bank_id FROM company_banks WHERE bank_id = bankID AND company_id = companyID LIMIT 1);
-      IF companyBankID IS NOT NULL
-        THEN UPDATE company_banks SET bank_status_id = statusID WHERE company_bank_id = companyBankID;
-        ELSE UPDATE companies c LEFT JOIN translates tr ON tr.translate_from = statusText JOIN banks b ON b.bank_id = bankID SET c.company_json = JSON_SET(c.company_json, CONCAT("$.company_banks.b", bankID), JSON_OBJECT(
-          "bank_id", b.bank_id,
-          "bank_name", b.bank_name,
-          "company_bank_status", IF(tr.translate_to IS NOT NULL, tr.translate_to, statusText),
-          "bank_status_id", statusID,
-          "type_id", statusTypeID,
-          "bank_suits", 0
-        )) WHERE company_id = companyID;
-      END IF;
-      IF statusTypeID = 17
-        THEN BEGIN 
-          UPDATE companies SET type_id = 13 WHERE company_id = companyID;
-          SET negativeCompaniesLength = negativeCompaniesLength + 1;
-        END;
-      END IF;
-      SET banksIterator = banksIterator + 1;
-      ITERATE companyBanksLoop;
+    DECLARE companiesLength, bankID, companiesIterator, banksIterator, banksLength, companyID, statusTypeID, statusID, companyBankID, negativeCompaniesLength INT(11);
+    DECLARE connectionHash VARCHAR(32);
+    DECLARE statusText VARCHAR(256);
+    DECLARE responce, company, companyBanksArray, companyBank JSON;
+    SET responce = JSON_ARRAY();
+    SET companiesLength = JSON_LENGTH(companiesArray);
+    SET negativeCompaniesLength = 0;
+    SET companiesIterator = 0;
+    companiesLoop: LOOP
+        IF companiesIterator >= companiesLength
+            THEN LEAVE companiesLoop;
+        END IF;
+        SET company = JSON_UNQUOTE(JSON_EXTRACT(companiesArray, CONCAT("$[", companiesIterator, "]")));
+        SET companyID = JSON_UNQUOTE(JSON_EXTRACT(company, "$.company_id"));
+        SET companyBanksArray = JSON_UNQUOTE(JSON_EXTRACT(company, "$.banks"));
+        SET banksIterator = 0;
+        SET banksLength = JSON_LENGTH(companyBanksArray);
+        companyBanksLoop:LOOP
+            IF banksIterator >= banksLength
+                THEN LEAVE companyBanksLoop;
+            END IF;
+            SET companyBank = JSON_UNQUOTE(JSON_EXTRACT(companyBanksArray, CONCAT("$[", banksIterator, "]")));
+            SET statusText = JSON_UNQUOTE(JSON_EXTRACT(companyBank, "$.status_text"));
+            SET bankID = JSON_UNQUOTE(JSON_EXTRACT(companyBank, "$.bank_id"));
+            CALL checkBanksStatuses(JSON_ARRAY(bankID), JSON_ARRAY(statusText));
+            SELECT type_id, bank_status_id INTO statusTypeID, statusID FROM bank_statuses WHERE bank_id = bankID AND bank_status_text = statusText LIMIT 1;
+            SET companyBankID = (SELECT company_bank_id FROM company_banks WHERE bank_id = bankID AND company_id = companyID LIMIT 1);
+            IF companyBankID IS NOT NULL
+                THEN UPDATE company_banks SET bank_status_id = statusID WHERE company_bank_id = companyBankID;
+                ELSE UPDATE companies c LEFT JOIN translates tr ON tr.translate_from = statusText JOIN banks b ON b.bank_id = bankID SET c.company_json = JSON_SET(c.company_json, CONCAT("$.company_banks.b", bankID), JSON_OBJECT(
+                    "bank_id", b.bank_id,
+                    "bank_name", b.bank_name,
+                    "company_bank_status", IF(tr.translate_to IS NOT NULL, tr.translate_to, statusText),
+                    "bank_status_id", statusID,
+                    "type_id", statusTypeID,
+                    "bank_suits", 0
+                )) WHERE company_id = companyID;
+            END IF;
+            IF statusTypeID = 17
+                THEN BEGIN 
+                    UPDATE companies SET type_id = 13 WHERE company_id = companyID;
+                    SET negativeCompaniesLength = negativeCompaniesLength + 1;
+                END;
+            END IF;
+            SET banksIterator = banksIterator + 1;
+            ITERATE companyBanksLoop;
+        END LOOP;
+        SET companiesIterator = companiesIterator + 1;
+        ITERATE companiesLoop;
     END LOOP;
-    SET companiesIterator = companiesIterator + 1;
-    ITERATE companiesLoop;
-  END LOOP;
-  UPDATE companies SET type_id = 9 WHERE user_id = userID AND type_id = 44;
-  SELECT bank_id, connection_hash INTO bankID, connectionHash FROM users_connections_view WHERE user_id = userID AND connection_end = 0 LIMIT 1;
-  SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
-  SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
-    "type", "merge",
-    "data", JSON_OBJECT(
-      "message", IF(negativeCompaniesLength = 0, "Окончание наполнения рабочего списка", CONCAT("Добавлено в рабочий список ", (companiesLength - negativeCompaniesLength) ," компаний.На проверке ещё ", negativeCompaniesLength, " компаний")),
-      "messageType", IF(negativeCompaniesLength = 0, "success", "")
-    )
-  ))));
-  IF negativeCompaniesLength > 0
-    THEN SET responce = JSON_MERGE(responce, getBankCompanies(connectionHash, negativeCompaniesLength, 0));
-  END IF;
-  RETURN responce;
+    UPDATE companies SET type_id = 9 WHERE user_id = userID AND type_id = 44;
+    SELECT bank_id, connection_hash INTO bankID, connectionHash FROM users_connections_view WHERE user_id = userID AND connection_end = 0 LIMIT 1;
+    SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
+    SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
+        "type", "merge",
+        "data", JSON_OBJECT(
+            "message", IF(negativeCompaniesLength = 0, "Окончание наполнения рабочего списка", CONCAT("Добавлено в рабочий список ", (companiesLength - negativeCompaniesLength) ," компаний.На проверке ещё ", negativeCompaniesLength, " компаний")),
+            "messageType", IF(negativeCompaniesLength = 0, "success", "")
+        )
+    ))));
+    IF negativeCompaniesLength > 0
+        THEN SET responce = JSON_MERGE(responce, getBankCompanies(connectionHash, negativeCompaniesLength, 0));
+    END IF;
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `setRecordFile` (`userSip` VARCHAR(128) CHARSET utf8, `companyPhone` VARCHAR(128) CHARSET utf8, `fileName` VARCHAR(128) CHARSET utf8, `filePath` VARCHAR(128) CHARSET utf8, `internal` TINYINT(1)) RETURNS JSON NO SQL
@@ -3447,16 +3507,16 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `successCompaniesArray` () RETURNS JSON NO SQL
 BEGIN
-  DECLARE done TINYINT(1);
-  DECLARE responce, company JSON;
+    DECLARE done TINYINT(1);
+    DECLARE responce, company JSON;
     DECLARE companiesCursor CURSOR FOR SELECT JSON_OBJECT("requestID", company_api_request_id, "applicationID", company_application_id) FROM companies WHERE type_id = 16 and date(company_date_create) = date(now());
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     SET responce = JSON_ARRAY();
     OPEN companiesCursor;
-      companiesLoop: LOOP
-          FETCH companiesCursor INTO company;
+        companiesLoop: LOOP
+            FETCH companiesCursor INTO company;
             IF done
-              THEN LEAVE companiesLoop;
+                THEN LEAVE companiesLoop;
             END IF;
             SET responce = JSON_MERGE(responce, company);
             ITERATE companiesLoop;
@@ -3662,9 +3722,9 @@ CREATE TABLE `calls` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `calls_after_insert` AFTER INSERT ON `calls` FOR EACH ROW BEGIN
-  IF NEW.company_id IS NOT NULL
-    THEN UPDATE companies SET call_id = NEW.call_id WHERE company_id = NEW.company_id;
-  END IF;
+    IF NEW.company_id IS NOT NULL
+        THEN UPDATE companies SET call_id = NEW.call_id WHERE company_id = NEW.company_id;
+    END IF;
 END
 $$
 DELIMITER ;
@@ -3678,13 +3738,13 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `calls_before_insert` BEFORE INSERT ON `calls` FOR EACH ROW BEGIN
-  SET NEW.call_date_create = NOW();
+    SET NEW.call_date_create = NOW();
 END
 $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `calls_before_update` BEFORE UPDATE ON `calls` FOR EACH ROW BEGIN
-  SET NEW.call_date_update = NOW();
+    SET NEW.call_date_update = NOW();
 END
 $$
 DELIMITER ;
@@ -4049,14 +4109,14 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `connections_before_update` BEFORE UPDATE ON `connections` FOR EACH ROW BEGIN
-  SET NEW.connection_date_update = NOW();
+    SET NEW.connection_date_update = NOW();
   IF NEW.connection_end
     THEN SET NEW.connection_date_disconnect = NOW();
   END IF;
   IF NEW.user_id IS NOT NULL AND (NEW.user_id != OLD.user_id OR OLD.user_id IS NULL)
     THEN BEGIN 
-      DELETE FROM states WHERE connection_id = NEW.connection_id;
-      INSERT INTO states (connection_id, user_id) VALUES (NEW.connection_id, NEW.user_id);
+        DELETE FROM states WHERE connection_id = NEW.connection_id;
+        INSERT INTO states (connection_id, user_id) VALUES (NEW.connection_id, NEW.user_id);
     END;
   END IF;
 END
@@ -4674,29 +4734,29 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `users_before_update` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
-  SET NEW.user_date_update = NOW();
-  IF NEW.user_auth = 1 AND OLD.user_auth = 0
-    THEN BEGIN
-      hashLoop: LOOP
-        SET NEW.user_hash = getHash(32);
-          IF (SELECT COUNT(*) FROM users WHERE user_hash = NEW.user_hash) > 0
-            THEN ITERATE hashLoop;
-              ELSE LEAVE hashLoop;
-          END IF;
-      END LOOP;
-    END;
-  END IF;
-  IF NEW.user_connections_count > 0
-    THEN SET NEW.user_online = 1;
-    ELSE SET NEW.user_online = 0;
-  END IF;
-  IF (NEW.user_auth = 0 AND OLD.user_auth = 1) OR (NEW.user_online = 0 AND OLD.user_online = 1)
-    THEN BEGIN 
-      IF NEW.type_id = 1
-        THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = NEW.user_id AND type_id = 20;
-      END IF;
-    END;
-  END IF;
+    SET NEW.user_date_update = NOW();
+    IF NEW.user_auth = 1 AND OLD.user_auth = 0
+        THEN BEGIN
+            hashLoop: LOOP
+            SET NEW.user_hash = getHash(32);
+              IF (SELECT COUNT(*) FROM users WHERE user_hash = NEW.user_hash) > 0
+                THEN ITERATE hashLoop;
+                  ELSE LEAVE hashLoop;
+              END IF;
+          END LOOP;
+        END;
+    END IF;
+    IF NEW.user_connections_count > 0
+        THEN SET NEW.user_online = 1;
+        ELSE SET NEW.user_online = 0;
+    END IF;
+    IF (NEW.user_auth = 0 AND OLD.user_auth = 1) OR (NEW.user_online = 0 AND OLD.user_online = 1)
+        THEN BEGIN 
+            IF NEW.type_id = 1
+                THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = NEW.user_id AND type_id = 20;
+            END IF;
+        END;
+    END IF;
 END
 $$
 DELIMITER ;
