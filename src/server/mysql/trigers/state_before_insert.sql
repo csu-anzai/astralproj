@@ -86,6 +86,13 @@ BEGIN
 							"type", 0,
 							"rowStart", 1,
 							"rowLimit", 10
+						),
+						"duplicates", JSON_OBJECT(
+							"dateStart", DATE(NOW()),
+							"dateEnd", DATE(NOW()),
+							"type", 0,
+							"rowStart", 1,
+							"rowLimit", 10
 						)
 					)
 				);

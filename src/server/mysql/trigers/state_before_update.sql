@@ -166,6 +166,24 @@ BEGIN
 				END;
 				ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(NOW()), "$.distribution.difficult.dateEnd", DATE(NOW()));
 			END CASE;
+			SET type = JSON_EXTRACT(NEW.state_json, "$.distribution.duplicates.type");
+			CASE type
+				WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(NOW()), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+				WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+				WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+				WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+				WHEN 4 THEN BEGIN 
+					SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 24 ORDER BY company_date_create LIMIT 1;
+					IF firstDate IS NULL
+						THEN SET firstDate = DATE(NOW());
+					END IF;
+					SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(firstDate), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+				END;
+				WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.distribution.duplicates.dateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
+				WHEN 6 THEN BEGIN
+				END;
+				ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(NOW()), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+			END CASE;
 		END;
 	END IF;
 END

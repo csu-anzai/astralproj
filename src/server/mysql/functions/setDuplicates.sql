@@ -39,7 +39,7 @@ BEGIN
 			END IF;
 			IF statusTypeID = 17
 				THEN BEGIN 
-					UPDATE companies SET type_id = 13 WHERE company_id = companyID;
+					UPDATE companies SET type_id = 24 WHERE company_id = companyID;
 					SET negativeCompaniesLength = negativeCompaniesLength + 1;
 				END;
 			END IF;
