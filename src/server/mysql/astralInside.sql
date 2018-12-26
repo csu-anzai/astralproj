@@ -1424,6 +1424,7 @@ BEGIN
                 @callbackCount:=IF(type_id = 23, @callbackCount+1, @callbackCount) callbackCount, 
                 @inworkCount:=IF(type_id IN (9, 35), @inworkCount+1, @inworkCount) inworkCount, 
                 @dialCount:=IF(type_id = 36, @dialCount+1, @dialCount) dialCount,
+                @duplicatesCount:=IF(type_id = 24, @duplicatesCount+1, @duplicatesCount) duplicatesCount,
                 type_id
             FROM 
                 companies 
@@ -1434,6 +1435,7 @@ BEGIN
                         (type_id = 14 AND DATE(company_date_create) BETWEEN DATE(@invalidateDateStart) AND DATE(@invalidateDateEnd)) OR 
                         (type_id = 37 AND DATE(company_date_create) BETWEEN DATE(@difficultDateStart) AND DATE(@difficultDateEnd)) OR 
                         (type_id = 23 AND DATE(company_date_create) BETWEEN DATE(@callbackDateStart) AND DATE(@callbackDateEnd)) OR 
+                        (type_id = 24 AND DATE(company_date_create) BETWEEN DATE(@duplicatesDateStart) AND DATE(@duplicatesDateEnd)) OR 
                         (type_id IN (9, 35))
                     ) AND user_id = userID
                 ) OR 
@@ -1446,6 +1448,7 @@ BEGIN
             (difficultCount BETWEEN @difficultRowStart AND @difficultRowLimit AND type_id = 37) OR
             (callbackCount BETWEEN @callbackRowStart AND @callbackRowLimit AND type_id = 23) OR
             (inworkCount BETWEEN @inworkRowStart AND @inworkRowLimit AND type_id IN (9, 35)) OR
+            (duplicatesCount BETWEEN @duplicatesRowStart AND @duplicatesRowLimit AND type_id = 24) OR
             (dialCount BETWEEN @dialRowStart AND @dialRowLimit AND type_id = 36);
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     SET responce = JSON_ARRAY();
@@ -1458,6 +1461,7 @@ BEGIN
                     @callbackCount = 0,
                     @dialCount = 0,
                     @inworkCount = 0,
+                    @duplicatesCount = 0,
                     @apiRowStart = JSON_EXTRACT(distributionFilters, "$.api.rowStart"),
                     @apiRowLimit = JSON_EXTRACT(distributionFilters, "$.api.rowLimit"),
                     @apiDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.api.dateStart")),
@@ -1478,6 +1482,10 @@ BEGIN
                     @dialRowLimit = JSON_EXTRACT(distributionFilters, "$.notDial.rowLimit"),
                     @dialDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.notDial.dateStart")),
                     @dialDateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.notDial.dateEnd")),
+                    @duplicatesRowStart = JSON_EXTRACT(distributionFilters, "$.duplicates.rowStart"),
+                    @duplicatesRowLimit = JSON_EXTRACT(distributionFilters, "$.duplicates.rowLimit"),
+                    @duplicatesDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.duplicates.dateStart")),
+                    @duplicatesDateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.duplicates.dateEnd")),
                     @inworkRowStart = JSON_EXTRACT(distributionFilters, "$.work.rowStart"),
                     @inworkRowLimit = JSON_EXTRACT(distributionFilters, "$.work.rowLimit");
             SET @apiRowLimit = @apiRowLimit + @apiRowStart - 1,
@@ -1485,7 +1493,8 @@ BEGIN
                     @difficultRowLimit = @difficultRowLimit + @difficultRowStart - 1,
                     @callbackRowLimit = @callbackRowLimit + @callbackRowStart - 1,
                     @inworkRowLimit = @inworkRowLimit + @inworkRowStart - 1,
-                    @dialRowLimit = @dialRowLimit + @dialRowStart - 1;
+                    @dialRowLimit = @dialRowLimit + @dialRowStart - 1,
+                    @duplicatesRowLimit = @duplicatesRowLimit + @duplicatesRowStart - 1;
             OPEN companiesCursor;
                 companiesLoop: LOOP
                     FETCH companiesCursor INTO company;
@@ -1810,12 +1819,12 @@ END$$
 CREATE DEFINER=`root`@`localhost` FUNCTION `getDayStatistic` () RETURNS JSON NO SQL
 BEGIN   
     DECLARE done TINYINT(1);
-    DECLARE translateTo, searchResult, searchResult2 VARCHAR(128);
+    DECLARE translateTo, searchResult, searchResult2, bankName VARCHAR(128);
     DECLARE userName VARCHAR(64);
-    DECLARE userID, countLength, companyBanksLength,bankTypesLength, iterator, companyBankType, userObjectBanksTypeCount INT(11);
-    DECLARE responce, userObject, typesArray, companyBanksTypes, companyBank, userObjectBanksTypes JSON;
-    DECLARE companiesCursor CURSOR FOR SELECT translate_to, user_name, user_id, count FROM day_statistic_view;
-    DECLARE statusesCursor CURSOR FOR SELECT user_id, jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id") FROM companies WHERE DATE(company_date_update) = DATE(NOW()) AND JSON_LENGTH(jsonRemoveNulls(company_json ->> "$.company_banks.*.type_id")) > 0 AND user_id IS NOT NULL AND type_id = 13;
+    DECLARE userID, countLength, companyBanksLength, bankTypesLength, iterator, companyBankType, userObjectBanksTypeCount INT(11);
+    DECLARE responce, userObject, typesArray, companyBanks, companyBank, userObjectBanks JSON;
+    DECLARE companiesCursor CURSOR FOR SELECT translate_to, user_name, user_id, count FROM day_types_statistic_view;
+    DECLARE statusesCursor CURSOR FOR SELECT user_id, bank_name, count FROM day_banks_statistic_view;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     SET responce = JSON_ARRAY();
     OPEN companiesCursor;
@@ -1833,7 +1842,7 @@ BEGIN
                         "type_name", translateTo,
                         "count", countLength
                     )),
-                    "bank_types", JSON_ARRAY()
+                    "banks", JSON_ARRAY()
                 ));
                 ELSE BEGIN 
                     SET userObject = JSON_UNQUOTE(JSON_EXTRACT(responce, searchResult));
@@ -1852,38 +1861,19 @@ BEGIN
     SET done = 0;
     OPEN statusesCursor;
         statusesLoop: LOOP
-            FETCH statusesCursor INTO userID, companyBanksTypes;
+            FETCH statusesCursor INTO userID, bankName, countLength;
             IF done 
                 THEN LEAVE statusesLoop;
             END IF;
             SET searchResult = REPLACE(JSON_UNQUOTE(JSON_SEARCH(responce, "one", CONCAT(userID), NULL, "$[*].user_id")), ".user_id", "");
             SET userObject = JSON_UNQUOTE(JSON_EXTRACT(responce, searchResult));
-            SET userObjectBanksTypes = JSON_UNQUOTE(JSON_EXTRACT(userObject, "$.bank_types"));
-            SET iterator = 0;
-            SET bankTypesLength = JSON_LENGTH(companyBanksTypes);
-            bankTypesLoop: LOOP
-                IF iterator >= bankTypesLength
-                    THEN LEAVE bankTypesLoop;
-                END IF;
-                SET companyBankType = JSON_UNQUOTE(JSON_EXTRACT(companyBanksTypes, CONCAT("$[", iterator, "]")));
-                SET searchResult2 = REPLACE(JSON_UNQUOTE(JSON_SEARCH(userObjectBanksTypes, "one", CONCAT(companyBankType), NULL, "$[*].type_id")), ".type_id", "");
-                IF searchResult2 IS NULL
-                    THEN SET userObjectBanksTypes = JSON_MERGE(userObjectBanksTypes, JSON_OBJECT(
-                        "type_id", CONCAT(companyBankType),
-                        "count", 1
-                    ));
-                    ELSE BEGIN
-                        SET userObjectBanksTypeCount = JSON_UNQUOTE(JSON_EXTRACT(userObjectBanksTypes, CONCAT(searchResult2, ".count")));
-                        SET userObjectBanksTypeCount = userObjectBanksTypeCount + 1;
-                        SET userObjectBanksTypes = JSON_SET(userObjectBanksTypes, CONCAT(searchResult2, ".count"), userObjectBanksTypeCount);
-                    END;
-                END IF;
-                SET iterator = iterator + 1;
-                ITERATE bankTypesLoop;
-            END LOOP;
-            SET userObject = JSON_SET(userObject, "$.bank_types", userObjectBanksTypes);
+            SET userObjectBanks = JSON_UNQUOTE(JSON_EXTRACT(userObject, "$.banks"));
+            SET userObjectBanks = JSON_MERGE(userObjectBanks, JSON_OBJECT(
+                "bank_name", bankName,
+                "count", countLength
+            ));
+            SET userObject = JSON_SET(userObject, "$.banks", userObjectBanks);
             SET responce = JSON_SET(responce, searchResult, userObject);
-            SET done = 0;
             ITERATE statusesLoop;
         END LOOP;
     CLOSE statusesCursor;
@@ -3348,7 +3338,7 @@ BEGIN
             END IF;
             IF statusTypeID = 17
                 THEN BEGIN 
-                    UPDATE companies SET type_id = 13 WHERE company_id = companyID;
+                    UPDATE companies SET type_id = 24 WHERE company_id = companyID;
                     SET negativeCompaniesLength = negativeCompaniesLength + 1;
                 END;
             END IF;
@@ -4122,7 +4112,12 @@ CREATE TRIGGER `connections_before_update` BEFORE UPDATE ON `connections` FOR EA
 END
 $$
 DELIMITER ;
-CREATE TABLE `day_statistic_view` (
+CREATE TABLE `day_banks_statistic_view` (
+`user_id` int(11)
+,`bank_name` varchar(128)
+,`count` bigint(21)
+);
+CREATE TABLE `day_types_statistic_view` (
 `translate_to` varchar(128)
 ,`user_name` varchar(64)
 ,`user_id` int(11)
@@ -4357,6 +4352,13 @@ CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGI
                             "type", 0,
                             "rowStart", 1,
                             "rowLimit", 10
+                        ),
+                        "duplicates", JSON_OBJECT(
+                            "dateStart", DATE(NOW()),
+                            "dateEnd", DATE(NOW()),
+                            "type", 0,
+                            "rowStart", 1,
+                            "rowLimit", 10
                         )
                     )
                 );
@@ -4535,6 +4537,24 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 END;
                 ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(NOW()), "$.distribution.difficult.dateEnd", DATE(NOW()));
             END CASE;
+            SET type = JSON_EXTRACT(NEW.state_json, "$.distribution.duplicates.type");
+            CASE type
+                WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(NOW()), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+                WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+                WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+                WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+                WHEN 4 THEN BEGIN 
+                    SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 24 ORDER BY company_date_create LIMIT 1;
+                    IF firstDate IS NULL
+                        THEN SET firstDate = DATE(NOW());
+                    END IF;
+                    SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(firstDate), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+                END;
+                WHEN 5 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)), "$.distribution.duplicates.dateEnd", DATE(SUBDATE(NOW(), INTERVAL 1 DAY)));
+                WHEN 6 THEN BEGIN
+                END;
+                ELSE SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(NOW()), "$.distribution.duplicates.dateEnd", DATE(NOW()));
+            END CASE;
         END;
     END IF;
 END
@@ -4640,15 +4660,6 @@ CREATE TABLE `types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 INSERT INTO `types` (`type_id`, `type_name`) VALUES
-(30, 'api_accepted'),
-(31, 'api_bank_rejection'),
-(32, 'api_client_refusal'),
-(25, 'api_doc_upload'),
-(24, 'api_double'),
-(28, 'api_meeting_scheduled'),
-(27, 'api_meeting_waiting'),
-(29, 'api_postprocessing'),
-(26, 'api_processing'),
 (19, 'bank_supervisor'),
 (18, 'bank_user'),
 (46, 'call_answered'),
@@ -4671,6 +4682,7 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (44, 'check_inn'),
 (7, 'deposit'),
 (37, 'difficult'),
+(24, 'double'),
 (21, 'file_created'),
 (22, 'file_process'),
 (20, 'file_reservation'),
@@ -4692,7 +4704,15 @@ INSERT INTO `types` (`type_id`, `type_name`) VALUES
 (13, 'validate'),
 (3, 'ws'),
 (11, 'ИП'),
-(12, 'ООО');
+(12, 'ООО'),
+(25, '–'),
+(26, '––'),
+(27, '–––'),
+(28, '––––'),
+(29, '–––––'),
+(30, '––––––'),
+(31, '–––––––'),
+(32, '––––––––');
 
 CREATE TABLE `users` (
   `user_id` int(11) NOT NULL,
@@ -4818,9 +4838,12 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `company_banks_statuses_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `company_banks_statuses_view`  AS  select `cb`.`company_id` AS `company_id`,`cb`.`bank_id` AS `bank_id`,if((`tr`.`translate_to` is not null),`tr`.`translate_to`,`bs`.`bank_status_text`) AS `bank_status_text`,`bs`.`type_id` AS `type_id` from ((`company_banks` `cb` left join `bank_statuses` `bs` on((`cb`.`bank_status_id` = `bs`.`bank_status_id`))) left join `translates` `tr` on((`tr`.`translate_from` = `bs`.`bank_status_text`))) ;
-DROP TABLE IF EXISTS `day_statistic_view`;
+DROP TABLE IF EXISTS `day_banks_statistic_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `day_statistic_view`  AS  select if((`tr`.`translate_to` is not null),`tr`.`translate_to`,`tp`.`type_name`) AS `translate_to`,`u`.`user_name` AS `user_name`,`u`.`user_id` AS `user_id`,count(0) AS `count` from (((`companies` `c` left join `types` `tp` on((`tp`.`type_id` = `c`.`type_id`))) left join `translates` `tr` on((`tr`.`translate_from` = `tp`.`type_name`))) join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) where (cast(`c`.`company_date_update` as date) = cast(now() as date)) group by `u`.`user_name`,`tr`.`translate_to`,`tp`.`type_id`,`u`.`user_id` ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `day_banks_statistic_view`  AS  select `c`.`user_id` AS `user_id`,`b`.`bank_name` AS `bank_name`,count(0) AS `count` from ((`company_banks` `cb` join `companies` `c` on((`c`.`company_id` = `cb`.`company_id`))) join `banks` `b` on((`b`.`bank_id` = `cb`.`bank_id`))) where ((cast(`cb`.`company_bank_date_send` as date) = cast(now() as date)) and (`c`.`type_id` = 13) and ((`cb`.`company_bank_application_id` is not null) or (`cb`.`company_bank_request_id` is not null))) group by `c`.`user_id`,`b`.`bank_name` ;
+DROP TABLE IF EXISTS `day_types_statistic_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `day_types_statistic_view`  AS  select if((`tr`.`translate_to` is not null),`tr`.`translate_to`,`tp`.`type_name`) AS `translate_to`,`u`.`user_name` AS `user_name`,`u`.`user_id` AS `user_id`,count(0) AS `count` from (((`companies` `c` left join `types` `tp` on((`tp`.`type_id` = `c`.`type_id`))) left join `translates` `tr` on((`tr`.`translate_from` = `tp`.`type_name`))) join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) where (cast(`c`.`company_date_update` as date) = cast(now() as date)) group by `u`.`user_name`,`tr`.`translate_to`,`tp`.`type_id`,`u`.`user_id` ;
 DROP TABLE IF EXISTS `empty_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `empty_companies_view`  AS  select `companies`.`company_id` AS `company_id`,`companies`.`company_date_create` AS `company_date_create` from `companies` where (isnull(`companies`.`company_ogrn`) and isnull(`companies`.`company_ogrn_date`) and isnull(`companies`.`company_person_name`) and isnull(`companies`.`company_person_surname`) and isnull(`companies`.`company_person_patronymic`) and isnull(`companies`.`company_person_birthday`) and isnull(`companies`.`company_person_birthplace`) and isnull(`companies`.`company_inn`) and isnull(`companies`.`company_address`) and isnull(`companies`.`company_doc_number`) and isnull(`companies`.`company_doc_date`) and isnull(`companies`.`company_organization_name`) and isnull(`companies`.`company_organization_code`) and isnull(`companies`.`company_phone`) and isnull(`companies`.`company_email`) and isnull(`companies`.`company_okved_code`) and isnull(`companies`.`company_okved_name`) and isnull(`companies`.`company_kpp`) and isnull(`companies`.`company_index`) and isnull(`companies`.`company_house`) and isnull(`companies`.`company_region_type`) and isnull(`companies`.`company_region_name`) and isnull(`companies`.`company_area_type`) and isnull(`companies`.`company_area_name`) and isnull(`companies`.`company_locality_type`) and isnull(`companies`.`company_locality_name`) and isnull(`companies`.`company_street_type`) and isnull(`companies`.`company_street_name`) and isnull(`companies`.`company_innfl`) and isnull(`companies`.`company_person_position_type`) and isnull(`companies`.`company_person_position_name`) and isnull(`companies`.`company_doc_name`) and isnull(`companies`.`company_doc_gifter`) and isnull(`companies`.`company_doc_code`) and isnull(`companies`.`company_doc_house`) and isnull(`companies`.`company_doc_flat`) and isnull(`companies`.`company_doc_region_type`) and isnull(`companies`.`company_doc_region_name`) and isnull(`companies`.`company_doc_area_type`) and isnull(`companies`.`company_doc_area_name`) and isnull(`companies`.`company_doc_locality_type`) and isnull(`companies`.`company_doc_locality_name`) and isnull(`companies`.`company_doc_street_type`) and isnull(`companies`.`company_doc_street_name`) and isnull(`companies`.`company_date_registration`) and isnull(`companies`.`company_person_sex`) and isnull(`companies`.`company_ip_type`)) ;
