@@ -18,6 +18,7 @@ import ArrowForward from 'material-ui/svg-icons/navigation/arrow-forward';
 import Audiotrack from 'material-ui/svg-icons/image/audiotrack';
 import PhoneForwarded from 'material-ui/svg-icons/notification/phone-forwarded';
 import PhoneInTalk from 'material-ui/svg-icons/notification/phone-in-talk';
+import Block from 'material-ui/svg-icons/content/block';
 import RemoveCircle from 'material-ui/svg-icons/content/remove-circle';
 import SettingsPhone from 'material-ui/svg-icons/action/settings-phone';
 import Replay from 'material-ui/svg-icons/av/replay';
@@ -57,7 +58,8 @@ const categories = [
 	"api",
 	"callBack",
 	"notDial",
-	"difficult"
+	"difficult",
+	"duplicates"
 ];
 const categoriesTypes = [
 	[35,9],
@@ -65,7 +67,8 @@ const categoriesTypes = [
 	[13],
 	[23],
 	[36],
-	[37]
+	[37],
+	[24]
 ];
 export default class Tinkoff extends React.Component {
 	constructor(props){
@@ -425,6 +428,11 @@ export default class Tinkoff extends React.Component {
             icon={<SadFace/>}
             onClick={() => this.select(5)}
           />
+          <BottomNavigationItem
+            label={"ДУБЛИКАТЫ"}
+            icon={<Block/>}
+            onClick={() => this.select(6)}
+          />
 				</BottomNavigation>
 				<Table
           fixedHeader={false}
@@ -520,7 +528,7 @@ export default class Tinkoff extends React.Component {
 	              				]
 		              		}
 		              		{
-		              			[1,2,3,4,5].indexOf(this.state.selectedIndex) != -1 &&
+		              			[1,2,3,4,5,6].indexOf(this.state.selectedIndex) != -1 &&
 		              			<SelectField
 		              				floatingLabelText = "Период"
 		              				value = {
@@ -674,7 +682,8 @@ export default class Tinkoff extends React.Component {
 	            					this.state.selectedIndex == 2 ? [13] :
 	            					this.state.selectedIndex == 3 ? [23] :
 	            					this.state.selectedIndex == 4 ? [36] :
-	            					this.state.selectedIndex == 5 && [37]
+	            					this.state.selectedIndex == 5 ? [37] :
+	            					this.state.selectedIndex == 6 && [24]
             					).indexOf(company.type_id) != -1).length == this.props.state.distribution[
         								categories[this.state.selectedIndex]
         							].rowLimit) ? false : true
@@ -724,7 +733,7 @@ export default class Tinkoff extends React.Component {
 	              	this.state.selectedIndex == 3 && 
 	              	<TableHeaderColumn>Дата и Время</TableHeaderColumn>
 	              }
-              	<TableHeaderColumn>{this.state.selectedIndex != 2 ? "Действия" : "Статус обработки"}</TableHeaderColumn>
+              	<TableHeaderColumn>{[2,6].indexOf(this.state.selectedIndex) == -1 ? "Действия" : "Статус обработки"}</TableHeaderColumn>
               	{
               		this.state.selectedIndex == 2 &&
 	              	<TableHeaderColumn>Действия</TableHeaderColumn>
@@ -745,7 +754,8 @@ export default class Tinkoff extends React.Component {
 		              	(this.state.selectedIndex == 2 && company.type_id == 13) ||
 		              	(this.state.selectedIndex == 3 && company.type_id == 23) ||
 		              	(this.state.selectedIndex == 4 && company.type_id == 36) ||
-		              	(this.state.selectedIndex == 5 && company.type_id == 37)
+		              	(this.state.selectedIndex == 5 && company.type_id == 37) ||
+		              	(this.state.selectedIndex == 6 && company.type_id == 24) 
 		              ) &&
 		              <TableRow key = {key} style = {{background: [33,34,43,38,39].indexOf(company.call_type) > -1 ? "#E8F5E9" : "inherit"}}>
 		                <TableRowColumn>{company.company_phone || "–"}</TableRowColumn>
@@ -864,7 +874,7 @@ export default class Tinkoff extends React.Component {
 				                	</IconButton>
 		                		}
 		                		{
-		                			this.state.selectedIndex == 2 &&
+		                			[2,6].indexOf(this.state.selectedIndex) > -1 &&
 		                			<span style = {{
 		                				whiteSpace: "pre"
 		                			}}>
@@ -1017,7 +1027,8 @@ export default class Tinkoff extends React.Component {
 	            					this.state.selectedIndex == 2 ? [13] :
 	            					this.state.selectedIndex == 3 ? [23] :
 	            					this.state.selectedIndex == 4 ? [36] :
-	            					this.state.selectedIndex == 5 && [37]
+	            					this.state.selectedIndex == 5 ? [37] :
+	            					this.state.selectedIndex == 6 && [24]
             					).indexOf(company.type_id) != -1).length == this.props.state.distribution[
         								categories[this.state.selectedIndex]
         							].rowLimit) ? false : true
@@ -1395,8 +1406,10 @@ export default class Tinkoff extends React.Component {
       							"Перезвонить" :
       							this.props.state.activeCompany.type_id == 36 ?
       								"Нет связи" :
-      								this.props.state.activeCompany.type_id == 37 &&
-      								"Сложные") : "–"
+      								this.props.state.activeCompany.type_id == 37 ?
+      								"Сложные" :
+      									this.props.state.activeCompany.type_id == 24 &&
+      									"Дубликаты") : "–"
         			}</div>,
 							<Divider key = {1}/>,
 							<div key = {2} style = {{margin: "20px 0", padding: "0 10px"}}>Ф.И.О: {this.props.state.activeCompany && [this.props.state.activeCompany.company_person_name, this.props.state.activeCompany.company_person_surname, this.props.state.activeCompany.company_person_patronymic].join(" ")}</div>,

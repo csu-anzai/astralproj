@@ -15,6 +15,7 @@ BEGIN
 				@callbackCount:=IF(type_id = 23, @callbackCount+1, @callbackCount) callbackCount, 
 				@inworkCount:=IF(type_id IN (9, 35), @inworkCount+1, @inworkCount) inworkCount, 
 				@dialCount:=IF(type_id = 36, @dialCount+1, @dialCount) dialCount,
+				@duplicatesCount:=IF(type_id = 24, @duplicatesCount+1, @duplicatesCount) duplicatesCount,
 				type_id
 			FROM 
 				companies 
@@ -25,6 +26,7 @@ BEGIN
 						(type_id = 14 AND DATE(company_date_create) BETWEEN DATE(@invalidateDateStart) AND DATE(@invalidateDateEnd)) OR 
 						(type_id = 37 AND DATE(company_date_create) BETWEEN DATE(@difficultDateStart) AND DATE(@difficultDateEnd)) OR 
 						(type_id = 23 AND DATE(company_date_create) BETWEEN DATE(@callbackDateStart) AND DATE(@callbackDateEnd)) OR 
+						(type_id = 24 AND DATE(company_date_create) BETWEEN DATE(@duplicatesDateStart) AND DATE(@duplicatesDateEnd)) OR 
 						(type_id IN (9, 35))
 					) AND user_id = userID
 				) OR 
@@ -37,6 +39,7 @@ BEGIN
 			(difficultCount BETWEEN @difficultRowStart AND @difficultRowLimit AND type_id = 37) OR
 			(callbackCount BETWEEN @callbackRowStart AND @callbackRowLimit AND type_id = 23) OR
 			(inworkCount BETWEEN @inworkRowStart AND @inworkRowLimit AND type_id IN (9, 35)) OR
+			(duplicatesCount BETWEEN @duplicatesRowStart AND @duplicatesRowLimit AND type_id = 24) OR
 			(dialCount BETWEEN @dialRowStart AND @dialRowLimit AND type_id = 36);
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
 	SET responce = JSON_ARRAY();
@@ -49,6 +52,7 @@ BEGIN
 					@callbackCount = 0,
 					@dialCount = 0,
 					@inworkCount = 0,
+					@duplicatesCount = 0,
 					@apiRowStart = JSON_EXTRACT(distributionFilters, "$.api.rowStart"),
 					@apiRowLimit = JSON_EXTRACT(distributionFilters, "$.api.rowLimit"),
 					@apiDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.api.dateStart")),
@@ -69,6 +73,10 @@ BEGIN
 					@dialRowLimit = JSON_EXTRACT(distributionFilters, "$.notDial.rowLimit"),
 					@dialDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.notDial.dateStart")),
 					@dialDateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.notDial.dateEnd")),
+					@duplicatesRowStart = JSON_EXTRACT(distributionFilters, "$.duplicates.rowStart"),
+					@duplicatesRowLimit = JSON_EXTRACT(distributionFilters, "$.duplicates.rowLimit"),
+					@duplicatesDateStart = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.duplicates.dateStart")),
+					@duplicatesDateEnd = JSON_UNQUOTE(JSON_EXTRACT(distributionFilters, "$.duplicates.dateEnd")),
 					@inworkRowStart = JSON_EXTRACT(distributionFilters, "$.work.rowStart"),
 					@inworkRowLimit = JSON_EXTRACT(distributionFilters, "$.work.rowLimit");
 			SET @apiRowLimit = @apiRowLimit + @apiRowStart - 1,
@@ -76,7 +84,8 @@ BEGIN
 					@difficultRowLimit = @difficultRowLimit + @difficultRowStart - 1,
 					@callbackRowLimit = @callbackRowLimit + @callbackRowStart - 1,
 					@inworkRowLimit = @inworkRowLimit + @inworkRowStart - 1,
-					@dialRowLimit = @dialRowLimit + @dialRowStart - 1;
+					@dialRowLimit = @dialRowLimit + @dialRowStart - 1,
+					@duplicatesRowLimit = @duplicatesRowLimit + @duplicatesRowStart - 1;
 			OPEN companiesCursor;
 				companiesLoop: LOOP
 					FETCH companiesCursor INTO company;

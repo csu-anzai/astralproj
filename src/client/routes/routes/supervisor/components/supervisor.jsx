@@ -66,6 +66,10 @@ const typeNames = [
 	{
 		type_id: 9,
 		type_name: "Рабочий список: в работе"
+	},
+	{
+		type_id: 24,
+		type_name: "Дубликаты"
 	}
 ];
 export default class Supervisor extends React.Component {
@@ -465,6 +469,7 @@ export default class Supervisor extends React.Component {
         			</SelectField>
         		])}
 	        	<Divider/>
+	        	<MenuItem value = {24} primaryText = "дубликаты"/>
 	        	<MenuItem value = {14} primaryText = "Не интересно" />
 	        	<MenuItem value = {36} primaryText = "Нет связи" />
 	        	<MenuItem value = {23} primaryText = "Перезвонить" />

@@ -14,7 +14,7 @@ module.exports = modules => (resolve, reject, data) => {
 		if(responce && responce.length > 0){
 			message = "Статистика по обработке компаний за день:\n\n";
 			responce.forEach(item => {
-				message += `${item.user_name}:\n--\nобработано всего лидов - ${item.types.map(type => type.count).reduce((before, after) => before + after)};\n${item.types.map(type => `${type.type_name} – ${type.count}`).join("\n")}\n--\n${item.bank_types.map(bankType => `${bankType.type_id == 15 ? "Нейтральный статус заявки" : bankType.type_id == 16 ? "Положительный статус заявки" : bankType.type_id == 17 && "Отрицательный статус заявки"} – ${bankType.count}`).join("\n")}\n\n`;
+				message += `${item.user_name}:\n--\nобработано всего лидов - ${item.types.map(type => type.count).reduce((before, after) => before + after)};\n${item.types.map(type => `${type.type_name} – ${type.count}`).join("\n")}\n--\n${item.banks.map(bank => `${bank.bank_name} – ${bank.count}`).join("\n")}\n\n`;
 			});
 		} else {
 			message = "Сегодня нет обработанных компаний";

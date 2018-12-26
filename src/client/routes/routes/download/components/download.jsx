@@ -57,6 +57,10 @@ const typeNames = [
 	{
 		type_id: 10,
 		type_name: "Свободные"
+	},
+	{
+		type_id: 24,
+		type_name: "Дубликаты"
 	}
 ];
 export default class Download extends React.Component {
@@ -271,6 +275,7 @@ export default class Download extends React.Component {
 						          selectionRenderer = {values => values.length == 0 ? "Не учитывать" : values.length == 1 ? typeNames.find(i => i.type_id == values[0]).type_name : `Выбрано типов: ${values.length}`}
 						        >
 						        	<MenuItem value = {10} primaryText = "Свободные" />
+						        	<MenuItem value = {24} primaryText = "Дубликаты" />
 						        	<MenuItem value = {13} primaryText = "Утверждено" />
 						        	<MenuItem value = {14} primaryText = "Не интересно" />
 						        	<MenuItem value = {36} primaryText = "Нет связи" />
