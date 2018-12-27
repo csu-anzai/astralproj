@@ -3,8 +3,9 @@ module.exports = modules => (resolve, reject, data) => {
 	let companiesLength = data.companies.length,
 			count = 100,
 			integers = parseInt(companiesLength/count),
-			remainder = integers > 0 ? (companiesLength % count) : 0;
-	let companies = [];
+			remainder = integers > 0 ? (companiesLength % count) : 0,
+			companies = [];
+	const banksKeys = [1,4];
 	if(integers == 0){
 		companies = [data.companies.map(company => company.company_id)];
 	} else {
@@ -41,6 +42,17 @@ module.exports = modules => (resolve, reject, data) => {
 				}, (err, responce, body) => {
 						err ? reject(err) : resolve(body.result);
 				});
+			}),
+			new Promise((resolve, reject) => {
+				request({
+					url: `${modules.env.vtb.checkInnUrl}?inn=${company.company_inn}`,
+					headers: {
+						Token: modules.vtb.getToken()
+					}
+				}, (err, responce, body) => {
+					typeof body == "string" && (body = JSON.parse(body));
+					err ? reject(err) : resolve(body.status_code);
+				});
 			})
 		]) 
 	)).then(responce => {
@@ -48,11 +60,11 @@ module.exports = modules => (resolve, reject, data) => {
 			type: "checkDuplicatesResponce",
 			responce
 		});
-		const companies = responce.map((arr, key) => ({
-			company_id: data.companies[key].company_id,
+		const companies = responce.map((arr, companyKey) => ({
+			company_id: data.companies[companyKey].company_id,
 			banks: arr.map((item, key) => ({
-				bank_id: +key + 1,
-				status_text: item 
+				bank_id: banksKeys[key],
+				status_text: item
 			}))
 		}));
 		modules.reducer.dispatch({
