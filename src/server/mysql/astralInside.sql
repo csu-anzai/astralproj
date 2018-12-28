@@ -4010,7 +4010,7 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
     THEN SET NEW.company_date_update = OLD.company_date_update;
     ELSE BEGIN 
       IF NEW.company_file_user IS NULL AND OLD.company_file_user IS NULL
-        THEN BEGIN END; -- SET NEW.company_date_update = NOW();
+        THEN SET NEW.company_date_update = NOW();
         ELSE SET NEW.company_date_update = OLD.company_date_update;
       END IF;
     END;
