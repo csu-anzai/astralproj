@@ -2,7 +2,7 @@ BEGIN
 	DECLARE companyID, companiesLength, connectionID, userID, timeID, companiesCount INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
-	DECLARE today, yesterday, hours, weekdaynow VARCHAR(19);
+	DECLARE today, yesterday, hours, weekdaynow, friday VARCHAR(19);
 	DECLARE responce, companiesArray JSON;
 	SET connectionValid = checkConnection(connectionHash);
 	SELECT connection_api_id, connection_id, user_id INTO connectionApiID, connectionID, userID FROM users_connections_view WHERE connection_hash = connectionHash;
@@ -12,6 +12,8 @@ BEGIN
 			SET today = DATE(NOW());
 			SET yesterday = SUBDATE(today, INTERVAL 1 DAY);
 			SET hours = HOUR(NOW());
+			SET friday = SUBDATE(today, INTERVAL 3 DAY);
+			SET weekdaynow = WEEKDAY(today);
 			IF clearWorkList 
 				THEN BEGIN 
 					UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35, 44);
@@ -44,8 +46,8 @@ BEGIN
 							(
 								IF(
 									DATE(company_date_registration) IS NOT NULL, 
-									DATE(company_date_registration) IN (today, yesterday), 
-									DATE(company_date_create) IN (today, yesterday)
+									DATE(company_date_registration) IN (today, IF(weekdaynow = 0, friday, yesterday)), 
+									DATE(company_date_create) IN (today, IF(weekdaynow = 0, friday, yesterday))
 								) AND
 								user_id IS NULL AND 
 								type_id = 10 AND 
@@ -53,7 +55,7 @@ BEGIN
 								IF(
 									DATE(company_date_registration) IS NOT NULL,
 									IF(
-										DATE(company_date_registration) = yesterday,
+										DATE(company_date_registration) = IF(weekdaynow = 0, friday, yesterday),
 										IF(
 											hours BETWEEN 9 AND 16,
 											1,
@@ -62,7 +64,7 @@ BEGIN
 										1
 									),
 									IF(
-										DATE(company_date_create) = yesterday,
+										DATE(company_date_create) = IF(weekdaynow = 0, friday, yesterday),
 										IF(
 											hours BETWEEN 9 AND 16,
 											1,
