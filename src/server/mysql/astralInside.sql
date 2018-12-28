@@ -1578,7 +1578,7 @@ BEGIN
     DECLARE companyID, companiesLength, connectionID, userID, timeID, companiesCount INT(11);
     DECLARE connectionValid TINYINT(1);
     DECLARE connectionApiID VARCHAR(128);
-    DECLARE today, yesterday, hours, weekdaynow VARCHAR(19);
+    DECLARE today, yesterday, hours, weekdaynow, friday VARCHAR(19);
     DECLARE responce, companiesArray JSON;
     SET connectionValid = checkConnection(connectionHash);
     SELECT connection_api_id, connection_id, user_id INTO connectionApiID, connectionID, userID FROM users_connections_view WHERE connection_hash = connectionHash;
@@ -1588,6 +1588,8 @@ BEGIN
             SET today = DATE(NOW());
             SET yesterday = SUBDATE(today, INTERVAL 1 DAY);
             SET hours = HOUR(NOW());
+            SET friday = SUBDATE(today, INTERVAL 3 DAY);
+            SET weekdaynow = WEEKDAY(today);
             IF clearWorkList 
                 THEN BEGIN 
                     UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35, 44);
@@ -1620,8 +1622,8 @@ BEGIN
                             (
                                 IF(
                                     DATE(company_date_registration) IS NOT NULL, 
-                                    DATE(company_date_registration) IN (today, yesterday), 
-                                    DATE(company_date_create) IN (today, yesterday)
+                                    DATE(company_date_registration) IN (today, IF(weekdaynow = 0, friday, yesterday)), 
+                                    DATE(company_date_create) IN (today, IF(weekdaynow = 0, friday, yesterday))
                                 ) AND
                                 user_id IS NULL AND 
                                 type_id = 10 AND 
@@ -1629,7 +1631,7 @@ BEGIN
                                 IF(
                                     DATE(company_date_registration) IS NOT NULL,
                                     IF(
-                                        DATE(company_date_registration) = yesterday,
+                                        DATE(company_date_registration) = IF(weekdaynow = 0, friday, yesterday),
                                         IF(
                                             hours BETWEEN 9 AND 16,
                                             1,
@@ -1638,7 +1640,7 @@ BEGIN
                                         1
                                     ),
                                     IF(
-                                        DATE(company_date_create) = yesterday,
+                                        DATE(company_date_create) = IF(weekdaynow = 0, friday, yesterday),
                                         IF(
                                             hours BETWEEN 9 AND 16,
                                             1,
@@ -3301,9 +3303,10 @@ BEGIN
     DECLARE companiesLength, bankID, companiesIterator, banksIterator, banksLength, companyID, statusTypeID, statusID, companyBankID, negativeCompaniesLength INT(11);
     DECLARE connectionHash VARCHAR(32);
     DECLARE statusText VARCHAR(256);
-    DECLARE responce, company, companyBanksArray, companyBank JSON;
+    DECLARE responce, company, companyBanksArray, companyBank, negativeCompanies JSON;
     SET responce = JSON_ARRAY();
     SET companiesLength = JSON_LENGTH(companiesArray);
+    SET negativeCompanies = JSON_ARRAY();
     SET negativeCompaniesLength = 0;
     SET companiesIterator = 0;
     companiesLoop: LOOP
@@ -3339,7 +3342,9 @@ BEGIN
             IF statusTypeID = 17
                 THEN BEGIN 
                     UPDATE companies SET type_id = 24 WHERE company_id = companyID;
-                    SET negativeCompaniesLength = negativeCompaniesLength + 1;
+                    IF !JSON_CONTAINS(negativeCompanies, JSON_ARRAY(companyID))
+                        THEN SET negativeCompanies = JSON_MERGE(negativeCompanies, JSON_ARRAY(companyID));
+                    END IF;
                 END;
             END IF;
             SET banksIterator = banksIterator + 1;
@@ -3350,11 +3355,12 @@ BEGIN
     END LOOP;
     UPDATE companies SET type_id = 9 WHERE user_id = userID AND type_id = 44;
     SELECT bank_id, connection_hash INTO bankID, connectionHash FROM users_connections_view WHERE user_id = userID AND connection_end = 0 LIMIT 1;
+    SET negativeCompaniesLength = JSON_LENGTH(negativeCompanies);
     SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
     SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
         "type", "merge",
         "data", JSON_OBJECT(
-            "message", IF(negativeCompaniesLength = 0, "Окончание наполнения рабочего списка", CONCAT("Добавлено в рабочий список ", (companiesLength - negativeCompaniesLength) ," компаний.На проверке ещё ", negativeCompaniesLength, " компаний")),
+            "message", IF(negativeCompaniesLength = 0, "Окончание наполнения рабочего списка", CONCAT("Добавлено в рабочий список ", (companiesLength - negativeCompaniesLength) ," компаний. На проверке ещё ", negativeCompaniesLength, " компаний")),
             "messageType", IF(negativeCompaniesLength = 0, "success", "")
         )
     ))));
@@ -4004,7 +4010,7 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
     THEN SET NEW.company_date_update = OLD.company_date_update;
     ELSE BEGIN 
       IF NEW.company_file_user IS NULL AND OLD.company_file_user IS NULL
-        THEN SET NEW.company_date_update = NOW();
+        THEN BEGIN END; -- SET NEW.company_date_update = NOW();
         ELSE SET NEW.company_date_update = OLD.company_date_update;
       END IF;
     END;
