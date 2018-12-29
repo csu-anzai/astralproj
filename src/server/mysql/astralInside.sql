@@ -732,7 +732,7 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `auth` (`connectionHash` VARCHAR(32) CHARSET utf8, `email` VARCHAR(512) CHARSET utf8, `pass` VARCHAR(128) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE userHash VARCHAR(32);
+    DECLARE userHash VARCHAR(32);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userName VARCHAR(64);
     DECLARE userEmail VARCHAR(512);
@@ -794,7 +794,8 @@ BEGIN
                                         "activeCompany", activeCompany,
                                         "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
-                                        "ringing", ringing
+                                        "ringing", ringing,
+                                        "cities", getCities()
                                     )
                                 ))
                             )
@@ -869,12 +870,12 @@ BEGIN
         END;
         ELSE SET responce = JSON_MERGE(responce, 
             JSON_OBJECT(
-              "type", "sendToSocket",
+                "type", "sendToSocket",
                 "data", JSON_OBJECT(
                     "socketID", connectionApiID,
                     "data", JSON_ARRAY(
                         JSON_OBJECT(
-                          "type", "merge",
+                            "type", "merge",
                             "data", JSON_OBJECT(
                                 "loginMessage", "Не верный email или пароль",
                                 "auth", 0
@@ -890,22 +891,22 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `autoAuth` (`userHash` VARCHAR(32) CHARSET utf8, `connectionHash` VARCHAR(32) CHARSET utf8) RETURNS JSON NO SQL
 BEGIN
-  DECLARE connectionID, userID, activeCompaniesLength, typeID, bankID INT(11);
+    DECLARE connectionID, userID, activeCompaniesLength, typeID, bankID INT(11);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE userName VARCHAR(64);
     DECLARE userEmail VARCHAR(512);
     DECLARE userAuth, connectionEnd, ringing TINYINT(1);
     DECLARE responce, activeCompanies, activeCompany, downloadFilters, distributionFilters, statisticFilters JSON;
     SET responce = JSON_ARRAY();
-  SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
+    SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     SELECT user_id, user_auth, type_id, user_name, user_email, bank_id INTO userID, userAuth, typeID, userName, userEmail, bankID FROM users WHERE user_hash = userHash;
     IF connectionID IS NULL OR userAuth = 0 OR connectionEnd = 1 OR userID IS NULL
-      THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
-          "type", "sendToSocket",
+        THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "sendToSocket",
             "data", JSON_OBJECT(
                 "socketID", connectionApiID,
                 "data", JSON_ARRAY(JSON_OBJECT(
-                  "type", "merge",
+                    "type", "merge",
                     "data", JSON_OBJECT(
                         "loginMessage", "Требуется ручная авторизация",
                         "auth", 0,
@@ -918,12 +919,12 @@ BEGIN
             UPDATE connections SET user_id = userID WHERE connection_id = connectionID;
             SELECT user_hash INTO userHash FROM users WHERE user_id = userID;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
-              "type", "sendToSocket",
+                "type", "sendToSocket",
                 "data", JSON_OBJECT(
                     "socketID", connectionApiID,
                     "data", JSON_ARRAY(
                         JSON_OBJECT(
-                          "type", "merge",
+                            "type", "merge",
                             "data", JSON_OBJECT(
                                 "loginMessage", "Авторизация прошла успешно",
                                 "auth", 1,
@@ -961,7 +962,8 @@ BEGIN
                                         "activeCompany", activeCompany,
                                         "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
-                                        "ringing", ringing
+                                        "ringing", ringing,
+                                        "cities", getCities()
                                     )
                                 ))
                             )
@@ -1406,6 +1408,62 @@ BEGIN
   RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `editCompanyInformation` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11), `phone` VARCHAR(12) CHARSET utf8, `cityID` INT(11)) RETURNS JSON NO SQL
+BEGIN
+    DECLARE userID, companyTypeID, oldCityID, bankID INT(11);
+    DECLARE connectionValid, done TINYINT(1);
+    DECLARE connectionApiID VARCHAR(32);
+    DECLARE cityName VARCHAR(60);
+    DECLARE bankName VARCHAR(128);
+    DECLARE responce, companyBanks JSON;
+    DECLARE banksCursor CURSOR FOR SELECT bank_id FROM bank_cities WHERE city_id = cityID;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    SET connectionValid = checkConnection(connectionHash);
+    IF connectionValid
+        THEN BEGIN
+            SELECT type_id, city_id INTO companyTypeID, oldCityID FROM companies WHERE company_id = companyID;
+            SELECT user_id INTO userID FROM connections WHERE connection_hash = connectionHash;
+            SELECT city_name INTO cityName FROM cities WHERE city_id = cityID;
+            SET companyBanks = JSON_OBJECT();
+            IF oldCityID != cityID
+                THEN BEGIN
+                    DELETE FROM company_banks WHERE company_id = companyID;
+                    OPEN banksCursor;
+                        banksLoop: LOOP
+                            SET done = 0;
+                            FETCH banksCursor INTO bankID;
+                            IF done
+                                THEN LEAVE banksLoop;
+                            END IF;
+                            INSERT INTO company_banks (company_id, bank_id) VALUES (companyID, bankID);
+                            SELECT bank_name INTO bankName FROM banks WHERE bank_id = bankID;
+                            SET companyBanks = JSON_SET(companyBanks, CONCAT("$.b", bankID), JSON_OBJECT("bank_id", bankID, "bank_name", bankName, "company_bank_status", NULL, "bank_status_id", NULL));
+                            ITERATE banksLoop;
+                        END LOOP;
+                    CLOSE banksCursor;
+                END;
+            END IF;
+            UPDATE companies SET company_phone = phone, city_id = cityID, company_json = JSON_SET(company_json, "$.company_phone", phone, "$.city_name", cityName, "$.city_id", cityID, "$.company_banks", companyBanks) WHERE company_id = companyID;
+            SET responce = JSON_MERGE(responce, IF(companyTypeID = 36, refreshUsersCompanies(), refreshUserCompanies(userID)));
+        END;
+        ELSE SET responce = JSON_MERGE(responce, JSON_OBJECT(
+            "type", "sendToSocket",
+            "data", JSON_OBJECT(
+                "socketID", connectionApiID,
+                "data", JSON_ARRAY(JSON_OBJECT(
+                    "type", "merge",
+                    "data", JSON_OBJECT(
+                        "auth", 0,
+                        "loginMessage", "Требуется ручной вход в систему"
+                    )
+                ))
+            )
+        ));
+    END IF;
+    RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `getActiveBankUserCompanies` (`connectionID` INT(11)) RETURNS JSON NO SQL
 BEGIN
     DECLARE userID INT(11) DEFAULT (SELECT user_id FROM connections WHERE connection_id = connectionID);
@@ -1716,6 +1774,52 @@ BEGIN
             ITERATE banksLoop;
         END LOOP;
     CLOSE banksCursor;
+    RETURN responce;
+END$$
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `getCities` () RETURNS JSON NO SQL
+BEGIN
+    DECLARE cityID, bankID INT(11);
+    DECLARE done TINYINT(1);
+    DECLARE cityName VARCHAR(60);
+    DECLARE bankName VARCHAR(128);
+    DECLARE responce, cityBanks, city JSON;
+    DECLARE citiesCursor CURSOR FOR SELECT city_id, city_name FROM cities;
+    DECLARE banksCursor CURSOR FOR SELECT DISTINCT bc.bank_id, b.bank_name FROM bank_cities bc JOIN banks b ON b.bank_id = bc.bank_id WHERE bc.city_id = @cityID;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    SET responce = JSON_ARRAY();
+    OPEN citiesCursor;
+        citiesLoop: LOOP
+            SET done = 0;   
+            FETCH citiesCursor INTO cityID, cityName;
+            IF done
+                THEN LEAVE citiesLoop;
+            END IF;
+            SET @cityID = cityID;
+            SET city = JSON_OBJECT(
+                "city_id", cityID,
+                "city_name", cityName
+            );
+            SET cityBanks = JSON_ARRAY();
+            OPEN banksCursor;
+                banksLoop: LOOP
+                    SET done = 0;
+                    FETCH banksCursor INTO bankID, bankName;
+                    IF done 
+                        THEN LEAVE banksLoop;
+                    END IF;
+                    SET cityBanks = JSON_MERGE(cityBanks, JSON_OBJECT(
+                        "bank_id", bankID,
+                        "bank_name", bankName
+                    ));
+                    ITERATE banksLoop;
+                END LOOP;
+            CLOSE banksCursor;
+            SET city = JSON_SET(city, "$.city_banks", cityBanks);
+            SET responce = JSON_MERGE(responce, city);
+            ITERATE citiesLoop;
+        END LOOP;
+    CLOSE citiesCursor;
     RETURN responce;
 END$$
 
@@ -4496,7 +4600,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.api.dateEnd", DATE(NOW()));
                 WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.api.dateEnd", DATE(NOW()));
                 WHEN 4 THEN BEGIN 
-                    SELECT company_date_create INTO firstDate FROM companies WHERE type_id IN (15, 16, 17) ORDER BY company_date_create LIMIT 1;
+                    SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 13 ORDER BY company_date_create LIMIT 1;
                     IF firstDate IS NULL
                         THEN SET firstDate = DATE(NOW());
                     END IF;
