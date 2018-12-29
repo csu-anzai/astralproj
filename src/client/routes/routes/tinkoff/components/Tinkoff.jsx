@@ -16,6 +16,7 @@ import History from 'material-ui/svg-icons/action/history';
 import ArrowBack from 'material-ui/svg-icons/navigation/arrow-back';
 import ArrowForward from 'material-ui/svg-icons/navigation/arrow-forward';
 import Audiotrack from 'material-ui/svg-icons/image/audiotrack';
+import Create from 'material-ui/svg-icons/content/create';
 import PhoneForwarded from 'material-ui/svg-icons/notification/phone-forwarded';
 import PhoneInTalk from 'material-ui/svg-icons/notification/phone-in-talk';
 import Block from 'material-ui/svg-icons/content/block';
@@ -99,6 +100,9 @@ export default class Tinkoff extends React.Component {
 		this.nextCall = this.nextCall.bind(this);
 		this.bankSelect = this.bankSelect.bind(this);
 		this.searchFilialChange = this.searchFilialChange.bind(this);
+		this.editPhone = this.editPhone.bind(this);
+		this.confirmEditInformation = this.confirmEditInformation.bind(this);
+		this.searchCityChange = this.searchCityChange.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -217,7 +221,9 @@ export default class Tinkoff extends React.Component {
 			company,
 			comment: company.company_comment || "",
 			dialog: true,
-			dialogType
+			dialogType,
+			city: company.city_name,
+			phone: company.company_phone
 		});
 	}
 	openDialog(dialogType){
@@ -232,7 +238,9 @@ export default class Tinkoff extends React.Component {
 			comment: "",
 			company: {},
 			selectedBanks: [],
-			searchFilialsValues: []
+			searchFilialsValues: [],
+			city: "",
+			phone: ""
 		});
 		this.props.dispatch({
 			type: "merge",
@@ -392,6 +400,32 @@ export default class Tinkoff extends React.Component {
 		this.setState({
 			searchFilialsValues
 		});
+	}
+	editPhone(obj, phone){
+		this.setState({
+			phone
+		});
+	}
+	searchCityChange(city){
+		this.setState({
+			city
+		});
+	}
+	confirmEditInformation(){
+		this.props.dispatch({
+			type: "query",
+			socket: true,
+			data: {
+				query: "editCompanyInformation",
+				values: [
+					this.props.state.connectionHash,
+					this.state.company.company_id,
+					this.state.phone,
+					this.props.state.cities.find(city => city.city_name.toLowerCase() == this.state.city.toLowerCase()).city_id
+				]
+			}
+		});
+		this.closeDialog();
 	}
 	render(){
 		localStorage.removeItem("hash");
@@ -909,6 +943,15 @@ export default class Tinkoff extends React.Component {
 					                	<RemoveCircle color = "#9a2c2c"/>
 					                </IconButton>
 					              }
+					              {
+		                			[0,1,3,4,5].indexOf(this.state.selectedIndex) > -1 &&
+			                		<IconButton
+					                	title = "Редактировать компанию"
+					                	onClick = {this.companyCheck.bind(this, company, 4)}
+					                >
+					                	<Create color = "#da66da"/>
+					                </IconButton>
+					              }
 			                </TableRowColumn>
 		                }
 		                {
@@ -1067,8 +1110,10 @@ export default class Tinkoff extends React.Component {
           title={
           	this.state.dialogType == 0 ? 
           		`Оформление заявки – ${this.state.company && this.state.company.company_organization_name}` : 
-          		this.state.dialogType == 1 && 
-          			`Выбор даты и времени – ${this.state.company && this.state.company.company_organization_name}`
+          		this.state.dialogType == 1 ? 
+          			`Выбор даты и времени – ${this.state.company && this.state.company.company_organization_name}` :
+          			this.state.dialogType == 4 &&
+          				`Редактирование информации – ${this.state.company && this.state.company.company_organization_name}`
           }
           actions={[
 			      <FlatButton
@@ -1077,20 +1122,27 @@ export default class Tinkoff extends React.Component {
 			        onClick={this.closeDialog}
 			      />,
 			      <FlatButton
-			        label= {this.state.dialogType == 2 ? "Сбросить" : "Отправить"}
+			        label= {this.state.dialogType == 2 ? "Сбросить" : this.state.dialogType == 3 ? "Удалить" : "Отправить"}
 			        primary
 			        disabled = {
 			        	(
-			        		this.state.dialogType == 0 && 
-			        		(
-			        			this.state.selectedBanks.length == 0 || 
-			        			(
-			        				this.props.state.banksFilials && 
-			        				Object.keys(this.props.state.banksFilials).length > 0 &&
-			        				this.state.selectedBanks.filter(selectedBank => Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == selectedBank.bank_id) && Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == selectedBank.bank_id).bank_filials.length > 0).length !=
-			        				this.state.searchFilialsValues.filter(searchFilialValue => Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == searchFilialValue.bank_id) && Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == searchFilialValue.bank_id).bank_filials.length > 0 && searchFilialValue.filial_id >= 0).length
-		        				)
-		        			)
+			        		this.state.dialogType == 0 ? 
+				        		(
+				        			this.state.selectedBanks.length == 0 || 
+				        			(
+				        				this.props.state.banksFilials && 
+				        				Object.keys(this.props.state.banksFilials).length > 0 &&
+				        				this.state.selectedBanks.filter(selectedBank => Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == selectedBank.bank_id) && Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == selectedBank.bank_id).bank_filials.length > 0).length !=
+				        				this.state.searchFilialsValues.filter(searchFilialValue => Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == searchFilialValue.bank_id) && Object.keys(this.props.state.banksFilials).map(bankFilialKey => this.props.state.banksFilials[bankFilialKey]).find(bankFilial => bankFilial.bank_id == searchFilialValue.bank_id).bank_filials.length > 0 && searchFilialValue.filial_id >= 0).length
+			        				)
+			        			) :
+			        			this.state.dialogType == 4 &&
+			        				(
+			        					!this.props.state.cities ||
+			        					this.props.state.cities.length == 0 ||
+			        					this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) == -1 ||
+			        					!/\+7[0-9]{10}/.test(this.state.phone)
+			        				)
 	        			) ? true : false
 		        	}
 			        onClick={
@@ -1100,7 +1152,10 @@ export default class Tinkoff extends React.Component {
 			        			this.changeType.bind(this, this.state.company.company_id, 23, [this.state.dateCallBack, this.state.timeCallBack]) :
 			        			this.state.dialogType == 2 ?
 			        				this.reset.bind(this, this.state.selectedIndex == 1 ? 14 : 23) :
-			        				this.deleteCompany.bind(this, this.state.companyID)
+			        				this.state.dialogType == 3 ?
+			        					this.deleteCompany.bind(this, this.state.companyID) :
+			        					this.state.dialogType == 4 &&
+			        						this.confirmEditInformation
 			        }
 			      />,
 			    ]}
@@ -1237,8 +1292,61 @@ export default class Tinkoff extends React.Component {
 			    			</div> :
 			    			this.state.dialogType == 2 ?
 			    				`Вы уверены что хотите сбросить список "${ this.state.selectedIndex == 1 ? "НЕ ИНТЕРЕСНО" : this.state.selectedIndex == 3 && "ПЕРЕЗВОНИТЬ" }"` :
-			    				this.state.dialogType == 3 &&
-			    				"Вы уверены что хотите удалить компанию из базы?"
+			    				this.state.dialogType == 3 ?
+			    					"Вы уверены что хотите удалить компанию из базы?" :
+			    					this.state.dialogType == 4 &&
+			    						[
+			    							<TextField
+			    								floatingLabelText = "Телефон"
+			    								floatingLabelFixed = {true}
+			    								errorText = {/\+7[0-9]{10}/.test(this.state.phone) ? "" : "Номер должен быть вида +7**********"}
+			    								value = {this.state.phone || ""}
+			    								onChange = {this.editPhone}
+			    								fullWidth = {true}
+			    								key = {0}
+			    							/>,
+			    							<AutoComplete
+								          floatingLabelText = "Город"
+								          searchText={this.state.city}
+								          onUpdateInput={this.searchCityChange}
+								          dataSource={this.props.state.cities && this.props.state.cities.map(city => city.city_name) || []}
+								          filter={(searchText, key) => (key.toLowerCase().indexOf(searchText && searchText.toLowerCase()) !== -1)}
+								          openOnFocus={true}
+								          menuStyle = {{
+								          	overflowY: "scroll",
+								          	maxHeight: "300px"
+								          }}
+								          menuProps = {{
+								          	menuItemStyle: {
+								          		whiteSpace: "normal",
+								          		lineHeight: "20px",
+								          		minHeight: "none",
+								          		padding: "10px 0"
+								          	}
+								          }}
+								          popoverProps = {{
+								          	canAutoPosition: true
+								          }}
+								          listStyle = {{
+								          	overflow: "auto"
+								          }}
+								          floatingLabelFixed = {true}
+								          disableFocusRipple= {false}
+								          errorText = {this.props.state.cities && this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) == -1 ? "Необходимо выбрать город из списка" : ""}
+								          key = {1}
+								          fullWidth = {true}
+								        />,
+								        <div
+								        	key = {2}
+								        >
+								        	{
+								        		this.props.state.cities && 
+								        		this.props.state.cities.length > 0 && 
+								        		this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) > -1 &&
+								        		`Для города подходят банки: ${this.props.state.cities.find(city => city.city_name.toLowerCase() == this.state.city.toLowerCase()).city_banks.map(bank => bank.bank_name).join(" ") || "–"}`
+								        	}
+								        </div>
+			    						]
         	}
         </Dialog>
         <Dialog
@@ -1389,6 +1497,19 @@ export default class Tinkoff extends React.Component {
         			onClick = {this.deleteCompanyDialog.bind(this, this.props.state.activeCompany && this.props.state.activeCompany.company_id)}
       			>
         			<RemoveCircle color="#9a2c2c"/>
+        		</IconButton>,
+        		<IconButton 
+        			tooltip = "Редактировать информацию" 
+        			tooltipPosition = "top-center"
+        			onClick = {this.companyCheck.bind(this, this.props.state.activeCompany, 4)}
+        			disabled = {
+        				this.props.state.activeCompany &&
+        				this.props.state.activeCompany.type_id == 13 ?
+        					true :
+        					false
+        			}
+      			>
+        			<Create color="#da66da"/>
         		</IconButton>
         	]}
 				>
@@ -1429,7 +1550,7 @@ export default class Tinkoff extends React.Component {
 							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(i => this.props.state.activeCompany.company_banks[i].bank_name).join(" ")}</div>,
 							<Divider key = {17} />,
 							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Статусы обработки: {
-								this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(key => this.props.state.activeCompany.company_banks[key]).map((bank, key) => (<div style = {{margin: "5px 0", color: bank.type_id == 15 ? "inherit" : bank.type_id == 16 ? "green" : "red"}} key = {key}>{`${bank.bank_name}: ${bank.company_bank_status || "–"}`}</div>))
+								this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(key => this.props.state.activeCompany.company_banks[key]).map((bank, key) => (<div style = {{margin: "5px 0", color: (bank.type_id == 15 || !bank.type_id) ? "inherit" : bank.type_id == 16 ? "green" : "red"}} key = {key}>{`${bank.bank_name}: ${bank.company_bank_status || "–"}`}</div>))
 							}</div>,							
 							<Divider key = {19} />,
 							<div key = {20} style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.activeCompany && this.props.state.activeCompany.company_date_call_back || "–"}</div>,
