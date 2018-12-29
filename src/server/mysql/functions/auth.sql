@@ -61,7 +61,8 @@ BEGIN
                                         "activeCompany", activeCompany,
                                         "distribution", distributionFilters,
                                         "message", CONCAT("Загружено компаний: ", activeCompaniesLength),
-                                        "ringing", ringing
+                                        "ringing", ringing,
+                                        "cities", getCities()
                                     )
                                 ))
                             )
