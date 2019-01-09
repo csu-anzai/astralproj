@@ -69,6 +69,7 @@ BEGIN
 				"$.city_id",
 				"$.region_id",
 				"$.type_id",
+				"$.old_type_id",
 				"$.company_id",
 				"$.template_id",
 				"$.company_comment",

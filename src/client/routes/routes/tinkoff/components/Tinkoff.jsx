@@ -791,7 +791,7 @@ export default class Tinkoff extends React.Component {
 		              	(this.state.selectedIndex == 5 && company.type_id == 37) ||
 		              	(this.state.selectedIndex == 6 && company.type_id == 24) 
 		              ) &&
-		              <TableRow key = {key} style = {{background: [33,34,43,38,39].indexOf(company.call_type) > -1 ? "#E8F5E9" : "inherit"}}>
+		              <TableRow key = {key} style = {{background: [33,34,43,38,39].indexOf(company.call_type) > -1 ? "#E8F5E9" : (company.type_id == 9 && company.old_type_id == 23) ? "#ffe1c7" : "inherit"}}>
 		                <TableRowColumn>{company.company_phone || "–"}</TableRowColumn>
 		                <TableRowColumn>{company.template_type_id == 11 ? "ИП" : "ООО"}</TableRowColumn>
 		                <TableRowColumn>{company.company_inn || "–"}</TableRowColumn>
