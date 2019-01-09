@@ -1285,6 +1285,7 @@ export default class Tinkoff extends React.Component {
 							      		timeCallBack: date
 							      	});
 							      }}
+							      format = '24hr'
 							    />
 							    <div style = {{fontSize: "12px"}}>
 							    		<Info style={{verticalAlign: "middle", width: "25px", color: "#e8a521"}}/> Время и дата не должны быть меньше текущих даты и времени
