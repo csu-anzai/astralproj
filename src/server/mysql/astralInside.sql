@@ -254,6 +254,7 @@ BEGIN
                 "$.city_id",
                 "$.region_id",
                 "$.type_id",
+                "$.old_type_id",
                 "$.company_id",
                 "$.template_id",
                 "$.company_comment",
@@ -4101,36 +4102,37 @@ $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH ROW BEGIN
-  DECLARE callInternalTypeID, callDestinationTypeID INT(11);
-  DECLARE callPredicted TINYINT(1);
-  DECLARE fileName VARCHAR(128);
-  IF NEW.call_id IS NOT NULL
-    THEN BEGIN
-      SELECT call_internal_type_id, call_destination_type_id, call_predicted INTO callInternalTypeID, callDestinationTypeID, callPredicted FROM calls WHERE call_id = NEW.call_id;
-      SELECT IF(callPredicted = 1, destination_file_name, internal_file_name) INTO fileName FROM calls_file_view WHERE call_id = NEW.call_id;
-    END;
-  END IF;
-  IF OLD.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32) AND NEW.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32)
-    THEN SET NEW.company_date_update = OLD.company_date_update;
-    ELSE BEGIN 
-      IF NEW.company_file_user IS NULL AND OLD.company_file_user IS NULL
-        THEN SET NEW.company_date_update = NOW();
-        ELSE SET NEW.company_date_update = OLD.company_date_update;
-      END IF;
-    END;
-  END IF;
-  SET NEW.company_json = JSON_SET(NEW.company_json,
-    "$.type_id", NEW.type_id,
-    "$.company_date_update", NEW.company_date_update,
-    "$.company_comment", NEW.company_comment,
-    "$.company_date_call_back", NEW.company_date_call_back,
-    "$.call_internal_type_id", callInternalTypeID,
-    "$.call_destination_type_id", callDestinationTypeID,
-    "$.file_name", fileName
-  );
-  IF NEW.type_id != OLD.type_id 
-    THEN SET NEW.old_type_id = OLD.type_id;
-  END IF;
+    DECLARE callInternalTypeID, callDestinationTypeID INT(11);
+    DECLARE callPredicted TINYINT(1);
+    DECLARE fileName VARCHAR(128);
+    IF NEW.call_id IS NOT NULL
+        THEN BEGIN
+            SELECT call_internal_type_id, call_destination_type_id, call_predicted INTO callInternalTypeID, callDestinationTypeID, callPredicted FROM calls WHERE call_id = NEW.call_id;
+            SELECT IF(callPredicted = 1, destination_file_name, internal_file_name) INTO fileName FROM calls_file_view WHERE call_id = NEW.call_id;
+        END;
+    END IF;
+    IF OLD.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32) AND NEW.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32)
+        THEN SET NEW.company_date_update = OLD.company_date_update;
+        ELSE BEGIN 
+            IF NEW.company_file_user IS NULL AND OLD.company_file_user IS NULL
+                THEN SET NEW.company_date_update = NOW();
+                ELSE SET NEW.company_date_update = OLD.company_date_update;
+            END IF;
+        END;
+    END IF;
+    IF NEW.type_id != OLD.type_id 
+        THEN SET NEW.old_type_id = OLD.type_id;
+    END IF;
+    SET NEW.company_json = JSON_SET(NEW.company_json,
+        "$.type_id", NEW.type_id,
+        "$.old_type_id", NEW.old_type_id,
+        "$.company_date_update", NEW.company_date_update,
+        "$.company_comment", NEW.company_comment,
+        "$.company_date_call_back", NEW.company_date_call_back,
+        "$.call_internal_type_id", callInternalTypeID,
+        "$.call_destination_type_id", callDestinationTypeID,
+        "$.file_name", fileName
+    );
 END
 $$
 DELIMITER ;
@@ -5127,85 +5129,85 @@ ALTER TABLE `users`
 
 
 ALTER TABLE `banks`
-  MODIFY `bank_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bank_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 ALTER TABLE `bank_cities`
-  MODIFY `bank_city_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bank_city_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1391;
 
 ALTER TABLE `bank_cities_time_priority`
-  MODIFY `bank_city_time_priority_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bank_city_time_priority_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2492;
 
 ALTER TABLE `bank_filials`
-  MODIFY `bank_filial_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bank_filial_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3532;
 
 ALTER TABLE `bank_statuses`
-  MODIFY `bank_status_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bank_status_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 ALTER TABLE `calls`
-  MODIFY `call_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `call_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18596;
 
 ALTER TABLE `cities`
-  MODIFY `city_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `city_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=577;
 
 ALTER TABLE `codes`
-  MODIFY `code_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `code_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=133;
 
 ALTER TABLE `columns`
-  MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 ALTER TABLE `companies`
-  MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `company_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=548284;
 
 ALTER TABLE `company_banks`
-  MODIFY `company_bank_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `company_bank_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=982966;
 
 ALTER TABLE `connections`
-  MODIFY `connection_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `connection_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16066;
 
 ALTER TABLE `files`
-  MODIFY `file_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `file_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9304;
 
 ALTER TABLE `fns_codes`
-  MODIFY `fns_code_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `fns_code_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=985;
 
 ALTER TABLE `psb_codes`
-  MODIFY `psb_code_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `psb_code_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=129;
 
 ALTER TABLE `psb_filial_codes`
-  MODIFY `psb_filial_code_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `psb_filial_code_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=129;
 
 ALTER TABLE `purchases`
   MODIFY `purchase_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `regions`
-  MODIFY `region_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `region_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 ALTER TABLE `states`
-  MODIFY `state_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `state_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13611;
 
 ALTER TABLE `telegrams`
-  MODIFY `telegram_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `telegram_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 ALTER TABLE `templates`
-  MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `template_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 ALTER TABLE `template_columns`
-  MODIFY `template_column_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `template_column_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=188;
 
 ALTER TABLE `times`
-  MODIFY `time_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `time_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 ALTER TABLE `transactions`
   MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `translates`
-  MODIFY `translate_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `translate_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=111;
 
 ALTER TABLE `types`
-  MODIFY `type_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `type_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 
 ALTER TABLE `bank_cities`
