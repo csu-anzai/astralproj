@@ -22,6 +22,8 @@ import PhoneInTalk from 'material-ui/svg-icons/notification/phone-in-talk';
 import Block from 'material-ui/svg-icons/content/block';
 import RemoveCircle from 'material-ui/svg-icons/content/remove-circle';
 import SettingsPhone from 'material-ui/svg-icons/action/settings-phone';
+import ArrowTop from 'material-ui/svg-icons/hardware/keyboard-arrow-up';
+import ArrowDown from 'material-ui/svg-icons/hardware/keyboard-arrow-down';
 import Replay from 'material-ui/svg-icons/av/replay';
 import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
@@ -87,7 +89,8 @@ export default class Tinkoff extends React.Component {
 			timeCallBack: new Date(),
 			selectedBanks: [],
 			workDialog: false,
-			searchFilialsValues: []
+			searchFilialsValues: [],
+			addInfo: false
 		};
 		this.refresh = this.refresh.bind(this);
 		this.setDistributionFilter = this.setDistributionFilter.bind(this);
@@ -103,6 +106,7 @@ export default class Tinkoff extends React.Component {
 		this.editPhone = this.editPhone.bind(this);
 		this.confirmEditInformation = this.confirmEditInformation.bind(this);
 		this.searchCityChange = this.searchCityChange.bind(this);
+		this.addInfo = this.addInfo.bind(this);
 	}
 	select(index){
 		this.setState({
@@ -291,6 +295,9 @@ export default class Tinkoff extends React.Component {
 				]
 			}
 		});
+		this.setState({
+			addInfo: false
+		});
 	}
 	openURL(url){
 		window.open(url, "_blank");
@@ -352,7 +359,8 @@ export default class Tinkoff extends React.Component {
 	}
 	closeWorkDialog(bool){
 		this.setState({
-			workDialog: !bool || typeof bool == "object" ? false : true
+			workDialog: !bool || typeof bool == "object" ? false : true,
+			addInfo: false
 		});
 	}
 	bankSelect(event, key, payload){
@@ -426,6 +434,11 @@ export default class Tinkoff extends React.Component {
 			}
 		});
 		this.closeDialog();
+	}
+	addInfo(){
+		this.setState({
+			addInfo: !this.state.addInfo
+		});
 	}
 	render(){
 		localStorage.removeItem("hash");
@@ -1516,47 +1529,72 @@ export default class Tinkoff extends React.Component {
 				>
 					{
 						this.props.state.activeCompany && Object.keys(this.props.state.activeCompany).length > 0 ? [ 
-							<div key = {0} style = {{margin: "20px 0", padding: "0 10px"}}>Список: {
-        				this.props.state.activeCompany ? ( 
-        				[9,35].indexOf(this.props.state.activeCompany.type_id) > -1 ? 
-        					"В работе" :
-        				this.props.state.activeCompany.type_id == 14 ?
-        					"Не интересно" :
-        					this.props.state.activeCompany.type_id == 13 ?
-        					"Утверждено" :
-      						this.props.state.activeCompany.type_id == 23 ?
-      							"Перезвонить" :
-      							this.props.state.activeCompany.type_id == 36 ?
-      								"Нет связи" :
-      								this.props.state.activeCompany.type_id == 37 ?
-      								"Сложные" :
-      									this.props.state.activeCompany.type_id == 24 &&
-      									"Дубликаты") : "–"
-        			}</div>,
+							<div key = {0} style = {{margin: "20px 0", padding: "0 10px"}}>Ф.И.О: {this.props.state.activeCompany && [this.props.state.activeCompany.company_person_name, this.props.state.activeCompany.company_person_surname, this.props.state.activeCompany.company_person_patronymic].join(" ")}</div>,
 							<Divider key = {1}/>,
-							<div key = {2} style = {{margin: "20px 0", padding: "0 10px"}}>Ф.И.О: {this.props.state.activeCompany && [this.props.state.activeCompany.company_person_name, this.props.state.activeCompany.company_person_surname, this.props.state.activeCompany.company_person_patronymic].join(" ")}</div>,
+							<div key = {2} style = {{margin: "20px 0", padding: "0 10px"}}>Город: {this.props.state.activeCompany && this.props.state.activeCompany.city_name}</div>,
 							<Divider key = {3}/>,
-							<div key = {4} style = {{margin: "20px 0", padding: "0 10px"}}>Компания: {this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name}</div>,
+							<div key = {4} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_type_id == 11 ? "ИП" : "ООО"}</div>,
 							<Divider key = {5}/>,
-							<div key = {6} style = {{margin: "20px 0", padding: "0 10px"}}>Регион: {this.props.state.activeCompany && this.props.state.activeCompany.region_name}</div>,
+							<div key = {6} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(i => this.props.state.activeCompany.company_banks[i].bank_name).join(" ")}</div>,
 							<Divider key = {7}/>,
-							<div key = {8} style = {{margin: "20px 0", padding: "0 10px"}}>Город: {this.props.state.activeCompany && this.props.state.activeCompany.city_name}</div>,
-							<Divider key = {9}/>,
-							<div key = {10} style = {{margin: "20px 0", padding: "0 10px"}}>Телефон: {this.props.state.activeCompany && this.props.state.activeCompany.company_phone}</div>,
-							<Divider key = {11}/>,
-							<div key = {12} style = {{margin: "20px 0", padding: "0 10px"}}>ИНН: {this.props.state.activeCompany && this.props.state.activeCompany.company_inn}</div>,
-							<Divider key = {13} />,
-							<div key = {14} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.activeCompany && this.props.state.activeCompany.template_type_id == 11 ? "ИП" : "ООО"}</div>,
-							<Divider key = {15} />,
-							<div key = {16} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(i => this.props.state.activeCompany.company_banks[i].bank_name).join(" ")}</div>,
-							<Divider key = {17} />,
-							<div key = {18} style = {{margin: "20px 0", padding: "0 10px"}}>Статусы обработки: {
-								this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(key => this.props.state.activeCompany.company_banks[key]).map((bank, key) => (<div style = {{margin: "5px 0", color: (bank.type_id == 15 || !bank.type_id) ? "inherit" : bank.type_id == 16 ? "green" : "red"}} key = {key}>{`${bank.bank_name}: ${bank.company_bank_status || "–"}`}</div>))
-							}</div>,							
-							<Divider key = {19} />,
-							<div key = {20} style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.activeCompany && this.props.state.activeCompany.company_date_call_back || "–"}</div>,
-							<Divider key = {21} />,
-							<div key = {22} style = {{margin: "20px 0", padding: "0 10px"}}>Коментарий: {this.props.state.activeCompany && this.props.state.activeCompany.company_comment || "–"}</div>,
+        			this.state.addInfo ? <div 
+        				key = {8}
+        			>
+        				<div 
+        					style = {{
+        						margin: "20px 0", 
+        						padding: "0 10px"
+      						}}
+    						>
+    							Список: {
+		        				this.props.state.activeCompany ? ( 
+		        				[9,35].indexOf(this.props.state.activeCompany.type_id) > -1 ? 
+		        					"В работе" :
+		        				this.props.state.activeCompany.type_id == 14 ?
+		        					"Не интересно" :
+		        					this.props.state.activeCompany.type_id == 13 ?
+		        					"Утверждено" :
+		      						this.props.state.activeCompany.type_id == 23 ?
+		      							"Перезвонить" :
+		      							this.props.state.activeCompany.type_id == 36 ?
+		      								"Нет связи" :
+		      								this.props.state.activeCompany.type_id == 37 ?
+		      								"Сложные" :
+		      									this.props.state.activeCompany.type_id == 24 &&
+		      									"Дубликаты") : "–"
+        					}
+      					</div>
+      					<Divider/>
+      					<div style = {{margin: "20px 0", padding: "0 10px"}}>Компания: {this.props.state.activeCompany && this.props.state.activeCompany.company_organization_name}</div>
+      					<Divider/>
+      					<div style = {{margin: "20px 0", padding: "0 10px"}}>Регион: {this.props.state.activeCompany && this.props.state.activeCompany.region_name}</div>
+      					<Divider/>
+      					<div style = {{margin: "20px 0", padding: "0 10px"}}>Телефон: {this.props.state.activeCompany && this.props.state.activeCompany.company_phone}</div>
+      					<Divider/>
+      					<div style = {{margin: "20px 0", padding: "0 10px"}}>ИНН: {this.props.state.activeCompany && this.props.state.activeCompany.company_inn}</div>
+      					<Divider/>
+      					<div style = {{margin: "20px 0", padding: "0 10px"}}>
+      						Статусы обработки: {
+										this.props.state.activeCompany && Object.keys(this.props.state.activeCompany.company_banks).map(key => this.props.state.activeCompany.company_banks[key]).map((bank, key) => (<div style = {{margin: "5px 0", color: (bank.type_id == 15 || !bank.type_id) ? "inherit" : bank.type_id == 16 ? "green" : "red"}} key = {key}>{`${bank.bank_name}: ${bank.company_bank_status || "–"}`}</div>))
+									}
+								</div>
+								<Divider/>
+								<div style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.activeCompany && this.props.state.activeCompany.company_date_call_back || "–"}</div>
+								<Divider/>
+								<div style = {{margin: "20px 0", padding: "0 10px"}}>Коментарий: {this.props.state.activeCompany && this.props.state.activeCompany.company_comment || "–"}</div>
+								<Divider/>
+        			</div> : "",
+        			<FlatButton
+        				label = "дополнительно"
+        				key = {9}
+        				onClick = {this.addInfo}
+        				style = {{
+        					marginTop: "10px",
+        					float: "right"
+        				}}
+        				labelPosition = "after"
+        				icon = {this.state.addInfo ? <ArrowTop/> : <ArrowDown/>}
+        			/>
 						] : "Не удалось найти последний не распределенный вызов"
 					}
 					<br/>
