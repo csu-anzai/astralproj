@@ -2809,7 +2809,7 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `sendToApi` (`connectionHash` VARCHAR(32) CHARSET utf8, `companyID` INT(11), `comment` TEXT CHARSET utf8, `banks` JSON) RETURNS JSON NO SQL
 BEGIN
-    DECLARE userID, iterator, banksLength, bankFilialID INT(11);
+    DECLARE userID, iterator, banksLength, bankFilialID, bankStatusID INT(11);
     DECLARE connectionValid TINYINT(1);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE filialApiCode, regionApiCode, cityApiCode VARCHAR(32);
@@ -2827,7 +2827,7 @@ BEGIN
             UPDATE companies SET company_comment = comment, type_id = 13 WHERE company_id = companyID;
             SET banksIDArray = jsonMap(banks, JSON_ARRAY("bank_id"));
             CALL checkBanksStatuses(banksIDArray, JSON_ARRAY(statusText));
-            UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, CONCAT(cb.bank_id));  
+            UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id, cb.company_bank_date_send = NOW() WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, JSON_ARRAY(CONCAT(cb.bank_id)));  
             banksLoop: LOOP
                 IF iterator >= banksLength
                     THEN LEAVE banksLoop;
@@ -4149,9 +4149,6 @@ CREATE TABLE `company_banks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `company_banks_before_update` BEFORE UPDATE ON `company_banks` FOR EACH ROW BEGIN
-    IF NEW.company_bank_date_send IS NULL AND NEW.bank_status_id IS NOT NULL AND OLD.bank_status_id IS NULL
-        THEN SET NEW.company_bank_date_send = NOW();
-    END IF;
     SET NEW.company_bank_date_update = NOW();
     IF NEW.bank_status_id IS NOT NULL AND IF(OLD.bank_status_id IS NOT NULL, NEW.bank_status_id != OLD.bank_status_id, 1)
         THEN UPDATE companies c LEFT JOIN bank_statuses bs ON bs.bank_status_id = NEW.bank_status_id LEFT JOIN translates tr ON tr.translate_from = bs.bank_status_text SET c.company_json = JSON_SET(c.company_json, CONCAT("$.company_banks.b", NEW.bank_id, ".company_bank_status"), IF(tr.translate_to IS NOT NULL, tr.translate_to, bs.bank_status_text), CONCAT("$.company_banks.b", NEW.bank_id, ".type_id"), bs.type_id, CONCAT("$.company_banks.b", NEW.bank_id, ".bank_status_id"), bs.bank_status_id) WHERE c.company_id = NEW.company_id;
