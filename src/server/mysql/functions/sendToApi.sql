@@ -1,5 +1,5 @@
 BEGIN
-	DECLARE userID, iterator, banksLength, bankFilialID INT(11);
+	DECLARE userID, iterator, banksLength, bankFilialID, bankStatusID INT(11);
 	DECLARE connectionValid TINYINT(1);
 	DECLARE connectionApiID VARCHAR(128);
 	DECLARE filialApiCode, regionApiCode, cityApiCode VARCHAR(32);
@@ -17,7 +17,7 @@ BEGIN
 			UPDATE companies SET company_comment = comment, type_id = 13 WHERE company_id = companyID;
 			SET banksIDArray = jsonMap(banks, JSON_ARRAY("bank_id"));
 			CALL checkBanksStatuses(banksIDArray, JSON_ARRAY(statusText));
-			UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, CONCAT(cb.bank_id));  
+			UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id, cb.company_bank_date_send = NOW() WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, JSON_ARRAY(CONCAT(cb.bank_id)));  
 			banksLoop: LOOP
 				IF iterator >= banksLength
 					THEN LEAVE banksLoop;
