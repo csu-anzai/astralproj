@@ -1153,6 +1153,7 @@ export default class Tinkoff extends React.Component {
 			        				(
 			        					!this.props.state.cities ||
 			        					this.props.state.cities.length == 0 ||
+			        					!this.state.city ||
 			        					this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) == -1 ||
 			        					!/\+7[0-9]{10}/.test(this.state.phone)
 			        				)
@@ -1346,7 +1347,7 @@ export default class Tinkoff extends React.Component {
 								          }}
 								          floatingLabelFixed = {true}
 								          disableFocusRipple= {false}
-								          errorText = {this.props.state.cities && this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) == -1 ? "Необходимо выбрать город из списка" : ""}
+								          errorText = {this.props.state.cities && this.state.city && this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) == -1 ? "Необходимо выбрать город из списка" : ""}
 								          key = {1}
 								          fullWidth = {true}
 								        />,
@@ -1356,6 +1357,7 @@ export default class Tinkoff extends React.Component {
 								        	{
 								        		this.props.state.cities && 
 								        		this.props.state.cities.length > 0 && 
+								        		this.state.city &&
 								        		this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) > -1 &&
 								        		`Для города подходят банки: ${this.props.state.cities.find(city => city.city_name.toLowerCase() == this.state.city.toLowerCase()).city_banks.map(bank => bank.bank_name).join(" ") || "–"}`
 								        	}
