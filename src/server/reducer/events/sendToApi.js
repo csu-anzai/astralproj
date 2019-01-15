@@ -296,6 +296,38 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 			}
 			break;
+			case 5: {
+				modules.reducer.dispatch({
+					type: "query",
+					data: {
+						query: "setApiResponce",
+						values: [
+							data.companyID,
+							bank.bank_id,
+							"1",
+							"1",
+							"1"
+						]
+					}
+				}).then(resolve).catch(reject);
+			}
+			break;
+			case 6: {
+				modules.reducer.dispatch({
+					type: "query",
+					data: {
+						query: "setApiResponce",
+						values: [
+							data.companyID,
+							bank.bank_id,
+							"1",
+							"1",
+							"1"
+						]
+					}
+				}).then(resolve).catch(reject);
+			}
+			break;
 		}
 	});
 }
