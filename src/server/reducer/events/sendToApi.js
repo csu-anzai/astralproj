@@ -1,5 +1,6 @@
 const request = require('request'),
-			xml = require("xml-parse");
+			xml = require("xml-parse"),
+			crypto = require("crypto");
 module.exports = modules => (resolve, reject, data) => {
 	data.banks.map(bank => {
 		switch(+bank.bank_id){
@@ -297,19 +298,49 @@ module.exports = modules => (resolve, reject, data) => {
 			}
 			break;
 			case 5: {
-				modules.reducer.dispatch({
-					type: "query",
-					data: {
-						query: "setApiResponce",
-						values: [
-							data.companyID,
-							bank.bank_id,
-							"1",
-							"1",
-							"1"
-						]
+				let options = {
+					method: "put",
+					body: Object.assign({
+						inn: data.companyInn,
+						customer: data.companyOrganizationName,
+						address: data.cityName,
+						ceo: [data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" "),
+						mail: data.companyEmail || "",
+						phone: data.companyPhone
+					}, modules.env.alfa.body),
+					url: modules.env.alfa.applicationUrl,
+					json: true
+				};
+				options.body.hash = `${JSON.stringify(options.body)}${modules.env.alfa.token}`;
+				options.body.hash = crypto.createHash("sha512").update(options.body.hash, "utf8").digest("hex");
+				modules.log.writeLog("alfa", {
+					type: "request",
+					options
+				});
+				request(options, (err, res, body) => {
+					if(err){
+						reject(err);
+					} else {
+						typeof body == "string" && (body = JSON.parse(body));
+						modules.log.writeLog("alfa", {
+							type: "responce",
+							body
+						});
+						modules.reducer.dispatch({
+							type: "query",
+							data: {
+								query: "setApiResponce",
+								values: [
+									data.companyID,
+									bank.bank_id,
+									body.NID || null,
+									null,
+									body.SUCCESS || null
+								]
+							}
+						}).then(resolve).catch(reject);
 					}
-				}).then(resolve).catch(reject);
+				});
 			}
 			break;
 			case 6: {
