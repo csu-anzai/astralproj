@@ -1,6 +1,16 @@
 const request = require('request'),
 			xml = require("xml-parse"),
-			crypto = require("crypto");
+			crypto = require("crypto"),
+			jsonConvertor = text => {
+				let json = {};
+				try {
+					 json = JSON.parse(text);
+					 return json;
+				} catch (err) {
+					return text;
+				}
+			};
+
 module.exports = modules => (resolve, reject, data) => {
 	data.banks.map(bank => {
 		switch(+bank.bank_id){
@@ -321,7 +331,7 @@ module.exports = modules => (resolve, reject, data) => {
 					if(err){
 						reject(err);
 					} else {
-						typeof body == "string" && (body = JSON.parse(body));
+						typeof body == "string" && (body = jsonConvertor(body));
 						modules.log.writeLog("alfa", {
 							type: "responce",
 							body
@@ -335,7 +345,7 @@ module.exports = modules => (resolve, reject, data) => {
 									bank.bank_id,
 									body.NID || null,
 									null,
-									body.SUCCESS || null
+									body.SUCCESS || (typeof body == "string" && body) || null
 								]
 							}
 						}).then(resolve).catch(reject);
