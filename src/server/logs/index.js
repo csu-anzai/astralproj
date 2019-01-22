@@ -32,6 +32,7 @@ class Log {
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/promsvyaz.txt`, "");
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/email.txt`, "");
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/vtb.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/dadata.txt`, "");
 		}
 	}
 	writeLog(type, object){

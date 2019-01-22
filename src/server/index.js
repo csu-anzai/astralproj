@@ -10,6 +10,7 @@ const env = require('../env.json'),
 		 	then = require('./then').bind(this, reducer),
 		 	log = require('./logs')(),
 		 	vtb = require('./vtb')(env, reducer),
+		 	dadata = require('./dadata')(env, reducer),
 		 	nowDate = new Date(),
 			nowHours = nowDate.getHours(),
 			nowMinutes = nowDate.getMinutes(),
@@ -39,7 +40,28 @@ reducer.initEvents({
 	then,
 	err,
 	log,
-	vtb
+	vtb,
+	dadata
+});
+
+reducer.dispatch({
+	type: "getCompaniesInformation",
+	data: {
+		companies: [
+			{
+				company_id: 1,
+				company_inn: 410119932600
+			},
+			{
+				company_id: 2,
+				company_inn: 410111154028
+			},
+			{
+				company_id: 3,
+				company_inn: 410909139945
+			}
+		]
+	}
 });
 
 setTimeout(() => {
