@@ -9,8 +9,17 @@ const request = require('request'),
 				} catch (err) {
 					return text;
 				}
-			};
-
+			},
+			transformCyrillicToUnicode = string => string.split("").map(item => {
+				if(/[аА-яЯ]/.test(item)) {
+					let numbers = item.charCodeAt(0).toString(16),
+							numbersLength = numbers.length,
+							unicode = `\\u${"0".repeat(4 - numbersLength)}${numbers}`;
+					return unicode;
+				} else {
+					return item;
+				}
+			}).join("");
 module.exports = modules => (resolve, reject, data) => {
 	data.banks.map(bank => {
 		switch(+bank.bank_id){
@@ -321,7 +330,7 @@ module.exports = modules => (resolve, reject, data) => {
 					url: modules.env.alfa.applicationUrl,
 					json: true
 				};
-				options.body.hash = `${JSON.stringify(options.body)}${modules.env.alfa.token}`;
+				options.body.hash = `${transformCyrillicToUnicode(JSON.stringify(options.body))}${modules.env.alfa.token}`;
 				options.body.hash = crypto.createHash("sha512").update(options.body.hash, "utf8").digest("hex");
 				modules.log.writeLog("alfa", {
 					type: "request",
@@ -343,9 +352,9 @@ module.exports = modules => (resolve, reject, data) => {
 								values: [
 									data.companyID,
 									bank.bank_id,
-									body.NID || null,
+									body.nid || null,
 									null,
-									body.SUCCESS || (typeof body == "string" && body) || null
+									body.success || (typeof body == "string" && body) || (typeof body == "object" && !body.hasOwnProperty("nid") && Object.keys(body).length > 0 && Object.keys(body).map(i => body[i]).join(" ")) || null
 								]
 							}
 						}).then(resolve).catch(reject);
