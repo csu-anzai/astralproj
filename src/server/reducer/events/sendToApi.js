@@ -316,7 +316,20 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 			}
 			break;
-			case 5: {
+			case 5: 
+			case 6:
+			case 7:
+			case 8:
+			case 9:
+			case 10: {
+				const banksKey= {
+					5: "alfa",
+					6: "sberbank",
+					7: "open",
+					8: "tochka",
+					9: "raiffaisen",
+					10: "ubrr"
+				};
 				let options = {
 					method: "put",
 					body: Object.assign({
@@ -326,22 +339,22 @@ module.exports = modules => (resolve, reject, data) => {
 						ceo: [data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" "),
 						mail: data.companyEmail || "",
 						phone: data.companyPhone
-					}, modules.env.alfa.body),
-					url: modules.env.alfa.applicationUrl,
+					}, modules.env.partnerka.body, modules.env[banksKey[+bank.bank_id]].body),
+					url: modules.env.partnerka.applicationUrl,
 					json: true
 				};
-				options.body.hash = `${transformCyrillicToUnicode(JSON.stringify(options.body))}${modules.env.alfa.token}`;
+				options.body.hash = `${transformCyrillicToUnicode(JSON.stringify(options.body))}${modules.env.partnerka.token}`;
 				options.body.hash = crypto.createHash("sha512").update(options.body.hash, "utf8").digest("hex");
-				modules.log.writeLog("alfa", {
+				modules.log.writeLog(banksKey[+bank.bank_id], {
 					type: "request",
 					options
 				});
 				request(options, (err, res, body) => {
 					if(err){
 						reject(err);
-					} else {
+					} else {						
 						typeof body == "string" && (body = jsonConvertor(body));
-						modules.log.writeLog("alfa", {
+						modules.log.writeLog(banksKey[+bank.bank_id], {
 							type: "responce",
 							body
 						});
@@ -360,22 +373,6 @@ module.exports = modules => (resolve, reject, data) => {
 						}).then(resolve).catch(reject);
 					}
 				});
-			}
-			break;
-			case 6: {
-				modules.reducer.dispatch({
-					type: "query",
-					data: {
-						query: "setApiResponce",
-						values: [
-							data.companyID,
-							bank.bank_id,
-							"1",
-							"1",
-							"1"
-						]
-					}
-				}).then(resolve).catch(reject);
 			}
 			break;
 		}
