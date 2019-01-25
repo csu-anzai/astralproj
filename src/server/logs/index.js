@@ -32,7 +32,13 @@ class Log {
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/promsvyaz.txt`, "");
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/email.txt`, "");
 			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/vtb.txt`, "");
-			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/dadata.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/alfa.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/sberbank.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/open.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/tochka.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/raiffaisen.txt`, "");
+			fs.writeFileSync(`./src/server/logs/data/${dateFormated}/ubrr.txt`, "");
+      fs.writeFileSync(`./src/server/logs/data/${dateFormated}/dadata.txt`, "");
 		}
 	}
 	writeLog(type, object){
