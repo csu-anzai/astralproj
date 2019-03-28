@@ -1,6 +1,10 @@
 let err = require("./../err");
 let then = (reducer, data) => {
-	err = err.bind(this, reducer);
+	if (reducer && reducer.modules && reducer.modules.err) {
+		err = reducer.modules.err;
+	} else {
+		err = err.bind(this, reducer);
+	}
 	(data && data[2] && data[2][0] && data[2][0].a && (data = data[2][0].a)) ||
 	(data && data[0] && data[0].a && (data = data[0].a)) || (data = false);
 	if (data){
