@@ -1,7 +1,11 @@
 const request = require('request'),
-			crypto = require('crypto');
+			crypto = require('crypto'),
+			formatPhoneNumber = require('../../../../src/libs/formatPhoneNumber.js');
 module.exports = modules => (resolve, reject, data) => {
 	if(data && data.options && data.method && data.type) {
+
+		data.options.to = formatPhoneNumber(data.options.to);
+
 		const sortOptionKeys = Object.keys(data.options).sort(),
 					queryString = sortOptionKeys.map(option => `${option}=${data.options[option]}`).join("&"),
 					sign = Buffer.from(
