@@ -317,6 +317,7 @@ module.exports = modules => (resolve, reject, data) => {
 			}
 			break;
 			case 6: 
+			case 8:
 				modules.reducer.dispatch({
 					type: "query",
 					data: {
@@ -333,7 +334,6 @@ module.exports = modules => (resolve, reject, data) => {
 			break;
 			case 5:
 			case 7:
-			case 8:
 			case 9:
 			case 10: {
 				const banksKey= {
