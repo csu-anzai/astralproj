@@ -1,6 +1,7 @@
 const request = require('request'),
 			xml = require("xml-parse"),
 			crypto = require("crypto"),
+			companyPresenter = require('../../../../src/presenters/company.js'),
 			jsonConvertor = text => {
 				let json = {};
 				try {
@@ -332,15 +333,49 @@ module.exports = modules => (resolve, reject, data) => {
 					}
 				}).then(resolve).catch(reject);
 			break;
+			case 7: {
+				request({
+					method: "post",
+					json: true,
+					url: `https://${modules.env.open.login}@${modules.env.open.url}`,
+					body: {
+					  "inn": data.companyInn,
+					  "city": data.cityName,
+					  "email": data.companyEmaiwl,
+					  "fio": companyPresenter(data).fio,
+					  "phone_number": data.companyPhone.replace("+7",""),
+					  "utm_source": modules.env.open.utm_source,
+					  "utm_someid": modules.env.open.utm_someid
+					}
+				}, (err, res, body) => {
+					if (err) {
+						reject(err);
+					}
+
+					modules.reducer.dispatch({
+						type: "query",
+						data: {
+							query: "setApiResponce",
+							values: [
+								data.companyID,
+								bank.bank_id,
+								null,
+								null,
+								body.order ? "success" : (Object.keys(r.errors)[0] + ": " + r.errors[Object.keys(r.errors)[0]].join(", "))
+							]
+						}
+					}).then(resolve).catch(reject);
+				});
+			}
+			break;
 			case 5:
-			case 7:
 			case 9:
 			case 10: {
 				const banksKey= {
 					5: "alfa",
-					6: "sberbank",
-					7: "open",
-					8: "tochka",
+					// 6: "sberbank",
+					// 7: "open",
+					// 8: "tochka",
 					9: "raiffaisen",
 					10: "ubrr"
 				};
