@@ -9,7 +9,9 @@ module.exports = (env, reducer) => {
 	const express = Express();
 	express.use(Helmet());
 	express.use(parser.urlencoded({extended: false}));
-	express.listen(env.express.port);
+	express.listen(env.express.port, () => {
+		console.log(`Сервер запущен на порту ${env.express.port}`)
+	});
 	express.post("/api/", (req, res) => {
 		if(req.body.data){
 			let data = req.body.data;
