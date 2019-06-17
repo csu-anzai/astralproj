@@ -344,8 +344,7 @@ module.exports = modules => (resolve, reject, data) => {
 					  "email": data.companyEmaiwl,
 					  "fio": companyPresenter(data).fio,
 					  "phone_number": data.companyPhone.replace("+7",""),
-					  "utm_source": modules.env.open.utm_source,
-					  "utm_someid": modules.env.open.utm_someid
+					  ...modules.env.open.body
 					}
 				}, (err, res, body) => {
 					if (err) {
@@ -361,7 +360,7 @@ module.exports = modules => (resolve, reject, data) => {
 								bank.bank_id,
 								null,
 								null,
-								body.order ? "success" : (Object.keys(r.errors)[0] + ": " + r.errors[Object.keys(r.errors)[0]].join(", "))
+								body.order ? "success" : (Object.keys(body.errors)[0] + ": " + r.errors[Object.keys(body.errors)[0]].join(", "))
 							]
 						}
 					}).then(resolve).catch(reject);
