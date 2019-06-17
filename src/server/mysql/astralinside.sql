@@ -4029,7 +4029,6 @@ CREATE TRIGGER `companies_before_insert` BEFORE INSERT ON `companies` FOR EACH R
     END IF;
     SET NEW.city_id = cityID;
     SET NEW.region_id = (SELECT region_id FROM codes WHERE code_value = SUBSTRING(NEW.company_inn, 1, 2));
-    SET NEW.company_phone = REPLACE(REPLACE(CONCAT("+", REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(NEW.company_phone, "(", ""), ")",""), " ", ""), "-", ""), "—", ""), "+", "")), "+8", "+7"), "#", "");
     SELECT type_id INTO templateType FROM templates WHERE template_id = NEW.template_id;
     IF NEW.company_organization_name IS NULL AND templateType = 11
         THEN SET NEW.company_organization_name = CONCAT(
@@ -4271,6 +4270,13 @@ CREATE TABLE `fns_codes` (
   `city_id` int(11) DEFAULT NULL,
   `fns_name` varchar(128) COLLATE utf8_bin NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+CREATE TABLE `nikolay_view` (
+`инн` varchar(12)
+,`телефон` varchar(120)
+,`дата создания` varchar(19)
+,`дата последнего обновления` varchar(19)
+,`статус` varchar(128)
+);
 
 CREATE TABLE `psb_codes` (
   `psb_code_id` int(11) NOT NULL,
@@ -4959,6 +4965,9 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `end_calls_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `end_calls_view`  AS  select `c`.`call_id` AS `call_id`,`c`.`call_internal_type_id` AS `call_internal_type_id`,`c`.`call_destination_type_id` AS `call_destination_type_id`,`u`.`user_sip` AS `user_sip`,replace(`co`.`company_phone`,'+','') AS `company_phone`,`u`.`user_id` AS `user_id`,`co`.`company_id` AS `company_id`,`c`.`call_destination_file_id` AS `call_destination_file_id`,`c`.`call_internal_file_id` AS `call_internal_file_id` from ((`calls` `c` join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) join `companies` `co` on((`co`.`company_id` = `c`.`company_id`))) where ((`c`.`call_internal_type_id` in (38,40,41,42,46,47,48,49,50,51,52,53)) or (`c`.`call_destination_type_id` in (38,40,41,42,46,47,48,49,50,51,52,53))) ;
+DROP TABLE IF EXISTS `nikolay_view`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `nikolay_view`  AS  select `c`.`company_inn` AS `инн`,`c`.`company_phone` AS `телефон`,`c`.`company_date_create` AS `дата создания`,`c`.`company_date_update` AS `дата последнего обновления`,if((`tr`.`translate_to` is not null),`tr`.`translate_to`,`t`.`type_name`) AS `статус` from ((`companies` `c` join `types` `t` on((`t`.`type_id` = `c`.`type_id`))) left join `translates` `tr` on((`tr`.`translate_from` = `t`.`type_name`))) where ((cast(`c`.`company_date_update` as date) between '2019-4-1' and '2019-4-12') and (`c`.`type_id` in (36,35,37)) and (`c`.`user_id` is not null)) ;
 DROP TABLE IF EXISTS `regions_companies_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `regions_companies_view`  AS  select `c`.`company_id` AS `company_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`type_id` AS `type_id`,`c`.`old_type_id` AS `old_type_id`,`c`.`user_id` AS `user_id`,json_length(json_keys(json_unquote(json_extract(`c`.`company_json`,'$.company_banks')))) AS `company_banks_length`,`r`.`region_msc_timezone` AS `region_msc_timezone`,`r`.`region_priority` AS `region_priority` from (`companies` `c` join `regions` `r` on((`r`.`region_id` = `c`.`region_id`))) ;
