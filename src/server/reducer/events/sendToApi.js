@@ -347,6 +347,17 @@ module.exports = modules => (resolve, reject, data) => {
 					  ...modules.env.open.body
 					}
 				}, (err, res, body) => {
+
+					modules.log.writeLog("open", {
+						type: "request",
+						options: res
+					});
+
+					modules.log.writeLog("open", {
+						type: "responce",
+						body
+					});
+
 					if (err) {
 						reject(err);
 					}
