@@ -14,8 +14,8 @@ BEGIN
 			SET hours = HOUR(NOW());
 			SET friday = SUBDATE(today, INTERVAL 3 DAY);
 			SET weekdaynow = WEEKDAY(today);
-			IF clearWorkList 
-				THEN BEGIN 
+			IF clearWorkList
+				THEN BEGIN
 					UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = userID AND type_id IN (9, 35, 44);
 					SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 					SET responce = JSON_MERGE(responce, JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
@@ -29,28 +29,28 @@ BEGIN
 					))));
 				END;
 			END IF;
-			UPDATE 
-				companies c 
+			UPDATE
+				companies c
 				JOIN (
-					SELECT 
+					SELECT
 						company_id,
 						IF(type_id = 10 AND old_type_id = 36, 1, 2) type
-					FROM 
+					FROM
 						regions_companies_view
-					WHERE 
+					WHERE
 						(
-							company_banks_length > 0 AND 
+							company_banks_length > 0 AND
 							(hours + region_msc_timezone) BETWEEN 10 AND 18
 						) AND
 						(
 							(
 								IF(
-									DATE(company_date_registration) IS NOT NULL, 
-									DATE(company_date_registration) IN (today, IF(weekdaynow = 0, friday, yesterday)), 
+									DATE(company_date_registration) IS NOT NULL,
+									DATE(company_date_registration) IN (today, IF(weekdaynow = 0, friday, yesterday)),
 									DATE(company_date_create) IN (today, IF(weekdaynow = 0, friday, yesterday))
 								) AND
-								user_id IS NULL AND 
-								type_id = 10 AND 
+								user_id IS NULL AND
+								type_id = 10 AND
 								(old_type_id IS NULL OR old_type_id != 36) AND
 								IF(
 									DATE(company_date_registration) IS NOT NULL,
@@ -76,18 +76,18 @@ BEGIN
 							)
 							OR
 							(
-								type_id = 10 AND 
-								old_type_id = 36 AND 
+								type_id = 10 AND
+								old_type_id = 36 AND
 								date(company_date_update) = today
 							)
 						)
-					ORDER BY type ASC, date(company_date_registration) DESC, date(company_date_create) DESC, region_priority ASC, time(company_date_registration) DESC, time(company_date_create) DESC LIMIT rows
-				) bc ON bc.company_id = c.company_id 
+					ORDER BY type ASC, date(company_date_registration) DESC, date(company_date_create) DESC, region_priority ASC, time(company_date_create) DESC LIMIT rows
+				) bc ON bc.company_id = c.company_id
 			SET c.user_id = userID, c.type_id = 44;
 			SELECT COUNT(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 44;
 			IF companiesCount > 0
 				THEN SET responce = JSON_MERGE(responce, checkCompaniesInn(userID));
-				ELSE BEGIN 
+				ELSE BEGIN
 					SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 					SET responce = JSON_MERGE(responce, JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(
 						JSON_OBJECT(
