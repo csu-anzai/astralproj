@@ -6,3 +6,4 @@ build/
 */**/files/
 */**/*.pem
 */**/logs/data
+.DS_Store
