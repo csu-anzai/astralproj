@@ -49,7 +49,7 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 				request(options, (err, res, body) => {
 					if(err){
-						reject(err);
+						modules.err(err);
 					} else {
 						modules.reducer.dispatch({
 							type: "query",
@@ -63,7 +63,7 @@ module.exports = modules => (resolve, reject, data) => {
 									(body.result && (body.result.rejectCode || body.result.resultCode)) || body.errorMessage
 								]
 							}
-						}).then(resolve).catch(reject);
+						}).then(modules.then).catch(modules.err);
 						modules.log.writeLog("tinkoff", {
 							type: "responce",
 							body
@@ -93,7 +93,7 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 				request(options, (err, res, body) => {
 					if(err){
-						reject(err);
+						modules.err(err);
 					} else {
 						modules.reducer.dispatch({
 							type: "query",
@@ -107,7 +107,7 @@ module.exports = modules => (resolve, reject, data) => {
 									body.errorMessage || body.errorCode || body.resultCode
 								]
 							}
-						}).then(resolve).catch(reject);
+						}).then(modules.then).catch(modules.err);
 						modules.log.writeLog("modul", {
 							type: "responce",
 							body
@@ -142,7 +142,7 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 				request(options, (err, res, body) => {
 					if(err){
-						reject(err);
+						modules.err(err);
 					} else {
 						let xmlResult = xml.parse(body),
 								requestResult = xmlResult && 
@@ -193,7 +193,7 @@ module.exports = modules => (resolve, reject, data) => {
 									errorMessage || requestStatus || requestResult || null
 								]
 							}
-						}).then(resolve).catch(reject);
+						}).then(modules.then).catch(modules.err);
 						modules.log.writeLog("promsvyaz", {
 							type: "responce",
 							body
@@ -216,7 +216,7 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 				request(options, (err, res, body) => {
 					if(err){
-						reject(err);
+						modules.err(err);
 					} else {
 						typeof body == "string" && (body = JSON.parse(body));
 						modules.log.writeLog("vtb", {
@@ -249,7 +249,7 @@ module.exports = modules => (resolve, reject, data) => {
 						});
 						request(options, (err, res, body) => {
 							if(err){
-								reject(err);
+								modules.err(err);
 							} else {
 								typeof body == "string" && (body = JSON.parse(body));
 								modules.log.writeLog("vtb", {
@@ -274,7 +274,7 @@ module.exports = modules => (resolve, reject, data) => {
 									});
 									request(options, (err, res, body) => {
 										if(err){
-											reject(err);
+											modules.err(err);
 										} else {
 											typeof body == "string" && (body = JSON.parse(body));
 											modules.log.writeLog("vtb", {
@@ -293,7 +293,7 @@ module.exports = modules => (resolve, reject, data) => {
 														body.info || body.status_code || null
 													]
 												}
-											}).then(resolve).catch(reject);
+											}).then(modules.then).catch(modules.err);
 										}
 									});
 								} else {
@@ -309,7 +309,7 @@ module.exports = modules => (resolve, reject, data) => {
 												body.info || body.status_code || null
 											]
 										}
-									}).then(resolve).catch(reject);
+									}).then(modules.then).catch(modules.err);
 								}
 							}
 						});
@@ -331,7 +331,7 @@ module.exports = modules => (resolve, reject, data) => {
 							"1"
 						]
 					}
-				}).then(resolve).catch(reject);
+				}).then(modules.then).catch(modules.err);
 			break;
 			case 7: {
 				request({
@@ -359,22 +359,23 @@ module.exports = modules => (resolve, reject, data) => {
 					});
 
 					if (err) {
-						reject(err);
+						modules.err(err);
+					} else {
+						modules.reducer.dispatch({
+							type: "query",
+							data: {
+								query: "setApiResponce",
+								values: [
+									data.companyID,
+									bank.bank_id,
+									null,
+									null,
+									body.order ? "success" : (Object.keys(body.errors)[0] + ": " + r.errors[Object.keys(body.errors)[0]].join(", "))
+								]
+							}
+						}).then(modules.then).catch(modules.err);
 					}
 
-					modules.reducer.dispatch({
-						type: "query",
-						data: {
-							query: "setApiResponce",
-							values: [
-								data.companyID,
-								bank.bank_id,
-								null,
-								null,
-								body.order ? "success" : (Object.keys(body.errors)[0] + ": " + r.errors[Object.keys(body.errors)[0]].join(", "))
-							]
-						}
-					}).then(resolve).catch(reject);
 				});
 			}
 			break;
@@ -410,7 +411,7 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 				request(options, (err, res, body) => {
 					if(err){
-						reject(err);
+						modules.err(err);
 					} else {						
 						typeof body == "string" && (body = jsonConvertor(body));
 						modules.log.writeLog(banksKey[+bank.bank_id], {
@@ -429,7 +430,7 @@ module.exports = modules => (resolve, reject, data) => {
 									body.success || (typeof body == "string" && body) || (typeof body == "object" && !body.hasOwnProperty("nid") && Object.keys(body).length > 0 && Object.keys(body).map(i => body[i]).join(" ")) || null
 								]
 							}
-						}).then(resolve).catch(reject);
+						}).then(modules.then).catch(modules.err);
 					}
 				});
 			}
