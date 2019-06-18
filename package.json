@@ -1,12 +1,14 @@
 {
   "name": "astralinside",
   "scripts": {
-    "build": "npm run clean && npm run copy && webpack --config webpack.prod.js --progress && screen -dmS back node src/server/index.js",
+    "build": "npm run clean && npm run copy && webpack --config webpack.prod.js --progress && npm run copyToHtml",
     "copy": "cp src/client/static/* build/",
+    "copyToHtml": "yes | cp -r ./build/* ../html/",
     "copyWindows": "xcopy src\\client\\static build /I",
     "clean": "rm -rf build src/server/attachments && mkdir build src/server/attachments",
     "cleanWindows": "rd /s /q build & rd /s /q src\\server\\attachments & mkdir build & mkdir src\\server\\attachments",
-    "start": "npm run clean && npm run copy && screen -dmS front webpack-dev-server --open --progress --config webpack.dev.js && screen -dmS back node src/server/index.js",
+    "start": "npm run clean && npm run copy && webpack-dev-server --open --progress --config webpack.dev.js",
+    "server": "node src/server/index.js",
     "startFrontWindows": "npm run cleanWindows & npm run copyWindows && webpack-dev-server --open --progress --config webpack.dev.js",
     "startBackWindows": "node src/server/index.js",
     "buildWindows": "npm run cleanWindows & npm run copyWindows && webpack --config webpack.prod.js --progress"
