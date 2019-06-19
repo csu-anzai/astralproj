@@ -22,6 +22,8 @@ const request = require('request'),
 				}
 			}).join("");
 module.exports = modules => (resolve, reject, data) => {
+	data = companyPresenter(data);
+
 	data.banks.map(bank => {
 		switch(+bank.bank_id){
 			case 1: {
@@ -31,7 +33,7 @@ module.exports = modules => (resolve, reject, data) => {
 						firstName: data.companyPersonName,
 						middleName: data.companyPersonPatronymic,
 						lastName: data.companyPersonSurname,
-						phoneNumber: data.companyPhone,
+						phoneNumber: data.phone,
 						product: "РКО",
 						companyName: data.companyOrganizationName,
 						source: "Федеральные партнеры",
@@ -79,7 +81,7 @@ module.exports = modules => (resolve, reject, data) => {
 						firstName: data.companyPersonName,
 						middleName: data.companyPersonPatronymic,
 						lastName: data.companyPersonSurname,
-						phoneNumber: data.companyPhone,
+						phoneNumber: data.phone,
 						product: "РКО",
 						companyName: data.companyOrganizationName,
 						[data.companyInn ? "inn" : "ogrn"]: data.companyInn || data.companyOgrn
@@ -119,7 +121,7 @@ module.exports = modules => (resolve, reject, data) => {
 									modules.env.modul.email
 								],
 								subject: `Лид от Астрал.инсайда ${data.companyOrganizationName} / ${data.companyInn}`,
-								text: `Ф.И.О.: ${[data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" ")}\nТелефон: ${data.companyPhone}\nНазвание: ${data.companyOrganizationName}\nИНН: ${data.companyInn}\nИдентификатор запроса: ${body.requestId}\nИдентификатор заявки: ${body.applicationId}\nКоментарий: ${data.companyComment}`
+								text: `Ф.И.О.: ${data.fio}\nТелефон: ${data.phone}\nНазвание: ${data.companyOrganizationName}\nИНН: ${data.companyInn}\nИдентификатор запроса: ${body.requestId}\nИдентификатор заявки: ${body.applicationId}\nКоментарий: ${data.companyComment}`
 							}
 						}).then(modules.then).catch(modules.err);
 					}
@@ -130,7 +132,7 @@ module.exports = modules => (resolve, reject, data) => {
 				let applicationId = "1".repeat(Math.floor(Math.random()*3)+10).split("").map(() => Math.floor(Math.random()*10)).join("");
 				let options = {
 					method: "post",
-					body: `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:ru.psbank.webservices"><soapenv:Header /><soapenv:Body><urn:ProcessFormDataWithResponse><urn:formData><FormGuid>F3AA3CE8-3A9C-4EB9-8A57-902851E24AED</FormGuid><Data><Key>A8A548B6-0426-421E-887F-145013011E5A</Key><Value>${data.companyComment || ''}</Value></Data><Data><Key>F9C02B1A-6C91-4100-A0E4-769194159DF0</Key><Value>${data.templateTypeID == 11 ? 4 : 1}</Value></Data><Data><Key>54952415-C2E6-4E60-8173-59C8883443DA</Key><Value>${data.companyOrganizationName || ''}</Value></Data><Data><Key>A97B7E7A-55BE-47A5-85E8-F29604AFDD66</Key><Value>${data.companyInn || ''}</Value></Data><Data><Key>5C911979-769B-41B5-AE2F-C82743FAE71A</Key><Value>${data.companyPersonName || ''}</Value></Data><Data><Key>7277E008-8FC0-40AA-8B2E-10FB8F606E1F</Key><Value>${data.companyPhone ? data.companyPhone.replace("+7", "") : ''}</Value></Data><Data><Key>BAE4DCDE-537D-43A6-8F64-E96DF3E753B5</Key><Value>${data.companyEmail || ''}</Value></Data><Data><Key>116DD0EC-6C11-494E-8710-74F9342F4230</Key><Value>${bank.bankFilialRegionApiCode || ''}</Value></Data><Data><Key>35F9E22C-7C08-4B76-B4F3-1857E4546F5A</Key><Value>${bank.bankFilialApiCode || ''}</Value></Data><Data><Key>E1FBA727-ABB6-4A4D-9136-BB4E258508E9</Key><Value>1</Value></Data><Data><Key>57E8C256-F118-40F4-B7DC-611F2BBFA4C7</Key><Value>${applicationId || ""}</Value></Data><Data><Key>95FDCE7D-2ACB-4446-9705-7B9EDF41B6E9</Key><Value></Value></Data><Data><Key>F63886D3-ABB9-469D-AD35-35DDFEF989CB</Key><Value></Value></Data><Data><Key>7395BCA7-C8B4-405E-92DC-D70ACC0E19BC</Key><Value></Value></Data><Data><Key>D94C6B80-B6BC-4667-8A22-B2DE9CDE18A4</Key><Value></Value></Data><Data><Key>53C7EFE6-607F-4E4A-A028-90ADADD13343</Key><Value>PartnersEB</Value></Data><Data><Key>F3AC4BBE-AEE4-4B9D-8BB7-E0923FEC3905</Key><Value></Value></Data><Data><Key>0B76C7ED-D068-44F2-AFB1-591BD7F1489A</Key><Value>КалугаАстрал</Value></Data><Data><Key>9DB6E8B8-D503-4751-9C6A-6BABCA0FFDCE</Key><Value></Value></Data></urn:formData><urn:leadGenId>57E8C256-F118-40F4-B7DC-611F2BBFA4C7</urn:leadGenId></urn:ProcessFormDataWithResponse></soapenv:Body></soapenv:Envelope>`,
+					body: `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:ru.psbank.webservices"><soapenv:Header /><soapenv:Body><urn:ProcessFormDataWithResponse><urn:formData><FormGuid>F3AA3CE8-3A9C-4EB9-8A57-902851E24AED</FormGuid><Data><Key>A8A548B6-0426-421E-887F-145013011E5A</Key><Value>${data.companyComment || ''}</Value></Data><Data><Key>F9C02B1A-6C91-4100-A0E4-769194159DF0</Key><Value>${data.templateTypeID == 11 ? 4 : 1}</Value></Data><Data><Key>54952415-C2E6-4E60-8173-59C8883443DA</Key><Value>${data.companyOrganizationName || ''}</Value></Data><Data><Key>A97B7E7A-55BE-47A5-85E8-F29604AFDD66</Key><Value>${data.companyInn || ''}</Value></Data><Data><Key>5C911979-769B-41B5-AE2F-C82743FAE71A</Key><Value>${data.companyPersonName || ''}</Value></Data><Data><Key>7277E008-8FC0-40AA-8B2E-10FB8F606E1F</Key><Value>${data.phone ? data.phone.replace("+7", "") : ''}</Value></Data><Data><Key>BAE4DCDE-537D-43A6-8F64-E96DF3E753B5</Key><Value>${data.companyEmail || ''}</Value></Data><Data><Key>116DD0EC-6C11-494E-8710-74F9342F4230</Key><Value>${bank.bankFilialRegionApiCode || ''}</Value></Data><Data><Key>35F9E22C-7C08-4B76-B4F3-1857E4546F5A</Key><Value>${bank.bankFilialApiCode || ''}</Value></Data><Data><Key>E1FBA727-ABB6-4A4D-9136-BB4E258508E9</Key><Value>1</Value></Data><Data><Key>57E8C256-F118-40F4-B7DC-611F2BBFA4C7</Key><Value>${applicationId || ""}</Value></Data><Data><Key>95FDCE7D-2ACB-4446-9705-7B9EDF41B6E9</Key><Value></Value></Data><Data><Key>F63886D3-ABB9-469D-AD35-35DDFEF989CB</Key><Value></Value></Data><Data><Key>7395BCA7-C8B4-405E-92DC-D70ACC0E19BC</Key><Value></Value></Data><Data><Key>D94C6B80-B6BC-4667-8A22-B2DE9CDE18A4</Key><Value></Value></Data><Data><Key>53C7EFE6-607F-4E4A-A028-90ADADD13343</Key><Value>PartnersEB</Value></Data><Data><Key>F3AC4BBE-AEE4-4B9D-8BB7-E0923FEC3905</Key><Value></Value></Data><Data><Key>0B76C7ED-D068-44F2-AFB1-591BD7F1489A</Key><Value>КалугаАстрал</Value></Data><Data><Key>9DB6E8B8-D503-4751-9C6A-6BABCA0FFDCE</Key><Value></Value></Data></urn:formData><urn:leadGenId>57E8C256-F118-40F4-B7DC-611F2BBFA4C7</urn:leadGenId></urn:ProcessFormDataWithResponse></soapenv:Body></soapenv:Envelope>`,
 					url: modules.env.promsvyaz.applicationUrl,
 					headers: Object.assign({
 						"Content-Type": "text/xml; charset=utf-8"
@@ -235,11 +237,11 @@ module.exports = modules => (resolve, reject, data) => {
 										inn: data.companyInn || "",
 										region: data.regionCode || "",
 										branch: bank.bankFilialApiCode || "",
-										contact_phone: data.companyPhone || "",
+										contact_phone: data.phone || "",
 										add_info: data.companyComment || "",
 										agreement: 1,
 										city: data.cityName || "",
-										fio: [data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" ")
+										fio: data.fio
 									})}`,
 									url: modules.env.vtb.editAnketaUrl.replace("${id}", applicationId)
 								};
@@ -342,8 +344,8 @@ module.exports = modules => (resolve, reject, data) => {
 					  "inn": data.companyInn,
 					  "city": data.cityName,
 					  "email": data.companyEmaiwl,
-					  "fio": companyPresenter(data).fio,
-					  "phone_number": data.companyPhone.replace("+7",""),
+					  "fio": data.fio,
+					  "phone_number": data.phone.replace("+7",""),
 					  ...modules.env.open.body
 					}
 				}, (err, res, body) => {
@@ -370,7 +372,7 @@ module.exports = modules => (resolve, reject, data) => {
 									bank.bank_id,
 									null,
 									null,
-									body.order ? "success" : (Object.keys(body.errors)[0] + ": " + r.errors[Object.keys(body.errors)[0]].join(", "))
+									body.order ? "success" : (Object.keys(body.errors)[0] + ": " + body.errors[Object.keys(body.errors)[0]].join(", "))
 								]
 							}
 						}).then(modules.then).catch(modules.err);
@@ -396,9 +398,9 @@ module.exports = modules => (resolve, reject, data) => {
 						inn: data.companyInn,
 						customer: data.companyOrganizationName,
 						address: data.cityName,
-						ceo: [data.companyPersonName, data.companyPersonSurname, data.companyPersonPatronymic].join(" "),
+						ceo: data.fio,
 						mail: data.companyEmail || "",
-						phone: data.companyPhone
+						phone: data.phone
 					}, modules.env.partnerka.body, modules.env[banksKey[+bank.bank_id]].body),
 					url: modules.env.partnerka.applicationUrl,
 					json: true
