@@ -2,8 +2,10 @@
   "name": "astralinside",
   "scripts": {
     "build": "npm run clean && npm run copy && webpack --config webpack.prod.js --progress && npm run copyToHtml",
+    "buildStaging": "npm run clean && npm run copy && webpack --config webpack.prod.js --progress && npm run copyToHtmlStaging",
     "copy": "cp src/client/static/* build/",
     "copyToHtml": "yes | cp -r ./build/* ../html/",
+    "copyToHtmlStaging": "yes | cp -r ./build/* ../html_staging/",
     "copyWindows": "xcopy src\\client\\static build /I",
     "clean": "rm -rf build src/server/attachments && mkdir build src/server/attachments",
     "cleanWindows": "rd /s /q build & rd /s /q src\\server\\attachments & mkdir build & mkdir src\\server\\attachments",
