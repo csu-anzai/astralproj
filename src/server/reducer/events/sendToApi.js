@@ -336,48 +336,53 @@ module.exports = modules => (resolve, reject, data) => {
 				}).then(modules.then).catch(modules.err);
 			break;
 			case 7: {
-				request({
-					method: "post",
-					json: true,
-					url: `https://${modules.env.open.login}@${modules.env.open.url}`,
-					body: {
-					  "inn": data.companyInn,
-					  "city": data.cityName,
-					  "email": data.companyEmaiwl,
-					  "fio": data.fio,
-					  "phone_number": data.phone.replace("+7",""),
-					  ...modules.env.open.body
-					}
-				}, (err, res, body) => {
+				const options = {
+						url: 'http://openpartners.ru/api/v2/request/add' + (modules.env.open.test ? '/test' : ''),
+						method: 'POST',
+						headers: {
+							'Host': 'openpartners.ru',
+							'X-Auth-Token': modules.env.open.token,
+							'Content-type': 'multipart/form-data;'
+						},
+						form: {
+							'full_name': data.fio,
+							'inn': data.companyInn,
+							'email': data.email,
+							'phone': data.phone,
+							'city': data.cityName,
+							'comment': "По API"
+						}
+				};
 
-					modules.log.writeLog("open", {
-						type: "request",
-						options: res
-					});
+				modules.log.writeLog("open", {
+					type: "request",
+					options
+				});
 
-					modules.log.writeLog("open", {
-						type: "responce",
-						body
-					});
+				request(options, (err, res, body) => {
+						modules.log.writeLog("open", {
+							type: "responce",
+							body
+						});
 
-					if (err) {
-						modules.err(err);
-					} else {
-						modules.reducer.dispatch({
-							type: "query",
-							data: {
-								query: "setApiResponce",
-								values: [
-									data.companyID,
-									bank.bank_id,
-									null,
-									null,
-									body.order ? "success" : (Object.keys(body.errors)[0] + ": " + body.errors[Object.keys(body.errors)[0]].join(", "))
-								]
-							}
-						}).then(modules.then).catch(modules.err);
-					}
-
+						if (err) {
+							modules.err(err);
+						} else {
+							const req = JSON.parse(body);
+							modules.reducer.dispatch({
+								type: "query",
+								data: {
+									query: "setApiResponce",
+									values: [
+										data.companyID,
+										bank.bank_id,
+										null,
+										null,
+										(req.id ? "success" : req.error)
+									]
+								}
+							}).then(modules.then).catch(modules.err);
+						}
 				});
 			}
 			break;
