@@ -1,14 +1,24 @@
 const Express = require("express"),
 			Helmet = require("helmet"),
 			parser = require("body-parser");
+			expressFileupload = require("express-fileupload");
+			uploadCompanies = require("./uploadCompanies.js");
+
+
 let err = require("./../err"),
 		then = require("./../then");
 module.exports = (env, reducer) => {
 	then = then.bind(this, reducer);
 	err = err.bind(this, reducer);
 	const express = Express();
+	express.use((req, res, next) => {
+	  res.header('Access-Control-Allow-Origin', "*");
+	  res.header('Access-Control-Allow-Headers', "*");
+	  next();
+	})
 	express.use(Helmet());
 	express.use(parser.urlencoded({extended: false}));
+	express.use(expressFileupload());
 	express.listen(env.express.port, () => {
 		console.log(`Сервер запущен на порту ${env.express.port}`)
 	});
@@ -21,6 +31,7 @@ module.exports = (env, reducer) => {
 		}
 		res.send(false);
 	});
+	express.post("/api/uploadCompanies", uploadCompanies);
 	express.post("/api/zadarma", (req, res) => {
 		reducer.modules.log.writeLog("zadarma", {
 			type: "in",
