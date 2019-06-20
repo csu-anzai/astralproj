@@ -3,6 +3,7 @@ import Drawer from 'material-ui/Drawer';
 import {List, ListItem, makeSelectable} from 'material-ui/List';
 import Home from 'material-ui/svg-icons/action/home';
 import DonutSmall from 'material-ui/svg-icons/action/donut-small';
+import ArrowUpward from 'material-ui/svg-icons/navigation/arrow-upward';
 import FileDownload from 'material-ui/svg-icons/file/file-download';
 import { push } from 'react-router-redux';
 import { connect } from 'react-redux';
@@ -87,6 +88,14 @@ class Menu extends React.Component {
             primaryText = "Статистика" 
             leftIcon = { <DonutSmall/> }
             value = "/supervisor"
+          />
+        }
+        {
+          (this.props.state.userType == 1 || this.props.state.userType == 19) &&
+          <ListItem 
+            primaryText = "Загрузка старой база" 
+            leftIcon = { <ArrowUpward/> }
+            value = "/upload"
           />
         }
         {
