@@ -1,7 +1,7 @@
 // presenters Функция преобразования/форматирования объекта компании
 const formatPhoneNumber = require('../libs/formatPhoneNumber.js');
 const formatName = name => {
-  if (typeof a != "string") return '';
+  if (typeof name != "string") return '';
   return name[0].toUpperCase() + name.slice(1).toLowerCase();
 };
 
