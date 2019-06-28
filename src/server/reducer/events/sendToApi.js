@@ -23,7 +23,6 @@ const request = require('request'),
 			}).join("");
 module.exports = modules => (resolve, reject, data) => {
 	data = companyPresenter(data);
-
 	data.banks.map(bank => {
 		switch(+bank.bank_id){
 			case 1: {
@@ -347,7 +346,7 @@ module.exports = modules => (resolve, reject, data) => {
 						form: {
 							'full_name': data.fio,
 							'inn': data.companyInn,
-							'email': data.email,
+							'email': (data.email || "1@mail.ru"),
 							'phone': data.phone,
 							'city': data.cityName,
 							'comment': "По API"
