@@ -44,7 +44,12 @@ module.exports = (env, reducer) => {
 			this.refresh_timeout_id = "";
 		}
 		responceHandle(startRefreshTimeout, err, res, body){
-			typeof body == "string" && (body = JSON.parse(body));
+			try {
+				typeof body == "string" && (body = JSON.parse(body));
+			} catch (err) {
+				this.reducer.modules.err(err || body);
+				return false;
+			}
 			if(err || body.status != "1" || !body.access_token || !body.refresh_token){
 				this.reducer.modules.err(err || body);
 				this.error_tick += 1;
