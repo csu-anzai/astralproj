@@ -18,13 +18,14 @@ class TelegramApi {
 		    }
 		  }
 		})
+		this.bot.on('error', error => {
+			logs.writeLog("telegram", error);
+		});
 	}
 
 	getUpdates(callback){
 		// Подписывание на получение всех объектов сообщений
-		this.bot.on('message', (msg) => {
-			callback(msg);
-		});
+		this.bot.on('message', msg => callback(msg));
 	}
 
 	sendMessage(chat_id, text){
