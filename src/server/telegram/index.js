@@ -32,8 +32,8 @@ class TelegramApi {
 		// Отправка сообщения
 		if (chat_id && text) {
 			logs.writeLog("telegram", {chat_id, text});
-			return new Promise((resolve, reject) => {
-				this.bot.sendMessage(chat_id, text);
+			return this.bot.sendMessage(chat_id, text).catch((error) => {
+				logs.writeLog("telegram", error);
 			});
 		}
 	}
