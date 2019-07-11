@@ -105,7 +105,10 @@ module.exports = modules => (resolve, reject, data) => {
 									bank.bank_id,
 									body.applicationId || null,
 									body.requestId,
-									body.errorMessage || body.errorCode || body.resultCode
+									(
+										body.success ? "Заявка заведена" :
+										(body.errorMessage || body.errorCode || body.resultCode)
+									)
 								]
 							}
 						}).then(modules.then).catch(modules.err);
