@@ -235,7 +235,6 @@ module.exports = modules => (resolve, reject, data) => {
 										org_name: data.companyOrganizationName || "",
 										inn: data.companyInn || "",
 										region: data.regionCode || "",
-										branch: bank.bankFilialApiCode || "",
 										contact_phone: data.phone || "",
 										add_info: data.companyComment || "",
 										agreement: 1,
