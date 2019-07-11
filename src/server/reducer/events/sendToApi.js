@@ -320,7 +320,6 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 			}
 			break;
-			case 6: 
 			case 8:
 				modules.reducer.dispatch({
 					type: "query",
@@ -392,7 +391,7 @@ module.exports = modules => (resolve, reject, data) => {
 			case 10: {
 				const banksKey= {
 					5: "alfa",
-					// 6: "sberbank",
+					6: "sberbank",
 					// 7: "open",
 					// 8: "tochka",
 					9: "raiffaisen",
