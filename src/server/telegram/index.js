@@ -12,10 +12,7 @@ class TelegramApi {
 		  // Подключение и настройка прокси socks5-https-client
 		  request: {
 		    agentClass: Agent,
-		    agentOptions: {
-		      socksHost: env.proxy.host,
-		      socksPort: env.proxy.port
-		    }
+		    agentOptions: env.socks
 		  }
 		})
 		this.bot.on('error', error => {
