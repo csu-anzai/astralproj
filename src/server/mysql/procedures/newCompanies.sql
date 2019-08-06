@@ -19,7 +19,7 @@ BEGIN
 			SET companiesKeys = JSON_KEYS(columns);
 			SET companiesKeysLength = JSON_LENGTH(companiesKeys);
 			SELECT template_id, COUNT(template_column_name) weight INTO templateID, templateСoncurrences FROM template_columns WHERE JSON_CONTAINS(companiesKeys, JSON_ARRAY(template_column_letters)) AND template_column_name = JSON_UNQUOTE(JSON_EXTRACT(columns, CONCAT("$.", template_column_letters))) group by template_id order by weight desc limit 1;
-			IF templateID IS NOT NULL 
+			IF templateID IS NOT NULL
 				THEN BEGIN
 					IF templateСoncurrences = companiesKeysLength
 						THEN BEGIN
@@ -39,11 +39,11 @@ BEGIN
 							OPEN templateCursor;
 								templateLoop: LOOP
 									FETCH templateCursor INTO columnName, templateColumnLetters;
-									IF done 
+									IF done
 										THEN LEAVE templateLoop;
 									END IF;
 									SET companiesKeys = JSON_MERGE(companiesKeys, JSON_OBJECT(
-										"letters", templateColumnLetters, 
+										"letters", templateColumnLetters,
 										"column", columnName
 									));
 									SET @mysqlText = CONCAT(
@@ -75,7 +75,7 @@ BEGIN
 									SET @mysqlText = CONCAT(
 										@mysqlText,
 										IF(iterator2 = 0, "", ","),
-										IF(columnValue IS NULL, "NULL", CONCAT("'", columnValue, "'"))
+										IF(columnValue IS NULL, "NULL", JSON_QUOTE(columnValue))
 									);
 									SET iterator2 = iterator2 + 1;
 									ITERATE companyLoop;
