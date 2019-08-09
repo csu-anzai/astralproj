@@ -1,45 +1,72 @@
-const TelegramBot = require('node-telegram-bot-api');
-const Agent = require('socks5-https-client/lib/Agent');
-
-const err = require("../err");
-const then = require("../then");
-const logs = require("../logs")();
-
+const tr = require("tor-request"),
+			err = require("../err");
+let then = require("../then");
 class TelegramApi {
 	constructor(env, reducer){
-		this.bot = new TelegramBot(env.telegram.token, {
-		  polling: true,
-		  // Подключение и настройка прокси socks5-https-client
-		  request: {
-		    agentClass: Agent,
-		    agentOptions: {
-		      socksHost: env.proxy.host,
-		      socksPort: env.proxy.port
-		    }
-		  }
-		})
-		this.bot.on('error', error => {
-			logs.writeLog("telegram", error);
+		this.telegramApiUrl = `https://api.telegram.org/bot${env.telegram.token}`;
+		this.reducer = reducer;
+		this.requestOptions = {
+			method: "POST",
+			json: true
+		}
+	}
+	getUpdates(offset = 0, limit = 10, timeout = 0, allowed_updates = ["message"]){
+		const options = Object.assign({
+			body: {
+				offset: offset,
+				limit: limit,
+				timeout: timeout,
+				allowed_updates: allowed_updates
+			},
+			url: `${this.telegramApiUrl}/getUpdates`
+		}, this.requestOptions);
+		return new Promise((resolve, reject) => {
+			tr.newTorSession(error => {
+				error ? reject(error) : 
+				tr.request(options, (err, res, body) => {
+					err ? reject(err) : resolve(body);
+					this.reducer.modules.log.writeLog("telegram", {
+						type: "update",
+						data: body
+					});
+				});
+			});
 		});
 	}
-
-	getUpdates(callback){
-		// Подписывание на получение всех объектов сообщений
-		this.bot.on('message', msg => callback(msg));
-	}
-
-	sendMessage(chat_id, text){
-		// Отправка сообщения
+	sendMessage(chat_id, text, parse_mode, disable_web_page_preview = false, disable_notification = false, reply_to_message_id, reply_markup){
 		if (chat_id && text) {
-			logs.writeLog("telegram", {chat_id, text});
-			return this.bot.sendMessage(chat_id, text).catch((error) => {
-				logs.writeLog("telegram", error);
+			const options = Object.assign({
+				body: {
+					chat_id,
+					text,
+					parse_mode,
+					disable_web_page_preview,
+					disable_notification,
+					reply_to_message_id,
+					reply_markup
+				},
+				url: `${this.telegramApiUrl}/sendMessage`
+			}, this.requestOptions);
+			!parse_mode && delete(options.body.parse_mode);
+			!reply_to_message_id && delete(options.body.reply_to_message_id);
+			!reply_markup && delete(options.body.reply_markup);
+			return new Promise((resolve, reject) => {
+				tr.newTorSession(error => {
+					error ? reject(error) :
+					tr.request(options, (err, res, body) => {
+						err ? reject(err) : resolve(body);
+						this.reducer.modules.log.writeLog("telegram", {
+							type: "send",
+							data: body
+						});
+					});
+				});
 			});
 		}
 	}
 }
-
 module.exports = (env, reducer) => {
+	tr.TorControlPort.password = env.tor.password;
 	const api = new TelegramApi(env, reducer);	
 	return api;
 }
