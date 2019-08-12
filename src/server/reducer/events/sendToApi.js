@@ -149,41 +149,41 @@ module.exports = modules => (resolve, reject, data) => {
 						modules.err(err);
 					} else {
 						let xmlResult = xml.parse(body),
-								requestResult = xmlResult && 
-												 xmlResult[2] && 
-												 xmlResult[2].childNodes && 
-												 xmlResult[2].childNodes[0] && 
-												 xmlResult[2].childNodes[0].childNodes && 
-												 xmlResult[2].childNodes[0].childNodes[0] && 
-												 xmlResult[2].childNodes[0].childNodes[0].childNodes && 
-												 xmlResult[2].childNodes[0].childNodes[0].childNodes[0] && 
+								requestResult = xmlResult &&
+												 xmlResult[2] &&
+												 xmlResult[2].childNodes &&
+												 xmlResult[2].childNodes[0] &&
+												 xmlResult[2].childNodes[0].childNodes &&
+												 xmlResult[2].childNodes[0].childNodes[0] &&
+												 xmlResult[2].childNodes[0].childNodes[0].childNodes &&
+												 xmlResult[2].childNodes[0].childNodes[0].childNodes[0] &&
 												 xmlResult[2].childNodes[0].childNodes[0].childNodes[0].text || false,
-								errorMessage = xmlResult && 
-												 xmlResult[2] && 
-												 xmlResult[2].childNodes && 
-												 xmlResult[2].childNodes[0] && 
-												 xmlResult[2].childNodes[0].childNodes && 
-												 xmlResult[2].childNodes[0].childNodes[1] && 
-												 xmlResult[2].childNodes[0].childNodes[1].childNodes && 
-												 xmlResult[2].childNodes[0].childNodes[1].childNodes[0] && 
+								errorMessage = xmlResult &&
+												 xmlResult[2] &&
+												 xmlResult[2].childNodes &&
+												 xmlResult[2].childNodes[0] &&
+												 xmlResult[2].childNodes[0].childNodes &&
+												 xmlResult[2].childNodes[0].childNodes[1] &&
+												 xmlResult[2].childNodes[0].childNodes[1].childNodes &&
+												 xmlResult[2].childNodes[0].childNodes[1].childNodes[0] &&
 												 xmlResult[2].childNodes[0].childNodes[1].childNodes[0].text || false,
-								requestStatus = xmlResult && 
-												 xmlResult[2] && 
-												 xmlResult[2].childNodes && 
-												 xmlResult[2].childNodes[0] && 
-												 xmlResult[2].childNodes[0].childNodes && 
-												 xmlResult[2].childNodes[0].childNodes[2] && 
-												 xmlResult[2].childNodes[0].childNodes[2].childNodes && 
-												 xmlResult[2].childNodes[0].childNodes[2].childNodes[0] && 
+								requestStatus = xmlResult &&
+												 xmlResult[2] &&
+												 xmlResult[2].childNodes &&
+												 xmlResult[2].childNodes[0] &&
+												 xmlResult[2].childNodes[0].childNodes &&
+												 xmlResult[2].childNodes[0].childNodes[2] &&
+												 xmlResult[2].childNodes[0].childNodes[2].childNodes &&
+												 xmlResult[2].childNodes[0].childNodes[2].childNodes[0] &&
 												 xmlResult[2].childNodes[0].childNodes[2].childNodes[0].text || false,
-								leadID = xmlResult && 
-												 xmlResult[2] && 
-												 xmlResult[2].childNodes && 
-												 xmlResult[2].childNodes[0] && 
-												 xmlResult[2].childNodes[0].childNodes && 
-												 xmlResult[2].childNodes[0].childNodes[3] && 
-												 xmlResult[2].childNodes[0].childNodes[3].childNodes && 
-												 xmlResult[2].childNodes[0].childNodes[3].childNodes[0] && 
+								leadID = xmlResult &&
+												 xmlResult[2] &&
+												 xmlResult[2].childNodes &&
+												 xmlResult[2].childNodes[0] &&
+												 xmlResult[2].childNodes[0].childNodes &&
+												 xmlResult[2].childNodes[0].childNodes[3] &&
+												 xmlResult[2].childNodes[0].childNodes[3].childNodes &&
+												 xmlResult[2].childNodes[0].childNodes[3].childNodes[0] &&
 												 xmlResult[2].childNodes[0].childNodes[3].childNodes[0].text || false;
 						modules.reducer.dispatch({
 							type: "query",
@@ -320,21 +320,59 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 			}
 			break;
-			case 6: 
-			case 8:
-				modules.reducer.dispatch({
-					type: "query",
-					data: {
-						query: "setApiResponce",
-						values: [
-							data.companyID,
-							bank.bank_id,
-							null,
-							null,
-							"1"
-						]
+			case 6:
+			case 8: {
+				const options = {
+					url: 'https://open.tochka.com:3000/rest/v1/request/new',
+					method: 'POST',
+					json: true,
+					body: {
+						token: modules.env.tochka.token,
+						workMode: modules.env.tochka.workMode,
+						request: {
+							telephone: data.phone,
+							name: data.companyOrganizationName,
+							inn: data.companyInn,
+							first_name: data.companyPersonName,
+							last_name: data.companyPersonSurname,
+							second_name: data.companyPersonPatronymic
+						}
 					}
-				}).then(modules.then).catch(modules.err);
+				};
+
+				if (data.company_person_sex) {
+					options.body.request.sex = ['M', 'F'][data.company_person_sex - 1];
+				}
+
+				modules.log.writeLog("tochka", {
+					type: "request",
+					options
+				});
+
+				request(options, (err, response, body) => {
+
+					modules.log.writeLog("tochka", {
+						type: "responce",
+						body
+					});
+
+					modules.reducer.dispatch({
+						type: "query",
+						data: {
+							query: "setApiResponce",
+							values: [
+								data.companyID,
+								bank.bank_id,
+								null,
+								null,
+								((response.statusCode == 200 && body.data) ? "success" : (
+									body.body ? body.body.join(', ') : response.statusCode
+								))
+							]
+						}
+					}).then(modules.then).catch(modules.err);
+				});
+			}
 			break;
 			case 7: {
 				const options = {
@@ -420,7 +458,7 @@ module.exports = modules => (resolve, reject, data) => {
 				request(options, (err, res, body) => {
 					if(err){
 						modules.err(err);
-					} else {						
+					} else {
 						typeof body == "string" && (body = jsonConvertor(body));
 						modules.log.writeLog(banksKey[+bank.bank_id], {
 							type: "responce",
