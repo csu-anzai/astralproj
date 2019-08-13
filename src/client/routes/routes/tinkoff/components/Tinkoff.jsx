@@ -1315,15 +1315,6 @@ export default class Tinkoff extends React.Component {
 			    					"Вы уверены что хотите удалить компанию из базы?" :
 			    					this.state.dialogType == 4 &&
 			    						[
-			    							<TextField
-			    								floatingLabelText = "Телефон"
-			    								floatingLabelFixed = {true}
-			    								errorText = {(validPhone(this.state.phone)) ? false : "Номер должен быть вида +7**********"}
-			    								value = {this.state.phone || ""}
-			    								onChange = {this.editPhone}
-			    								fullWidth = {true}
-			    								key = {0}
-			    							/>,
 			    							<AutoComplete
 								          floatingLabelText = "Город"
 								          searchText={this.state.city}
