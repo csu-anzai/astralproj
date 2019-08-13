@@ -335,7 +335,8 @@ module.exports = modules => (resolve, reject, data) => {
 							inn: data.companyInn,
 							first_name: data.companyPersonName,
 							last_name: data.companyPersonSurname,
-							second_name: data.companyPersonPatronymic
+							second_name: data.companyPersonPatronymic,
+							comment: data.companyComment
 						}
 					}
 				};
