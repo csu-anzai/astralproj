@@ -1158,8 +1158,7 @@ export default class Tinkoff extends React.Component {
 			        					!this.props.state.cities ||
 			        					this.props.state.cities.length == 0 ||
 			        					!this.state.city ||
-			        					this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) == -1 ||
-			        					!validPhone(this.state.phone)
+			        					this.props.state.cities.map(city => city.city_name.toLowerCase()).indexOf(this.state.city.toLowerCase()) == -1
 			        				)
 	        			) ? true : false
 		        	}
