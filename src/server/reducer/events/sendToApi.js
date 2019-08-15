@@ -22,7 +22,10 @@ const request = require('request'),
 				}
 			}).join("");
 module.exports = modules => (resolve, reject, data) => {
+	console.log('data: ', data);
 	data = companyPresenter(data);
+	console.log('data: ', data);
+	console.log(data);
 	data.banks.map(bank => {
 		switch(+bank.bank_id){
 			case 1: {
@@ -423,6 +426,79 @@ module.exports = modules => (resolve, reject, data) => {
 								}
 							}).then(modules.then).catch(modules.err);
 						}
+				});
+			}
+			break;
+			case 12: {
+				process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+				request({
+					url: 'https://partner-lk.vbank.ru/lk-api/api/voz/departments/get',
+					method: 'GET',
+					json: true,
+				}, (error, response, body) => {
+					let idCity = null;
+
+					modules.log.writeLog("voz", {
+						type: "responce",
+						body
+					});
+
+					!error && body.forEach(r => {
+						if (data.regionName.toLowerCase() == r.name.toLowerCase()) {
+							if(!r.cities.some(c => {
+								if(c.name.toLowerCase() == data.cityName.toLowerCase()) {
+									idCity = c.code;
+									return true;
+								}
+							})) {
+								idCity = r.cities[0].code;
+							}
+						}
+					});
+					if (idCity) {
+						var options = {
+							url: 'https://partner-lk.vbank.ru/lk-api/api/voz/agentapi/document/modification',
+							method: 'POST',
+							headers: {
+								'Authorization': 'Basic ' + Buffer(modules.env.voz.apiId + ":" + modules.env.voz.key).toString("base64")
+							},
+							json: true,
+							body: {
+								tin: data.companyInn,
+								phone: data.phone,
+								fullName: data.fio,
+								company: data.companyOrganizationName,
+								email: "123@123.ru",
+								idCity: idCity
+							}
+
+						};
+
+						modules.log.writeLog("voz", {
+							type: "request",
+							options
+						});
+
+						request(options, (error, response, body) => {
+							modules.log.writeLog("voz", {
+								type: "responce",
+								body
+							});
+							modules.reducer.dispatch({
+								type: "query",
+								data: {
+									query: "setApiResponce",
+									values: [
+										data.companyID,
+										bank.bank_id,
+										null,
+										null,
+										((error || body.errorText) ? body.errorText : "success")
+									]
+								}
+							}).then(modules.then).catch(modules.err);
+						});
+					}
 				});
 			}
 			break;
