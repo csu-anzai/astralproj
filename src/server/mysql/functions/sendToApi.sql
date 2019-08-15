@@ -12,12 +12,12 @@ BEGIN
 	SET iterator = 0;
 	SET banksLength = JSON_LENGTH(banks);
 	SELECT connection_api_id, user_id INTO connectionApiID, userID FROM connections WHERE connection_hash = connectionHash;
-	IF connectionValid 
+	IF connectionValid
 		THEN BEGIN
 			UPDATE companies SET company_comment = comment, type_id = 13 WHERE company_id = companyID;
 			SET banksIDArray = jsonMap(banks, JSON_ARRAY("bank_id"));
 			CALL checkBanksStatuses(banksIDArray, JSON_ARRAY(statusText));
-			UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id, cb.company_bank_date_send = NOW() WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, JSON_ARRAY(CONCAT(cb.bank_id)));  
+			UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id, cb.company_bank_date_send = NOW() WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, JSON_ARRAY(CONCAT(cb.bank_id)));
 			banksLoop: LOOP
 				IF iterator >= banksLength
 					THEN LEAVE banksLoop;
@@ -28,7 +28,7 @@ BEGIN
 				SET iterator = iterator + 1;
 				ITERATE banksLoop;
 			END LOOP;
-			SELECT 
+			SELECT
 				JSON_OBJECT(
 					"companyID", c.company_id,
 					"companyPersonName", c.company_person_name,
@@ -45,11 +45,12 @@ BEGIN
 					"companyEmail", c.company_email,
 					"cityName", ci.city_name
 				)
-			INTO company 
-			FROM 
-				companies c 
+			INTO company
+			FROM
+				companies c
 				LEFT JOIN codes cd ON cd.region_id = c.region_id
 				LEFT JOIN cities ci ON ci.city_id = c.city_id
+				LEFT JOIN regions r ON r.region_id = c.region_id
 			WHERE c.company_id = companyID LIMIT 1;
 			SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
 			SET responce = JSON_MERGE(responce,
