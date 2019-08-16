@@ -323,7 +323,22 @@ module.exports = modules => (resolve, reject, data) => {
 				});
 			}
 			break;
-			case 6:
+			case 6: {
+				modules.reducer.dispatch({
+					type: "query",
+					data: {
+						query: "setApiResponce",
+						values: [
+							data.companyID,
+							bank.bank_id,
+							null,
+							null,
+							"1"
+						]
+					}
+				}).then(modules.then).catch(modules.err);
+			}
+			break;
 			case 8: {
 				const options = {
 					url: 'https://open.tochka.com:3000/rest/v1/request/new',
