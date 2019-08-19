@@ -73,7 +73,7 @@ BEGIN
     SET statuses = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.bankStatuses"));
     SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.dateStart"));
     SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(statistic, "$.dateEnd"));
-    SET @mysqlText = CONCAT("CREATE VIEW custom_statistic_file_view AS 
+    SET @mysqlText = CONCAT("CREATE VIEW custom_statistic_file_view AS
         SELECT JSON_ARRAY(
             c.company_organization_name,
             RTRIM(LTRIM(CONCAT(
@@ -86,14 +86,14 @@ BEGIN
             c.company_date_create,
             c.company_date_update,
             IF(tr.translate_to IS NOT NULL, tr.translate_to, t.type_name)
-        ) company_json 
-        FROM  
-            companies c  
-            JOIN types t ON t.type_id = c.type_id  
+        ) company_json
+        FROM
+            companies c
+            JOIN types t ON t.type_id = c.type_id
             LEFT JOIN translates tr ON tr.translate_from = t.type_name
-        WHERE 
-            c.type_id != 10 AND 
-            DATE(c.company_date_update) BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "')", 
+        WHERE
+            c.type_id != 10 AND
+            DATE(c.company_date_update) BETWEEN DATE('", dateStart, "') AND DATE('", dateEnd, "')",
             IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, CONCAT(" AND JSON_CONTAINS('",users,"', JSON_ARRAY(c.user_id))"), ""),
             IF(types IS NOT NULL AND JSON_LENGTH(types) > 0, CONCAT(" AND JSON_CONTAINS('",types,"', JSON_ARRAY(c.type_id))"), ""),
             IF(banks IS NOT NULL AND JSON_LENGTH(banks) > 0, CONCAT(" AND jsonContainsLeastOne('",banks,"', c.company_json ->> '$.company_banks.*.bank_id')"), ""),
@@ -106,7 +106,7 @@ BEGIN
     OPEN companiesCursor;
         companiesLoop: LOOP
             FETCH companiesCursor INTO company;
-            IF done 
+            IF done
                 THEN LEAVE companiesLoop;
             END IF;
             SET companies = JSON_MERGE(companies, JSON_ARRAY(company));
@@ -156,7 +156,7 @@ BEGIN
     OPEN companiesCursor;
         companiesLoop: LOOP
             FETCH companiesCursor INTO companyID, cityID;
-            IF done 
+            IF done
                 THEN LEAVE companiesLoop;
             END IF;
             SET @cityID = cityID;
@@ -193,15 +193,15 @@ BEGIN
     SET responce = JSON_ARRAY();
     SET companies = JSON_ARRAY();
     SET files = JSON_ARRAY();
-    SELECT 
+    SELECT
         state_json ->> "$.download.limit",
         state_json ->> "$.download.offset",
         state_json ->> "$.download.orders"
-    INTO 
+    INTO
         limitOption,
         offsetOption,
         orders
-    FROM 
+    FROM
         states
     WHERE user_id = userID ORDER BY state_id DESC LIMIT 1;
     SET ordersLength = JSON_LENGTH(orders);
@@ -351,7 +351,7 @@ BEGIN
             SET companiesKeys = JSON_KEYS(columns);
             SET companiesKeysLength = JSON_LENGTH(companiesKeys);
             SELECT template_id, COUNT(template_column_name) weight INTO templateID, templateСoncurrences FROM template_columns WHERE JSON_CONTAINS(companiesKeys, JSON_ARRAY(template_column_letters)) AND template_column_name = JSON_UNQUOTE(JSON_EXTRACT(columns, CONCAT("$.", template_column_letters))) group by template_id order by weight desc limit 1;
-            IF templateID IS NOT NULL 
+            IF templateID IS NOT NULL
                 THEN BEGIN
                     IF templateСoncurrences = companiesKeysLength
                         THEN BEGIN
@@ -371,11 +371,11 @@ BEGIN
                             OPEN templateCursor;
                                 templateLoop: LOOP
                                     FETCH templateCursor INTO columnName, templateColumnLetters;
-                                    IF done 
+                                    IF done
                                         THEN LEAVE templateLoop;
                                     END IF;
                                     SET companiesKeys = JSON_MERGE(companiesKeys, JSON_OBJECT(
-                                        "letters", templateColumnLetters, 
+                                        "letters", templateColumnLetters,
                                         "column", columnName
                                     ));
                                     SET @mysqlText = CONCAT(
@@ -485,16 +485,16 @@ BEGIN
             SET allRegions = JSON_ARRAY();
             SET allColumns = JSON_ARRAY();
             UPDATE companies SET type_id = IF(type_id = 20, 10, type_id), user_id = IF(type_id = 20, NULL, user_id), company_file_user = NULL, company_file_type = NULL WHERE company_file_user = userID AND company_file_type = 20;
-            SELECT 
+            SELECT
                 state_json ->> "$.download.types",
                 state_json ->> "$.download.dateStart",
                 state_json ->> "$.download.dateEnd",
                 state_json ->> "$.download.regions",
                 state_json ->> "$.download.nullColumns",
                 state_json ->> "$.download.notNullColumns",
-                state_json ->> "$.download.count",      
+                state_json ->> "$.download.count",
                 state_json ->> "$.download.banks"
-            INTO  
+            INTO
                 types,
                 dateStart,
                 dateEnd,
@@ -519,16 +519,16 @@ BEGIN
                 IF(typesLength > 0, CONCAT(" AND JSON_CONTAINS('", types, "', JSON_ARRAY(type_id))"), ""),
                 IF(regionsLength > 0, CONCAT(" AND JSON_CONTAINS('", regions, "', JSON_ARRAY(region_id))"), ""),
                 IF(
-                    banksLength > 0, 
+                    banksLength > 0,
                     CONCAT(
-                        " AND (", 
+                        " AND (",
                         IF(banksWithoutNullLength > 0, CONCAT("(JSON_LENGTH(company_json ->> '$.company_banks') > 0 AND jsonContainsLeastOne(company_json ->> '$.company_banks.*.bank_id', '", banksWithoutNull,"'))"), "0"),
-                        IF(JSON_CONTAINS(banks, JSON_ARRAY(NULL)), " OR JSON_LENGTH(company_json ->> '$.company_banks') = 0)", ")") 
-                    ), 
+                        IF(JSON_CONTAINS(banks, JSON_ARRAY(NULL)), " OR JSON_LENGTH(company_json ->> '$.company_banks') = 0)", ")")
+                    ),
                     ""
                 )
             );
-            IF nullColumnsLength > 0 
+            IF nullColumnsLength > 0
                 THEN BEGIN
                     SET done = 0;
                     SET @mysqlText2 = CONCAT(
@@ -542,11 +542,11 @@ BEGIN
                     OPEN columnsCursor;
                         columnsLoop: LOOP
                             FETCH columnsCursor INTO columnName;
-                            IF done 
+                            IF done
                                 THEN LEAVE columnsLoop;
                             END IF;
                             SET @mysqlText = CONCAT(
-                                @mysqlText, 
+                                @mysqlText,
                                 " AND ",
                                 columnName,
                                 " IS NULL"
@@ -557,7 +557,7 @@ BEGIN
                     DROP VIEW IF EXISTS custom_columns_view;
                 END;
             END IF;
-            IF notNullColumnsLength > 0 
+            IF notNullColumnsLength > 0
                 THEN BEGIN
                     SET done = 0;
                     SET @mysqlText2 = CONCAT(
@@ -571,11 +571,11 @@ BEGIN
                     OPEN columnsCursor;
                         columnsLoop: LOOP
                             FETCH columnsCursor INTO columnName;
-                            IF done 
+                            IF done
                                 THEN LEAVE columnsLoop;
                             END IF;
                             SET @mysqlText = CONCAT(
-                                @mysqlText, 
+                                @mysqlText,
                                 " AND ",
                                 columnName,
                                 " IS NOT NULL"
@@ -631,7 +631,7 @@ BEGIN
         banksLoop: LOOP
           SET done = 0;
           FETCH banksCursor INTO bankID, bankName;
-          IF done 
+          IF done
             THEN LEAVE banksLoop;
           END IF;
           SET bankStatusText = NULL;
@@ -686,7 +686,7 @@ BEGIN
       SET bankStatusID = NULL;
       SET bankStatusTypeID = NULL;
       IF companyBankID IS NOT NULL AND !JSON_CONTAINS(JSON_UNQUOTE(JSON_EXTRACT(companyBanks, "$.*.bank_id")), JSON_ARRAY(companyBankID)) AND typeID IN (15,16,17,24,25,26,27,28,29,30,31,32)
-        THEN BEGIN 
+        THEN BEGIN
           CASE typeID
             WHEN 15 THEN SELECT bank_status_id, type_id INTO bankStatusID, bankStatusTypeID FROM bank_statuses WHERE bank_status_text = "Ожидание" AND bank_id = companyBankID;
             WHEN 16 THEN CASE companyBankID
@@ -745,11 +745,11 @@ BEGIN
     SELECT user_id, type_id, user_name, user_email, bank_id INTO userID, typeID, userName, userEmail, bankID FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
     SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     IF userID IS NOT NULL AND connectionID IS NOT NULL AND connectionEnd = 0
-        THEN BEGIN 
+        THEN BEGIN
             UPDATE users SET user_auth = 1 WHERE user_id = userID;
             UPDATE connections SET user_id = userID WHERE connection_id = connectionID;
             SELECT user_hash INTO userHash FROM users WHERE user_id = userID;
-            SET responce = JSON_MERGE(responce, 
+            SET responce = JSON_MERGE(responce,
                 JSON_OBJECT(
                     "type", "sendToSocket",
                     "data", JSON_OBJECT(
@@ -775,7 +775,7 @@ BEGIN
                     )
                 )
             );
-            IF typeID = 1 OR typeID = 18 
+            IF typeID = 1 OR typeID = 18
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
@@ -815,10 +815,10 @@ BEGIN
                         ));
                     END IF;
                 END;
-            END IF; 
+            END IF;
             IF typeID = 1 OR typeID = 19
                 THEN BEGIN
-                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID; 
+                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID;
                     SET statisticFilters = JSON_SET(statisticFilters, "$.users", getUsers(bankID));
                     SET responce = JSON_MERGE(responce, JSON_OBJECT(
                         "type", "sendToSocket",
@@ -869,7 +869,7 @@ BEGIN
                 END;
             END IF;
         END;
-        ELSE SET responce = JSON_MERGE(responce, 
+        ELSE SET responce = JSON_MERGE(responce,
             JSON_OBJECT(
                 "type", "sendToSocket",
                 "data", JSON_OBJECT(
@@ -882,7 +882,7 @@ BEGIN
                                 "auth", 0
                             )
                         )
-                    ) 
+                    )
                 )
             )
         );
@@ -943,7 +943,7 @@ BEGIN
                     )
                 )
             ));
-            IF typeID = 1 OR typeID = 18 
+            IF typeID = 1 OR typeID = 18
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
@@ -983,10 +983,10 @@ BEGIN
                         ));
                     END IF;
                 END;
-            END IF; 
+            END IF;
             IF typeID = 1 OR typeID = 19
                 THEN BEGIN
-                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID; 
+                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID;
                     SET statisticFilters = JSON_SET(statisticFilters, "$.users", getUsers(bankID));
                     SET responce = JSON_MERGE(responce, JSON_OBJECT(
                         "type", "sendToSocket",
@@ -1169,7 +1169,7 @@ BEGIN
     OPEN innCursor;
         innLoop: LOOP
             FETCH innCursor INTO companyInn, companiesLength;
-            IF done 
+            IF done
                 THEN LEAVE innLoop;
             END IF;
             SET companiesLength = companiesLength - 1;
@@ -1182,7 +1182,7 @@ BEGIN
     OPEN ogrnCursor;
         innLoop: LOOP
             FETCH ogrnCursor INTO companyOgrn, companiesLength;
-            IF done 
+            IF done
                 THEN LEAVE innLoop;
             END IF;
             SET companiesLength = companiesLength - 1;
@@ -1240,7 +1240,7 @@ BEGIN
     SET responce = JSON_ARRAY();
     SET connectionValid = checkRootConnection(connectionHash);
     SELECT connection_api_id INTO connectionApiID FROM connections WHERE connection_hash = connectionHash;
-    IF connectionValid 
+    IF connectionValid
         THEN BEGIN
             SET companies = JSON_ARRAY();
             SET translateNames = JSON_ARRAY();
@@ -1254,7 +1254,7 @@ BEGIN
                     IF done
                         THEN LEAVE companiesLoop;
                     END IF;
-                    SET company = JSON_REMOVE(company, 
+                    SET company = JSON_REMOVE(company,
                         "$.city_id",
                         "$.company_id",
                         "$.region_id",
@@ -1314,7 +1314,7 @@ BEGIN
                     "type", "merge",
                     "data", JSON_OBJECT(
                         "downloadCompanies", JSON_ARRAY(),
-                        "downloadCompaniesColumnsNames", JSON_ARRAY() 
+                        "downloadCompaniesColumnsNames", JSON_ARRAY()
                     )
                 ),
                 JSON_OBJECT(
@@ -1352,14 +1352,14 @@ BEGIN
     DECLARE responce JSON;
     SET responce = JSON_ARRAY();
     SET connectionValid = checkConnection(connectionHash);
-    SELECT connection_api_id, user_id INTO connectionApiID, userID FROM connections WHERE connection_hash = connectionHash; 
+    SELECT connection_api_id, user_id INTO connectionApiID, userID FROM connections WHERE connection_hash = connectionHash;
     IF connectionValid
         THEN BEGIN
             SELECT type_id INTO typeID FROM companies WHERE company_id = companyID;
             DELETE FROM companies WHERE company_id = companyID;
             IF typeID = 36
                 THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies());
-                ELSE BEGIN 
+                ELSE BEGIN
                     SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
                     SET responce = JSON_MERGE(responce, sendToAllUserSockets(userID, JSON_ARRAY(JSON_OBJECT(
                         "type", "mergeDeep",
@@ -1395,13 +1395,13 @@ BEGIN
     DECLARE userOnline TINYINT(1);
     SET responce = JSON_ARRAY();
     IF connectionApiID IS NOT NULL
-        THEN BEGIN 
+        THEN BEGIN
             SELECT user_id INTO userID FROM users_connections_view WHERE connection_api_id = connectionApiID;
             UPDATE connections SET connection_end = 1 WHERE connection_api_id = connectionApiID;
         END;
     END IF;
     IF connectionHash IS NOT NULL
-        THEN BEGIN 
+        THEN BEGIN
             SELECT user_id INTO userID FROM users_connections_view WHERE connection_hash = connectionHash;
             UPDATE connections SET connection_end = 1 WHERE connection_hash = connectionHash;
         END;
@@ -1471,37 +1471,37 @@ BEGIN
     DECLARE responce, type, company JSON;
     DECLARE distributionFilters JSON DEFAULT (SELECT state_json ->> "$.distribution" FROM states WHERE connection_id = connectionID);
     DECLARE done TINYINT(1);
-    DECLARE companiesCursor CURSOR FOR 
-        SELECT 
+    DECLARE companiesCursor CURSOR FOR
+        SELECT
             company_json
         FROM (
-            SELECT 
-                company_json, 
-                @apiCount:=IF(type_id = 13, @apiCount+1, @apiCount) apiCount, 
-                @invalidateCount:=IF(type_id = 14, @invalidateCount+1, @invalidateCount) invalidateCount, 
-                @difficultCount:=IF(type_id = 37, @difficultCount+1, @difficultCount) difficultCount, 
-                @callbackCount:=IF(type_id = 23, @callbackCount+1, @callbackCount) callbackCount, 
-                @inworkCount:=IF(type_id IN (9, 35), @inworkCount+1, @inworkCount) inworkCount, 
+            SELECT
+                company_json,
+                @apiCount:=IF(type_id = 13, @apiCount+1, @apiCount) apiCount,
+                @invalidateCount:=IF(type_id = 14, @invalidateCount+1, @invalidateCount) invalidateCount,
+                @difficultCount:=IF(type_id = 37, @difficultCount+1, @difficultCount) difficultCount,
+                @callbackCount:=IF(type_id = 23, @callbackCount+1, @callbackCount) callbackCount,
+                @inworkCount:=IF(type_id IN (9, 35), @inworkCount+1, @inworkCount) inworkCount,
                 @dialCount:=IF(type_id = 36, @dialCount+1, @dialCount) dialCount,
                 @duplicatesCount:=IF(type_id = 24, @duplicatesCount+1, @duplicatesCount) duplicatesCount,
                 type_id
-            FROM 
-                companies 
-            WHERE 
+            FROM
+                companies
+            WHERE
                 (
                     (
-                        (type_id = 13 AND DATE(company_date_create) BETWEEN DATE(@apiDateStart) AND DATE(@apiDateEnd)) OR 
-                        (type_id = 14 AND DATE(company_date_create) BETWEEN DATE(@invalidateDateStart) AND DATE(@invalidateDateEnd)) OR 
-                        (type_id = 37 AND DATE(company_date_create) BETWEEN DATE(@difficultDateStart) AND DATE(@difficultDateEnd)) OR 
-                        (type_id = 23 AND DATE(company_date_create) BETWEEN DATE(@callbackDateStart) AND DATE(@callbackDateEnd)) OR 
-                        (type_id = 24 AND DATE(company_date_create) BETWEEN DATE(@duplicatesDateStart) AND DATE(@duplicatesDateEnd)) OR 
+                        (type_id = 13 AND DATE(company_date_create) BETWEEN DATE(@apiDateStart) AND DATE(@apiDateEnd)) OR
+                        (type_id = 14 AND DATE(company_date_create) BETWEEN DATE(@invalidateDateStart) AND DATE(@invalidateDateEnd)) OR
+                        (type_id = 37 AND DATE(company_date_create) BETWEEN DATE(@difficultDateStart) AND DATE(@difficultDateEnd)) OR
+                        (type_id = 23 AND DATE(company_date_create) BETWEEN DATE(@callbackDateStart) AND DATE(@callbackDateEnd)) OR
+                        (type_id = 24 AND DATE(company_date_create) BETWEEN DATE(@duplicatesDateStart) AND DATE(@duplicatesDateEnd)) OR
                         (type_id IN (9, 35))
                     ) AND user_id = userID
-                ) OR 
+                ) OR
                 (type_id = 36 AND DATE(company_date_create) BETWEEN DATE(@dialDateStart) AND DATE(@dialDateEnd))
             ORDER BY type_id ASC, company_date_registration DESC, company_date_create DESC
         ) c
-        WHERE 
+        WHERE
             (apiCount BETWEEN @apiRowStart AND @apiRowLimit AND type_id = 13) OR
             (invalidateCount BETWEEN @invalidateRowStart AND @invalidateRowLimit AND type_id = 14) OR
             (difficultCount BETWEEN @difficultRowStart AND @difficultRowLimit AND type_id = 37) OR
@@ -1557,7 +1557,7 @@ BEGIN
             OPEN companiesCursor;
                 companiesLoop: LOOP
                     FETCH companiesCursor INTO company;
-                    IF done 
+                    IF done
                         THEN LEAVE companiesLoop;
                     END IF;
                     SET responce = JSON_MERGE(responce, company);
@@ -1765,7 +1765,7 @@ BEGIN
     OPEN banksCursor;
         banksLoop: LOOP
             FETCH banksCursor INTO bankID, bankName;
-            IF done 
+            IF done
                 THEN LEAVE banksLoop;
             END IF;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -1791,7 +1791,7 @@ BEGIN
     SET responce = JSON_ARRAY();
     OPEN citiesCursor;
         citiesLoop: LOOP
-            SET done = 0;   
+            SET done = 0;
             FETCH citiesCursor INTO cityID, cityName;
             IF done
                 THEN LEAVE citiesLoop;
@@ -1806,7 +1806,7 @@ BEGIN
                 banksLoop: LOOP
                     SET done = 0;
                     FETCH banksCursor INTO bankID, bankName;
-                    IF done 
+                    IF done
                         THEN LEAVE banksLoop;
                     END IF;
                     SET cityBanks = JSON_MERGE(cityBanks, JSON_OBJECT(
@@ -1836,7 +1836,7 @@ BEGIN
     OPEN columnsCursor;
         columnsLoop: LOOP
             FETCH columnsCursor INTO columnID, columnName;
-            IF done 
+            IF done
                 THEN LEAVE columnsLoop;
             END IF;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -1881,34 +1881,34 @@ BEGIN
     DECLARE companiesDate VARCHAR(10);
     DECLARE companiesTime VARCHAR(5);
     DECLARE responce JSON;
-    DECLARE companiesCursor CURSOR FOR SELECT 
-        COUNT(*), 
-        ty.type_name, 
-        DATE(c.company_date_create) company_date, 
-        CONCAT(HOUR(c.company_date_create), ":", MINUTE(c.company_date_create)) company_time 
-    FROM 
-        companies c 
-        JOIN templates t ON t.template_id = c.template_id 
-        JOIN types ty ON ty.type_id = t.type_id 
-    WHERE 
-        IF(banks IS NOT NULL AND JSON_LENGTH(banks) > 0, jsonContainsLeastOne(banks, c.company_json ->> "$.company_banks.*.bank_id"), JSON_LENGTH(c.company_json ->> "$.company_banks") = 0) AND 
-        IF(free, c.type_id = 10, 1) AND 
-        DATE(c.company_date_create) BETWEEN DATE(dateStart) AND DATE(dateEnd) 
-    GROUP BY 
-        company_date, 
-        company_time, 
-        ty.type_name 
-    ORDER BY 
-        company_date, 
-        HOUR(company_time), 
-        MINUTE(company_time), 
+    DECLARE companiesCursor CURSOR FOR SELECT
+        COUNT(*),
+        ty.type_name,
+        DATE(c.company_date_create) company_date,
+        CONCAT(HOUR(c.company_date_create), ":", MINUTE(c.company_date_create)) company_time
+    FROM
+        companies c
+        JOIN templates t ON t.template_id = c.template_id
+        JOIN types ty ON ty.type_id = t.type_id
+    WHERE
+        IF(banks IS NOT NULL AND JSON_LENGTH(banks) > 0, jsonContainsLeastOne(banks, c.company_json ->> "$.company_banks.*.bank_id"), JSON_LENGTH(c.company_json ->> "$.company_banks") = 0) AND
+        IF(free, c.type_id = 10, 1) AND
+        DATE(c.company_date_create) BETWEEN DATE(dateStart) AND DATE(dateEnd)
+    GROUP BY
+        company_date,
+        company_time,
+        ty.type_name
+    ORDER BY
+        company_date,
+        HOUR(company_time),
+        MINUTE(company_time),
         ty.type_name;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     SET responce = JSON_ARRAY();
     OPEN companiesCursor;
         companiesLoop: LOOP
             FETCH companiesCursor INTO companiesCount, templateName, companiesDate, companiesTime;
-            IF done 
+            IF done
                 THEN LEAVE companiesLoop;
             END IF;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -1924,7 +1924,7 @@ BEGIN
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `getDayStatistic` () RETURNS JSON NO SQL
-BEGIN   
+BEGIN
     DECLARE done TINYINT(1);
     DECLARE translateTo, searchResult, searchResult2, bankName VARCHAR(128);
     DECLARE userName VARCHAR(64);
@@ -1937,7 +1937,7 @@ BEGIN
     OPEN companiesCursor;
         companiesLoop: LOOP
             FETCH companiesCursor INTO translateTo, userName, userID, countLength;
-            IF done 
+            IF done
                 THEN LEAVE companiesLoop;
             END IF;
             SET searchResult = REPLACE(JSON_UNQUOTE(JSON_SEARCH(responce, "one", CONCAT(userID), NULL, "$[*].user_id")), ".user_id", "");
@@ -1951,7 +1951,7 @@ BEGIN
                     )),
                     "banks", JSON_ARRAY()
                 ));
-                ELSE BEGIN 
+                ELSE BEGIN
                     SET userObject = JSON_UNQUOTE(JSON_EXTRACT(responce, searchResult));
                     SET typesArray = JSON_UNQUOTE(JSON_EXTRACT(userObject, "$.types"));
                     SET userObject = JSON_SET(userObject, "$.types", JSON_MERGE(typesArray, JSON_OBJECT(
@@ -1969,7 +1969,7 @@ BEGIN
     OPEN statusesCursor;
         statusesLoop: LOOP
             FETCH statusesCursor INTO userID, bankName, countLength;
-            IF done 
+            IF done
                 THEN LEAVE statusesLoop;
             END IF;
             SET searchResult = REPLACE(JSON_UNQUOTE(JSON_SEARCH(responce, "one", CONCAT(userID), NULL, "$[*].user_id")), ".user_id", "");
@@ -1995,7 +1995,7 @@ BEGIN
     generation: LOOP
       SET symbol = LOWER(CONV(CEIL(RAND()*0xF),10,16)),
           iterator = iterator + 1;
-        IF CEIL(RAND()*2) = 1 
+        IF CEIL(RAND()*2) = 1
           THEN SET symbol = UPPER(symbol);
         END IF;
         SET str = CONCAT(str, symbol);
@@ -2019,7 +2019,7 @@ BEGIN
     OPEN regionsCursor;
         regionsLoop: LOOP
             FETCH regionsCursor INTO regionID, regionName;
-            IF done 
+            IF done
                 THEN LEAVE regionsLoop;
             END IF;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -2043,7 +2043,7 @@ BEGIN
     OPEN filesCursor;
         filesLoop: LOOP
             FETCH filesCursor INTO fileName;
-            IF done 
+            IF done
                 THEN LEAVE filesLoop;
             END IF;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -2123,7 +2123,7 @@ BEGIN
                         "workingCompaniesOffset", workingCompaniesOffset
                     );
                     IF statisticType = "working"
-                        THEN SET statistic = JSON_SET(statistic, 
+                        THEN SET statistic = JSON_SET(statistic,
                             "$.working", getWorkingBankStatistic(dateStart, dateEnd, types, users, banks, statuses),
                             "$.workingCompanies", getWorkingStatisticCompanies(dateStart, dateEnd, types, users, banks, statuses, workingCompaniesLimit, workingCompaniesOffset)
                         );
@@ -2169,36 +2169,36 @@ BEGIN
     DECLARE responce JSON;
     DECLARE companiesCount, iterator INT(11);
     DECLARE companiesHour VARCHAR(2);
-    DECLARE companiesDate VARCHAR(10);  
+    DECLARE companiesDate VARCHAR(10);
     DECLARE templateName VARCHAR(128);
-    DECLARE companiesCursor CURSOR FOR SELECT 
-        COUNT(*), 
-        DATE(c.company_date_update) company_date, 
-        HOUR(c.company_date_update) company_hour, 
-        ty.type_name 
-    FROM 
-        companies c 
-        JOIN templates t ON t.template_id = c.template_id 
+    DECLARE companiesCursor CURSOR FOR SELECT
+        COUNT(*),
+        DATE(c.company_date_update) company_date,
+        HOUR(c.company_date_update) company_hour,
+        ty.type_name
+    FROM
+        companies c
+        JOIN templates t ON t.template_id = c.template_id
         JOIN types ty ON ty.type_id = t.type_id
-    WHERE 
+    WHERE
         c.type_id != 10 AND
-        JSON_LENGTH(company_json ->> "$.company_banks") > 0 AND 
-        IF(companiesTypes IS NOT NULL AND JSON_LENGTH(companiesTypes) > 0, JSON_CONTAINS(companiesTypes, CONCAT(c.type_id)), 1) AND 
-        IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, JSON_CONTAINS(users, JSON_ARRAY(c.user_id)), 1) AND 
+        JSON_LENGTH(company_json ->> "$.company_banks") > 0 AND
+        IF(companiesTypes IS NOT NULL AND JSON_LENGTH(companiesTypes) > 0, JSON_CONTAINS(companiesTypes, CONCAT(c.type_id)), 1) AND
+        IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, JSON_CONTAINS(users, JSON_ARRAY(c.user_id)), 1) AND
         IF(banks IS NOT NULL AND JSON_LENGTH(banks) > 0, jsonContainsLeastOne(JSON_EXTRACT(c.company_json, "$.company_banks.*.bank_id"), banks), 1) AND
         IF(statuses IS NOT NULL AND JSON_LENGTH(statuses) > 0, jsonContainsLeastOne(JSON_EXTRACT(c.company_json, "$.company_banks.*.bank_status_id"), statuses), 1) AND
-        DATE(company_date_update) BETWEEN DATE(dateStart) AND DATE(dateEnd) 
-    GROUP BY 
-        company_date, 
-        company_hour, 
-        ty.type_name; 
+        DATE(company_date_update) BETWEEN DATE(dateStart) AND DATE(dateEnd)
+    GROUP BY
+        company_date,
+        company_hour,
+        ty.type_name;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     SET responce = JSON_ARRAY();
     SET iterator = 0;
     OPEN companiesCursor;
         companiesLoop: LOOP
             FETCH companiesCursor INTO companiesCount, companiesDate, companiesHour, templateName;
-            IF done 
+            IF done
                 THEN LEAVE companiesLoop;
             END IF;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -2217,35 +2217,35 @@ CREATE DEFINER=`root`@`localhost` FUNCTION `getWorkingStatisticCompanies` (`date
 BEGIN
     DECLARE done TINYINT(1);
     DECLARE responce, company JSON;
-    DECLARE companiesCursor CURSOR FOR SELECT 
-        company_json 
-    FROM 
-        working_statistic_companies_view 
-    WHERE 
+    DECLARE companiesCursor CURSOR FOR SELECT
+        company_json
+    FROM
+        working_statistic_companies_view
+    WHERE
         type_id != 10 AND
-        JSON_LENGTH(company_banks) > 0 AND 
-        IF(companiesTypes IS NOT NULL AND JSON_LENGTH(companiesTypes) > 0, JSON_CONTAINS(companiesTypes, CONCAT(type_id)), 1) AND 
+        JSON_LENGTH(company_banks) > 0 AND
+        IF(companiesTypes IS NOT NULL AND JSON_LENGTH(companiesTypes) > 0, JSON_CONTAINS(companiesTypes, CONCAT(type_id)), 1) AND
         IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, JSON_CONTAINS(users, CONCAT(user_id)), 1) AND
-        IF(banks IS NOT NULL AND JSON_ARRAY(banks) > 0, jsonContainsLeastOne(JSON_EXTRACT(company_banks, "$.*.bank_id"), banks), 1) AND 
+        IF(banks IS NOT NULL AND JSON_ARRAY(banks) > 0, jsonContainsLeastOne(JSON_EXTRACT(company_banks, "$.*.bank_id"), banks), 1) AND
         IF(statuses IS NOT NULL AND JSON_LENGTH(statuses) > 0, jsonContainsLeastOne(JSON_EXTRACT(company_banks, "$.*.bank_status_id"), statuses), 1) AND
-        DATE(company_date_update) BETWEEN DATE(dateStart) AND DATE(dateEnd) 
-    LIMIT 
-        companiesLimit 
-    OFFSET 
+        DATE(company_date_update) BETWEEN DATE(dateStart) AND DATE(dateEnd)
+    LIMIT
+        companiesLimit
+    OFFSET
         companiesOffset;
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     SET responce = JSON_ARRAY();
     OPEN companiesCursor;
         companiesLoop: LOOP
             FETCH companiesCursor INTO company;
-            IF done 
+            IF done
                 THEN LEAVE companiesLoop;
             END IF;
             SET responce = JSON_MERGE(responce, company);
             ITERATE companiesLoop;
         END LOOP;
     CLOSE companiesCursor;
-    RETURN responce; 
+    RETURN responce;
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `jsonContainsLeastOne` (`array1` JSON, `array2` JSON) RETURNS TINYINT(1) NO SQL
@@ -2302,7 +2302,7 @@ BEGIN
         END IF;
         IF keysLength > 1
             THEN BEGIN
-                SET arrayItem = JSON_UNQUOTE(JSON_EXTRACT(array, CONCAT("$[", arrayIterator, "]"))); 
+                SET arrayItem = JSON_UNQUOTE(JSON_EXTRACT(array, CONCAT("$[", arrayIterator, "]")));
                 SET customObject = JSON_OBJECT();
                 SET keysIterator = 0;
                 keysLoop: LOOP
@@ -2316,7 +2316,7 @@ BEGIN
                 END LOOP;
                 SET responce = JSON_MERGE(responce, customObject);
             END;
-            ELSE BEGIN 
+            ELSE BEGIN
                 SET keyName = JSON_UNQUOTE(JSON_EXTRACT(keysArray, "$[0]"));
                 SET responce = JSON_MERGE(responce, JSON_ARRAY(JSON_UNQUOTE(JSON_EXTRACT(array, CONCAT("$[", arrayIterator, "].", keyName)))));
             END;
@@ -2360,7 +2360,7 @@ BEGIN
         THEN BEGIN
             UPDATE connections SET user_id = NULL WHERE connection_id = connectionID;
             UPDATE users SET user_auth = 0 WHERE user_id = userID;
-            SET responce = JSON_MERGE(responce, 
+            SET responce = JSON_MERGE(responce,
                 JSON_OBJECT(
                     "type", "sendToSocket",
                     "data", JSON_OBJECT(
@@ -2444,16 +2444,16 @@ BEGIN
     SET responce = JSON_ARRAY();
     SET validConnection = checkConnection(connectionHash);
     SELECT user_id, connection_api_id INTO userID, connectionApiID FROM connections WHERE connection_hash = connectionHash;
-    IF validConnection 
+    IF validConnection
         THEN BEGIN
             SELECT user_sip INTO userSip FROM users WHERE user_id = userID;
             SELECT company_json ->> "$.company_id" INTO companyID FROM working_user_company_view WHERE user_id = userID LIMIT 1;
-            IF companyID IS NOT NULL 
+            IF companyID IS NOT NULL
                 THEN UPDATE companies SET company_ringing = 1 WHERE company_id = companyID;
             END IF;
             SELECT company_phone, company_id INTO companyPhone, companyID FROM companies WHERE user_id = userID AND type_id IN (9, 35) AND company_ringing = 0 ORDER BY type_id ASC, company_date_registration DESC, company_date_create DESC LIMIT 1;
             IF companyPhone IS NOT NULL
-                THEN BEGIN 
+                THEN BEGIN
                     INSERT INTO calls (user_id, company_id, call_internal_type_id, call_destination_type_id, call_predicted) VALUES (userID, companyID, 33, 33, 1);
                     UPDATE users SET user_ringing = 1 WHERE user_id = userID;
                     SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -2533,7 +2533,7 @@ BEGIN
         connectionsLoop:LOOP
             FETCH connectionsCursor INTO connectionID, connectionApiID;
             IF done
-                THEN LEAVE connectionsLoop; 
+                THEN LEAVE connectionsLoop;
             END IF;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
                 "type", "sendToSocket",
@@ -2626,8 +2626,8 @@ BEGIN
   OPEN usersCursor;
     usersLoop: LOOP
       FETCH usersCursor INTO userID;
-      IF done 
-        THEN LEAVE usersLoop; 
+      IF done
+        THEN LEAVE usersLoop;
       END IF;
       SET usersArray = JSON_MERGE(usersArray, CONCAT(userID));
       ITERATE usersLoop;
@@ -2674,7 +2674,7 @@ BEGIN
     IF connectionValid
         THEN BEGIN
             IF typeID = 14 OR typeID = 23
-                THEN BEGIN 
+                THEN BEGIN
                     SELECT JSON_EXTRACT(state_json, CONCAT("$.distribution.", IF(typeID = 14, "invalidate", "callBack"))) INTO filter FROM states WHERE connection_id = connectionID;
                     SET dateStart = JSON_UNQUOTE(JSON_EXTRACT(filter, "$.dateStart"));
                     SET dateEnd = JSON_UNQUOTE(JSON_EXTRACT(filter, "$.dateEnd"));
@@ -2711,7 +2711,7 @@ BEGIN
 END$$
 
 CREATE DEFINER=`root`@`localhost` FUNCTION `resetNotDialAllCompanies` () RETURNS JSON NO SQL
-BEGIN   
+BEGIN
     DECLARE companiesCount INT(11) DEFAULT 0;
     DECLARE responce JSON;
     SET responce = JSON_ARRAY();
@@ -2755,7 +2755,7 @@ BEGIN
                         JSON_OBJECT(
                             "type", "merge",
                             "data", JSON_OBJECT(
-                                "loginMessage", CONCAT("Сообщение направлено на почту: ", userEmail) 
+                                "loginMessage", CONCAT("Сообщение направлено на почту: ", userEmail)
                             )
                         )
                     )
@@ -2775,7 +2775,7 @@ BEGIN
                     )
                 )
             )
-        )); 
+        ));
     END IF;
     RETURN responce;
 END$$
@@ -2793,7 +2793,7 @@ BEGIN
             FETCH socketsCursor INTO connectionApiID;
             IF done
                 THEN LEAVE socketsLoop;
-            END IF; 
+            END IF;
             SET responce = JSON_MERGE(responce, JSON_OBJECT(
                 "type", "sendToSocket",
                 "data", JSON_OBJECT(
@@ -2822,12 +2822,12 @@ BEGIN
     SET iterator = 0;
     SET banksLength = JSON_LENGTH(banks);
     SELECT connection_api_id, user_id INTO connectionApiID, userID FROM connections WHERE connection_hash = connectionHash;
-    IF connectionValid 
+    IF connectionValid
         THEN BEGIN
             UPDATE companies SET company_comment = comment, type_id = 13 WHERE company_id = companyID;
             SET banksIDArray = jsonMap(banks, JSON_ARRAY("bank_id"));
             CALL checkBanksStatuses(banksIDArray, JSON_ARRAY(statusText));
-            UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id, cb.company_bank_date_send = NOW() WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, JSON_ARRAY(CONCAT(cb.bank_id)));  
+            UPDATE company_banks cb JOIN bank_statuses bs ON bs.bank_id = cb.bank_id AND bs.bank_status_text = statusText SET cb.bank_status_id = bs.bank_status_id, cb.company_bank_date_send = NOW() WHERE cb.company_id = companyID AND JSON_CONTAINS(banksIDArray, JSON_ARRAY(CONCAT(cb.bank_id)));
             banksLoop: LOOP
                 IF iterator >= banksLength
                     THEN LEAVE banksLoop;
@@ -2838,7 +2838,7 @@ BEGIN
                 SET iterator = iterator + 1;
                 ITERATE banksLoop;
             END LOOP;
-            SELECT 
+            SELECT
                 JSON_OBJECT(
                     "companyID", c.company_id,
                     "companyPersonName", c.company_person_name,
@@ -2855,9 +2855,9 @@ BEGIN
                     "companyEmail", c.company_email,
                     "cityName", ci.city_name
                 )
-            INTO company 
-            FROM 
-                companies c 
+            INTO company
+            FROM
+                companies c
                 LEFT JOIN codes cd ON cd.region_id = c.region_id
                 LEFT JOIN cities ci ON ci.city_id = c.city_id
             WHERE c.company_id = companyID LIMIT 1;
@@ -2968,7 +2968,7 @@ BEGIN
     SET filialsLength = JSON_LENGTH(filials);
     SELECT bank_name INTO bankName FROM banks WHERE bank_id = bankID;
     SELECT count(*) INTO bankFilialsCountBefore FROM bank_filials WHERE bank_id = bankID;
-    IF deleteFilials 
+    IF deleteFilials
         THEN DELETE FROM bank_filials WHERE bank_id = bankID;
     END IF;
     filialsLoop: LOOP
@@ -3003,7 +3003,7 @@ BEGIN
             END;
         END IF;
         SET iterator = iterator + 1;
-        ITERATE filialsLoop; 
+        ITERATE filialsLoop;
     END LOOP;
     SELECT count(*) INTO bankFilialsCountAfter FROM bank_filials WHERE bank_id = bankID;
     SET responce = JSON_MERGE(responce, JSON_OBJECT(
@@ -3033,19 +3033,19 @@ BEGIN
     SET responce = JSON_ARRAY();
     SELECT call_id, user_id INTO callID, userID FROM calls_view WHERE user_sip = userSip OR call_api_id_internal = callApiID OR call_api_id_destination = callApiID ORDER BY call_id DESC LIMIT 1;
     SELECT user_sip, user_ringing INTO userSip, ringing FROM users WHERE user_id = userID;
-    UPDATE calls SET 
+    UPDATE calls SET
         call_internal_type_id = IF(
             (
-                call_api_id_internal IS NOT NULL AND 
+                call_api_id_internal IS NOT NULL AND
                 call_api_id_internal = callApiID
-            ) OR 
+            ) OR
             (
                 call_api_id_internal IS NULL AND (
                     (
-                        call_api_id_destination IS NULL AND 
+                        call_api_id_destination IS NULL AND
                         call_predicted = 0
                     ) OR (
-                        call_api_id_destination IS NOT NULL AND 
+                        call_api_id_destination IS NOT NULL AND
                         call_api_id_destination != callApiID
                     )
                 )
@@ -3055,16 +3055,16 @@ BEGIN
         ),
         call_destination_type_id = IF(
             (
-                call_api_id_destination IS NOT NULL AND 
+                call_api_id_destination IS NOT NULL AND
                 call_api_id_destination = callApiID
-            ) OR 
+            ) OR
             (
                 call_api_id_destination IS NULL AND (
                     (
-                        call_api_id_internal IS NULL AND 
+                        call_api_id_internal IS NULL AND
                         call_predicted = 1
                     ) OR (
-                        call_api_id_internal IS NOT NULL AND 
+                        call_api_id_internal IS NOT NULL AND
                         call_api_id_internal != callApiID
                     )
                 )
@@ -3073,7 +3073,7 @@ BEGIN
             call_destination_type_id
         ),
         call_api_id_internal = IF(
-            call_api_id_internal IS NULL AND 
+            call_api_id_internal IS NULL AND
             ((
                 call_api_id_destination IS NULL AND
                 call_predicted = 0
@@ -3085,12 +3085,12 @@ BEGIN
             call_api_id_internal
         ),
         call_api_id_destination = IF(
-            call_api_id_destination IS NULL AND 
+            call_api_id_destination IS NULL AND
             ((
                 call_api_id_internal IS NULL AND
                 call_predicted = 1
             ) OR (
-                call_api_id_internal IS NOT NULL AND 
+                call_api_id_internal IS NOT NULL AND
                 call_api_id_internal != callApiID
             )),
             callApiID,
@@ -3125,8 +3125,8 @@ BEGIN
             "messageType", IF(typeID IN (39, 33, 34, 43), "success", "error")
         )
     ))));
-    IF callProcess = 1 AND callEnd = 0 
-        THEN BEGIN 
+    IF callProcess = 1 AND callEnd = 0
+        THEN BEGIN
             UPDATE users SET user_ringing = 0 WHERE user_id = userID;
             SET ringing = 0;
         END;
@@ -3144,7 +3144,7 @@ BEGIN
                             SET responce = JSON_MERGE(responce, JSON_OBJECT(
                                 "type", "sendToZadarma",
                                 "data", JSON_OBJECT(
-                                    "options", JSON_OBJECT( 
+                                    "options", JSON_OBJECT(
                                         "from", userSip,
                                         "to", nextPhone,
                                         "predicted", true
@@ -3239,7 +3239,7 @@ BEGIN
                 THEN UPDATE companies SET type_id = typeID, company_date_call_back = dateParam, user_id = userID WHERE company_id = companyID;
                 ELSE UPDATE companies SET type_id = typeID, user_id = userID WHERE company_id = companyID;
             END IF;
-            IF typeID = 36 OR lastTypeID = 36 
+            IF typeID = 36 OR lastTypeID = 36
                 THEN SET responce = JSON_MERGE(responce, refreshUsersCompanies());
                 ELSE SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
             END IF;
@@ -3445,7 +3445,7 @@ BEGIN
                 )) WHERE company_id = companyID;
             END IF;
             IF statusTypeID = 17
-                THEN BEGIN 
+                THEN BEGIN
                     UPDATE companies SET type_id = 24 WHERE company_id = companyID;
                     IF !JSON_CONTAINS(negativeCompanies, JSON_ARRAY(companyID))
                         THEN SET negativeCompanies = JSON_MERGE(negativeCompanies, JSON_ARRAY(companyID));
@@ -3485,7 +3485,7 @@ BEGIN
     THEN BEGIN
       INSERT INTO files (file_name, type_id, user_id) VALUES (filePath, 45, userID);
       SELECT file_id INTO fileID FROM files ORDER BY file_id DESC LIMIT 1;
-      UPDATE calls SET 
+      UPDATE calls SET
         call_destination_file_id = IF(internal = 0, fileID, call_destination_file_id),
         call_internal_file_id = IF(internal = 1, fileID, call_internal_file_id),
         call_destination_type_id = IF(call_destination_type_id NOT IN (38,40,41,42,46,47,48,49,50,51,52,53), call_destination_type_id, 42),
@@ -3516,7 +3516,7 @@ BEGIN
     SET responce = JSON_ARRAY();
     SELECT user_id, connection_id, connection_api_id, bank_id INTO userID, connectionID, connectionApiID, bankID FROM users_connections_view WHERE connection_hash = connectionHash;
     IF connectionValid
-        THEN BEGIN  
+        THEN BEGIN
             SET filtersKeys = JSON_KEYS(filters);
             SET keysLength = JSON_LENGTH(filtersKeys);
             SET iterator = 0;
@@ -3570,7 +3570,7 @@ BEGIN
     DECLARE responce JSON;
     SET responce = JSON_ARRAY();
     SET connectionValid = checkConnection(connectionHash);
-    IF connectionValid 
+    IF connectionValid
         THEN BEGIN
             SELECT user_id INTO userID FROM connections WHERE connection_hash = connectionHash;
             SELECT user_ringing INTO oldRinging FROM users WHERE user_id = userID;
@@ -3647,7 +3647,7 @@ BEGIN
       )
     )
   )));
-  IF !fileStatistic 
+  IF !fileStatistic
     THEN SET responce = JSON_MERGE(responce, JSON_OBJECT(
       "type", "merge",
       "data", JSON_OBJECT(
@@ -3832,7 +3832,7 @@ DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `calls_after_update` AFTER UPDATE ON `calls` FOR EACH ROW BEGIN
     IF NEW.company_id IS NOT NULL
-        THEN UPDATE companies SET call_id = NEW.call_id WHERE company_id = NEW.company_id;  
+        THEN UPDATE companies SET call_id = NEW.call_id WHERE company_id = NEW.company_id;
     END IF;
 END
 $$
@@ -4112,14 +4112,14 @@ CREATE TRIGGER `companies_before_update` BEFORE UPDATE ON `companies` FOR EACH R
     END IF;
     IF OLD.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32) AND NEW.type_id IN (15, 16, 17, 24, 25, 26, 27, 28, 29, 30, 31, 32)
         THEN SET NEW.company_date_update = OLD.company_date_update;
-        ELSE BEGIN 
+        ELSE BEGIN
             IF NEW.company_file_user IS NULL AND OLD.company_file_user IS NULL
                 THEN SET NEW.company_date_update = NOW();
                 ELSE SET NEW.company_date_update = OLD.company_date_update;
             END IF;
         END;
     END IF;
-    IF NEW.type_id != OLD.type_id 
+    IF NEW.type_id != OLD.type_id
         THEN SET NEW.old_type_id = OLD.type_id;
     END IF;
     SET NEW.company_json = JSON_SET(NEW.company_json,
@@ -4192,7 +4192,7 @@ DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `connections_before_insert` BEFORE INSERT ON `connections` FOR EACH ROW BEGIN
   SET NEW.connection_date_create = NOW();
-    IF NEW.connection_end 
+    IF NEW.connection_end
       THEN SET NEW.connection_date_disconnect = NOW();
     END IF;
     hashLoop: LOOP
@@ -4212,7 +4212,7 @@ CREATE TRIGGER `connections_before_update` BEFORE UPDATE ON `connections` FOR EA
     THEN SET NEW.connection_date_disconnect = NOW();
   END IF;
   IF NEW.user_id IS NOT NULL AND (NEW.user_id != OLD.user_id OR OLD.user_id IS NULL)
-    THEN BEGIN 
+    THEN BEGIN
         DELETE FROM states WHERE connection_id = NEW.connection_id;
         INSERT INTO states (connection_id, user_id) VALUES (NEW.connection_id, NEW.user_id);
     END;
@@ -4385,9 +4385,9 @@ CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGI
     SELECT type_id INTO typeID FROM users WHERE user_id = NEW.user_id;
     IF typeID = 1 OR typeID = 19 OR typeID = 18
         THEN BEGIN
-            SET NEW.state_json = JSON_OBJECT(); 
+            SET NEW.state_json = JSON_OBJECT();
             IF typeID = 1 OR typeID = 19
-                THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic", 
+                THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic",
                     JSON_OBJECT(
                         "dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)),
                         "dateEnd", DATE(NOW()),
@@ -4427,7 +4427,7 @@ CREATE TRIGGER `state_before_insert` BEFORE INSERT ON `states` FOR EACH ROW BEGI
                 ));
             END IF;
             IF typeID = 1 OR typeID = 18
-                THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution", 
+                THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution",
                     JSON_OBJECT(
                         "work", JSON_OBJECT(
                             "rowStart", 1,
@@ -4491,7 +4491,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
     DECLARE types, bank, banks, status, statuses JSON;
     DECLARE banksCursor CURSOR FOR SELECT bank_json, bank_id FROM banks_statistic_view WHERE JSON_CONTAINS(@banks, JSON_ARRAY(CONCAT(bank_id)));
     DECLARE banksStatusesCursor CURSOR FOR SELECT status_json FROM bank_status_translate WHERE bank_id = @bankID;
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1; 
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
     SET NEW.state_date_update = NOW();
     IF JSON_EXTRACT(NEW.state_json, "$.statistic") IS NOT NULL
         THEN BEGIN
@@ -4500,7 +4500,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
             OPEN banksCursor;
                 banksLoop: LOOP
                     FETCH banksCursor INTO bank, bankID;
-                    IF done 
+                    IF done
                         THEN LEAVE banksLoop;
                     END IF;
                     SET statuses = JSON_ARRAY();
@@ -4508,7 +4508,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                     OPEN banksStatusesCursor;
                         banksStatusesLoop:LOOP
                             FETCH banksStatusesCursor INTO status;
-                            IF done 
+                            IF done
                                 THEN LEAVE banksStatusesLoop;
                             END IF;
                             SET statuses = JSON_MERGE(statuses, status);
@@ -4531,7 +4531,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 WHEN 0 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.statistic.dateEnd", DATE(NOW()));
                 WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.statistic.dateEnd", DATE(NOW()));
                 WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.statistic.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.statistic.dateEnd", DATE(NOW()));
-                WHEN 3 THEN BEGIN 
+                WHEN 3 THEN BEGIN
                     SELECT company_date_update INTO firstDate FROM companies WHERE IF(JSON_LENGTH(types) = 0, 1, JSON_CONTAINS(types, JSON_ARRAY(type_id))) ORDER BY company_date_update LIMIT 1;
                     IF firstDate IS NULL
                         THEN SET firstDate = DATE(NOW());
@@ -4568,7 +4568,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.invalidate.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.invalidate.dateEnd", DATE(NOW()));
                 WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.invalidate.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.invalidate.dateEnd", DATE(NOW()));
                 WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.invalidate.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.invalidate.dateEnd", DATE(NOW()));
-                WHEN 4 THEN BEGIN 
+                WHEN 4 THEN BEGIN
                     SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 14 ORDER BY company_date_create LIMIT 1;
                     IF firstDate IS NULL
                         THEN SET firstDate = DATE(NOW());
@@ -4586,7 +4586,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.callBack.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.callBack.dateEnd", DATE(NOW()));
                 WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.callBack.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.callBack.dateEnd", DATE(NOW()));
                 WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.callBack.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.callBack.dateEnd", DATE(NOW()));
-                WHEN 4 THEN BEGIN 
+                WHEN 4 THEN BEGIN
                     SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 23 ORDER BY company_date_create LIMIT 1;
                     IF firstDate IS NULL
                         THEN SET firstDate = DATE(NOW());
@@ -4604,7 +4604,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.api.dateEnd", DATE(NOW()));
                 WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.api.dateEnd", DATE(NOW()));
                 WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.api.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.api.dateEnd", DATE(NOW()));
-                WHEN 4 THEN BEGIN 
+                WHEN 4 THEN BEGIN
                     SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 13 ORDER BY company_date_create LIMIT 1;
                     IF firstDate IS NULL
                         THEN SET firstDate = DATE(NOW());
@@ -4622,7 +4622,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.notDial.dateEnd", DATE(NOW()));
                 WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.notDial.dateEnd", DATE(NOW()));
                 WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.notDial.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.notDial.dateEnd", DATE(NOW()));
-                WHEN 4 THEN BEGIN 
+                WHEN 4 THEN BEGIN
                     SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 36 ORDER BY company_date_create LIMIT 1;
                     IF firstDate IS NULL
                         THEN SET firstDate = DATE(NOW());
@@ -4640,7 +4640,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.difficult.dateEnd", DATE(NOW()));
                 WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.difficult.dateEnd", DATE(NOW()));
                 WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.difficult.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.difficult.dateEnd", DATE(NOW()));
-                WHEN 4 THEN BEGIN 
+                WHEN 4 THEN BEGIN
                     SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 37 ORDER BY company_date_create LIMIT 1;
                     IF firstDate IS NULL
                         THEN SET firstDate = DATE(NOW());
@@ -4658,7 +4658,7 @@ CREATE TRIGGER `state_before_update` BEFORE UPDATE ON `states` FOR EACH ROW BEGI
                 WHEN 1 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 WEEK)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
                 WHEN 2 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 MONTH)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
                 WHEN 3 THEN SET NEW.state_json = JSON_SET(NEW.state_json, "$.distribution.duplicates.dateStart", DATE(SUBDATE(NOW(), INTERVAL 1 YEAR)), "$.distribution.duplicates.dateEnd", DATE(NOW()));
-                WHEN 4 THEN BEGIN 
+                WHEN 4 THEN BEGIN
                     SELECT company_date_create INTO firstDate FROM companies WHERE type_id = 24 ORDER BY company_date_create LIMIT 1;
                     IF firstDate IS NULL
                         THEN SET firstDate = DATE(NOW());
@@ -4742,7 +4742,7 @@ DELIMITER $$
 CREATE TRIGGER `transactions_before_insert` BEFORE INSERT ON `transactions` FOR EACH ROW BEGIN
   SET NEW.transaction_date_create = NOW();
     IF NEW.transaction_end
-      THEN BEGIN 
+      THEN BEGIN
           SET NEW.transaction_date_end = NOW();
             UPDATE purchases SET purchase_date_buy = NOW() WHERE transaction_id = NEW.transaction_id;
         END;
@@ -4754,7 +4754,7 @@ DELIMITER $$
 CREATE TRIGGER `transactions_before_update` BEFORE UPDATE ON `transactions` FOR EACH ROW BEGIN
   SET NEW.transaction_date_update = NOW();
     IF NEW.transaction_end
-      THEN BEGIN 
+      THEN BEGIN
           SET NEW.transaction_date_end = NOW();
             UPDATE purchases SET purchase_date_buy = NOW() WHERE transaction_id = NEW.transaction_id;
         END;
@@ -4886,7 +4886,7 @@ CREATE TRIGGER `users_before_update` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
         ELSE SET NEW.user_online = 0;
     END IF;
     IF (NEW.user_auth = 0 AND OLD.user_auth = 1) OR (NEW.user_online = 0 AND OLD.user_online = 1)
-        THEN BEGIN 
+        THEN BEGIN
             IF NEW.type_id = 1
                 THEN UPDATE companies SET user_id = NULL, type_id = 10 WHERE user_id = NEW.user_id AND type_id = 20;
             END IF;
