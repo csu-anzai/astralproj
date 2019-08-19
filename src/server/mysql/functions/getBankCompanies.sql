@@ -81,7 +81,14 @@ BEGIN
 								date(company_date_update) = today
 							)
 						)
-					ORDER BY type ASC, date(company_date_registration) DESC, date(company_date_create) DESC, region_priority ASC, time(company_date_create) DESC LIMIT rows
+					ORDER BY
+						type ASC,
+						date(company_date_registration) DESC,
+						date(company_date_create) DESC,
+						region_priority ASC,
+						time(company_date_create) DESC,
+						company_view_priority DESC
+					LIMIT rows
 				) bc ON bc.company_id = c.company_id
 			SET c.user_id = userID, c.type_id = 44;
 			SELECT COUNT(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 44;

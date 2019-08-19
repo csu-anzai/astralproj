@@ -3,37 +3,37 @@ BEGIN
 	DECLARE responce, type, company JSON;
 	DECLARE distributionFilters JSON DEFAULT (SELECT state_json ->> "$.distribution" FROM states WHERE connection_id = connectionID);
 	DECLARE done TINYINT(1);
-	DECLARE companiesCursor CURSOR FOR 
-		SELECT 
+	DECLARE companiesCursor CURSOR FOR
+		SELECT
 			company_json
 		FROM (
-			SELECT 
-				company_json, 
-				@apiCount:=IF(type_id = 13, @apiCount+1, @apiCount) apiCount, 
-				@invalidateCount:=IF(type_id = 14, @invalidateCount+1, @invalidateCount) invalidateCount, 
-				@difficultCount:=IF(type_id = 37, @difficultCount+1, @difficultCount) difficultCount, 
-				@callbackCount:=IF(type_id = 23, @callbackCount+1, @callbackCount) callbackCount, 
-				@inworkCount:=IF(type_id IN (9, 35), @inworkCount+1, @inworkCount) inworkCount, 
+			SELECT
+				company_json,
+				@apiCount:=IF(type_id = 13, @apiCount+1, @apiCount) apiCount,
+				@invalidateCount:=IF(type_id = 14, @invalidateCount+1, @invalidateCount) invalidateCount,
+				@difficultCount:=IF(type_id = 37, @difficultCount+1, @difficultCount) difficultCount,
+				@callbackCount:=IF(type_id = 23, @callbackCount+1, @callbackCount) callbackCount,
+				@inworkCount:=IF(type_id IN (9, 35), @inworkCount+1, @inworkCount) inworkCount,
 				@dialCount:=IF(type_id = 36, @dialCount+1, @dialCount) dialCount,
 				@duplicatesCount:=IF(type_id = 24, @duplicatesCount+1, @duplicatesCount) duplicatesCount,
 				type_id
-			FROM 
-				companies 
-			WHERE 
+			FROM
+				companies
+			WHERE
 				(
 					(
-						(type_id = 13 AND DATE(company_date_create) BETWEEN DATE(@apiDateStart) AND DATE(@apiDateEnd)) OR 
-						(type_id = 14 AND DATE(company_date_create) BETWEEN DATE(@invalidateDateStart) AND DATE(@invalidateDateEnd)) OR 
-						(type_id = 37 AND DATE(company_date_create) BETWEEN DATE(@difficultDateStart) AND DATE(@difficultDateEnd)) OR 
-						(type_id = 23 AND DATE(company_date_create) BETWEEN DATE(@callbackDateStart) AND DATE(@callbackDateEnd)) OR 
-						(type_id = 24 AND DATE(company_date_create) BETWEEN DATE(@duplicatesDateStart) AND DATE(@duplicatesDateEnd)) OR 
+						(type_id = 13 AND DATE(company_date_create) BETWEEN DATE(@apiDateStart) AND DATE(@apiDateEnd)) OR
+						(type_id = 14 AND DATE(company_date_create) BETWEEN DATE(@invalidateDateStart) AND DATE(@invalidateDateEnd)) OR
+						(type_id = 37 AND DATE(company_date_create) BETWEEN DATE(@difficultDateStart) AND DATE(@difficultDateEnd)) OR
+						(type_id = 23 AND DATE(company_date_create) BETWEEN DATE(@callbackDateStart) AND DATE(@callbackDateEnd)) OR
+						(type_id = 24 AND DATE(company_date_create) BETWEEN DATE(@duplicatesDateStart) AND DATE(@duplicatesDateEnd)) OR
 						(type_id IN (9, 35))
 					) AND user_id = userID
-				) OR 
+				) OR
 				(type_id = 36 AND DATE(company_date_create) BETWEEN DATE(@dialDateStart) AND DATE(@dialDateEnd))
-			ORDER BY type_id ASC, company_date_registration DESC, company_date_create DESC
+			ORDER BY type_id ASC, company_view_priority DESC, company_date_registration DESC, company_date_create DESC
 		) c
-		WHERE 
+		WHERE
 			(apiCount BETWEEN @apiRowStart AND @apiRowLimit AND type_id = 13) OR
 			(invalidateCount BETWEEN @invalidateRowStart AND @invalidateRowLimit AND type_id = 14) OR
 			(difficultCount BETWEEN @difficultRowStart AND @difficultRowLimit AND type_id = 37) OR
@@ -89,7 +89,7 @@ BEGIN
 			OPEN companiesCursor;
 				companiesLoop: LOOP
 					FETCH companiesCursor INTO company;
-					IF done 
+					IF done
 						THEN LEAVE companiesLoop;
 					END IF;
 					SET responce = JSON_MERGE(responce, company);

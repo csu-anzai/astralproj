@@ -407,7 +407,7 @@ BEGIN
                                     SET @mysqlText = CONCAT(
                                         @mysqlText,
                                         IF(iterator2 = 0, "", ","),
-                                        IF(columnValue IS NULL, "NULL", CONCAT("'", columnValue, "'"))
+                                        IF(columnValue IS NULL, "NULL", JSON_QUOTE(columnValue))
                                     );
                                     SET iterator2 = iterator2 + 1;
                                     ITERATE companyLoop;
@@ -1499,7 +1499,7 @@ BEGIN
                     ) AND user_id = userID
                 ) OR
                 (type_id = 36 AND DATE(company_date_create) BETWEEN DATE(@dialDateStart) AND DATE(@dialDateEnd))
-            ORDER BY type_id ASC, company_date_registration DESC, company_date_create DESC
+            ORDER BY type_id ASC, company_view_priority DESC, company_date_registration DESC, company_date_create DESC
         ) c
         WHERE
             (apiCount BETWEEN @apiRowStart AND @apiRowLimit AND type_id = 13) OR
@@ -1716,7 +1716,14 @@ BEGIN
                                 date(company_date_update) = today
                             )
                         )
-                    ORDER BY type ASC, date(company_date_registration) DESC, date(company_date_create) DESC, region_priority ASC, time(company_date_create) DESC LIMIT rows
+                    ORDER BY
+                        type ASC,
+                        date(company_date_registration) DESC,
+                        date(company_date_create) DESC,
+                        region_priority ASC,
+                        time(company_date_create) DESC,
+                        company_view_priority DESC
+                    LIMIT rows
                 ) bc ON bc.company_id = c.company_id
             SET c.user_id = userID, c.type_id = 44;
             SELECT COUNT(*) INTO companiesCount FROM companies WHERE user_id = userID AND type_id = 44;
@@ -2852,6 +2859,7 @@ BEGIN
                     "banks", banks,
                     "templateTypeID", c.company_json ->> "$.template_type_id",
                     "regionCode", cd.code_value,
+                    "regionName", r.region_name,
                     "companyEmail", c.company_email,
                     "cityName", ci.city_name
                 )
@@ -2860,6 +2868,7 @@ BEGIN
                 companies c
                 LEFT JOIN codes cd ON cd.region_id = c.region_id
                 LEFT JOIN cities ci ON ci.city_id = c.city_id
+                LEFT JOIN regions r ON r.region_id = c.region_id
             WHERE c.company_id = companyID LIMIT 1;
             SET responce = JSON_MERGE(responce, refreshUserCompanies(userID));
             SET responce = JSON_MERGE(responce,
@@ -3877,6 +3886,12 @@ CREATE TABLE `calls_view` (
 ,`company_phone` varchar(120)
 );
 
+CREATE TABLE `channels` (
+  `channel_id` bigint(20) UNSIGNED NOT NULL,
+  `channel_description` varchar(256) COLLATE utf8_bin NOT NULL,
+  `channel_priority` int(11) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
 CREATE TABLE `cities` (
   `city_id` int(11) NOT NULL,
   `city_name` varchar(60) COLLATE utf8_bin NOT NULL
@@ -3973,7 +3988,8 @@ CREATE TABLE `companies` (
   `call_id` int(11) DEFAULT NULL,
   `company_ringing` tinyint(1) NOT NULL DEFAULT '0',
   `company_file_user` int(11) DEFAULT NULL,
-  `company_file_type` int(11) DEFAULT NULL
+  `company_file_type` int(11) DEFAULT NULL,
+  `company_view_priority` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 DELIMITER $$
 CREATE TRIGGER `companies_after_insert` AFTER INSERT ON `companies` FOR EACH ROW BEGIN
@@ -4278,6 +4294,40 @@ CREATE TABLE `nikolay_view` (
 ,`статус` varchar(128)
 );
 
+CREATE TABLE `order_companies` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `order_id` bigint(20) NOT NULL,
+  `company_id` bigint(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `partners` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `fio` varchar(256) COLLATE utf8_bin DEFAULT NULL,
+  `email` varchar(256) COLLATE utf8_bin NOT NULL,
+  `phone` varchar(25) COLLATE utf8_bin NOT NULL,
+  `company_inn` varchar(12) COLLATE utf8_bin DEFAULT NULL,
+  `company_kpp` varchar(9) COLLATE utf8_bin DEFAULT NULL,
+  `company_name` varchar(256) COLLATE utf8_bin DEFAULT NULL,
+  `balance` int(11) NOT NULL DEFAULT '0',
+  `subscription` tinyint(1) DEFAULT '0',
+  `role` int(11) NOT NULL DEFAULT '1',
+  `password` varchar(64) COLLATE utf8_bin NOT NULL,
+  `token` varchar(64) COLLATE utf8_bin NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `partner_connections` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `partner_id` bigint(20) DEFAULT NULL,
+  `ip` varchar(15) COLLATE utf8_bin DEFAULT NULL,
+  `date` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `partner_order` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `partner_id` bigint(20) NOT NULL,
+  `date` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
 CREATE TABLE `psb_codes` (
   `psb_code_id` int(11) NOT NULL,
   `psb_code_filial` int(11) NOT NULL,
@@ -4351,6 +4401,13 @@ END
 $$
 DELIMITER ;
 
+CREATE TABLE `recovery_codes` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `partner_id` bigint(20) DEFAULT NULL,
+  `code` varchar(15) COLLATE utf8_bin DEFAULT NULL,
+  `date` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
 CREATE TABLE `regions` (
   `region_id` int(11) NOT NULL,
   `region_name` varchar(60) COLLATE utf8_bin NOT NULL,
@@ -4365,6 +4422,7 @@ CREATE TABLE `regions_companies_view` (
 ,`type_id` int(11)
 ,`old_type_id` int(11)
 ,`user_id` int(11)
+,`company_view_priority` int(11)
 ,`company_banks_length` bigint(21)
 ,`region_msc_timezone` int(11)
 ,`region_priority` int(11)
@@ -4676,6 +4734,25 @@ END
 $$
 DELIMITER ;
 
+CREATE TABLE `subscriptions` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `partner_id` bigint(20) NOT NULL,
+  `date_from` date NOT NULL,
+  `date_to` date NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `subscription_filter_regions` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `subscription_id` bigint(20) NOT NULL,
+  `region_id` bigint(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `subscription_filter_types` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `subscription_id` bigint(20) NOT NULL,
+  `type_id` bigint(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
 CREATE TABLE `telegrams` (
   `telegram_id` int(11) NOT NULL,
   `telegram_chat_id` varchar(120) COLLATE utf8_bin NOT NULL
@@ -4970,7 +5047,7 @@ DROP TABLE IF EXISTS `nikolay_view`;
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `nikolay_view`  AS  select `c`.`company_inn` AS `инн`,`c`.`company_phone` AS `телефон`,`c`.`company_date_create` AS `дата создания`,`c`.`company_date_update` AS `дата последнего обновления`,if((`tr`.`translate_to` is not null),`tr`.`translate_to`,`t`.`type_name`) AS `статус` from ((`companies` `c` join `types` `t` on((`t`.`type_id` = `c`.`type_id`))) left join `translates` `tr` on((`tr`.`translate_from` = `t`.`type_name`))) where ((cast(`c`.`company_date_update` as date) between '2019-4-1' and '2019-4-12') and (`c`.`type_id` in (36,35,37)) and (`c`.`user_id` is not null)) ;
 DROP TABLE IF EXISTS `regions_companies_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `regions_companies_view`  AS  select `c`.`company_id` AS `company_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`type_id` AS `type_id`,`c`.`old_type_id` AS `old_type_id`,`c`.`user_id` AS `user_id`,json_length(json_keys(json_unquote(json_extract(`c`.`company_json`,'$.company_banks')))) AS `company_banks_length`,`r`.`region_msc_timezone` AS `region_msc_timezone`,`r`.`region_priority` AS `region_priority` from (`companies` `c` join `regions` `r` on((`r`.`region_id` = `c`.`region_id`))) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `regions_companies_view`  AS  select `c`.`company_id` AS `company_id`,`c`.`company_date_create` AS `company_date_create`,`c`.`company_date_update` AS `company_date_update`,`c`.`company_date_registration` AS `company_date_registration`,`c`.`type_id` AS `type_id`,`c`.`old_type_id` AS `old_type_id`,`c`.`user_id` AS `user_id`,`c`.`company_view_priority` AS `company_view_priority`,json_length(json_keys(json_unquote(json_extract(`c`.`company_json`,'$.company_banks')))) AS `company_banks_length`,`r`.`region_msc_timezone` AS `region_msc_timezone`,`r`.`region_priority` AS `region_priority` from (`companies` `c` join `regions` `r` on((`r`.`region_id` = `c`.`region_id`))) ;
 DROP TABLE IF EXISTS `templates_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `templates_view`  AS  select `tm`.`template_id` AS `template_id`,`tm`.`type_id` AS `type_id`,`tm`.`template_columns_count` AS `template_columns_count`,`tp`.`type_name` AS `type_name` from (`templates` `tm` join `types` `tp` on((`tp`.`type_id` = `tm`.`type_id`))) ;
@@ -5022,6 +5099,9 @@ ALTER TABLE `calls`
   ADD KEY `call_destination_file_id` (`call_destination_file_id`),
   ADD KEY `call_destination_type_id` (`call_destination_type_id`),
   ADD KEY `call_internal_file_id` (`call_internal_file_id`);
+
+ALTER TABLE `channels`
+  ADD UNIQUE KEY `channel_id` (`channel_id`);
 
 ALTER TABLE `cities`
   ADD PRIMARY KEY (`city_id`);
@@ -5076,6 +5156,20 @@ ALTER TABLE `fns_codes`
   ADD KEY `city_id` (`city_id`),
   ADD KEY `region_id` (`region_id`);
 
+ALTER TABLE `order_companies`
+  ADD UNIQUE KEY `id` (`id`);
+
+ALTER TABLE `partners`
+  ADD UNIQUE KEY `id` (`id`),
+  ADD UNIQUE KEY `token` (`token`),
+  ADD UNIQUE KEY `company_inn` (`company_inn`);
+
+ALTER TABLE `partner_connections`
+  ADD UNIQUE KEY `id` (`id`);
+
+ALTER TABLE `partner_order`
+  ADD UNIQUE KEY `id` (`id`);
+
 ALTER TABLE `psb_codes`
   ADD PRIMARY KEY (`psb_code_id`),
   ADD KEY `city_id` (`city_id`);
@@ -5089,6 +5183,9 @@ ALTER TABLE `purchases`
   ADD KEY `user_id` (`user_id`),
   ADD KEY `transaction_id` (`transaction_id`);
 
+ALTER TABLE `recovery_codes`
+  ADD UNIQUE KEY `id` (`id`);
+
 ALTER TABLE `regions`
   ADD PRIMARY KEY (`region_id`),
   ADD UNIQUE KEY `region_name` (`region_name`);
@@ -5097,6 +5194,15 @@ ALTER TABLE `states`
   ADD PRIMARY KEY (`state_id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `connection_id` (`connection_id`);
+
+ALTER TABLE `subscriptions`
+  ADD UNIQUE KEY `id` (`id`);
+
+ALTER TABLE `subscription_filter_regions`
+  ADD UNIQUE KEY `id` (`id`);
+
+ALTER TABLE `subscription_filter_types`
+  ADD UNIQUE KEY `id` (`id`);
 
 ALTER TABLE `telegrams`
   ADD PRIMARY KEY (`telegram_id`);
@@ -5152,6 +5258,9 @@ ALTER TABLE `bank_statuses`
 ALTER TABLE `calls`
   MODIFY `call_id` int(11) NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `channels`
+  MODIFY `channel_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `cities`
   MODIFY `city_id` int(11) NOT NULL AUTO_INCREMENT;
 
@@ -5176,6 +5285,18 @@ ALTER TABLE `files`
 ALTER TABLE `fns_codes`
   MODIFY `fns_code_id` int(11) NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `order_companies`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `partners`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `partner_connections`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `partner_order`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `psb_codes`
   MODIFY `psb_code_id` int(11) NOT NULL AUTO_INCREMENT;
 
@@ -5185,11 +5306,23 @@ ALTER TABLE `psb_filial_codes`
 ALTER TABLE `purchases`
   MODIFY `purchase_id` int(11) NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `recovery_codes`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `regions`
   MODIFY `region_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `states`
   MODIFY `state_id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `subscriptions`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `subscription_filter_regions`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `subscription_filter_types`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `telegrams`
   MODIFY `telegram_id` int(11) NOT NULL AUTO_INCREMENT;
