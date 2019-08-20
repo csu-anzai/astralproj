@@ -1,6 +1,7 @@
 import Tinkoff from './tinkoff';
 import Download from './download';
 import Upload from './upload';
+import UploadChannel from './uploadChannel';
 import Supervisor from './supervisor';
 import Login from './login';
 import ForgotPassword from './forgotPassword';
@@ -16,7 +17,8 @@ class Childrens extends React.Component {
 						<Route key = {1} path = "/supervisor" component = {Supervisor}/>,
 						<Route key = {2} path = "/tinkoff" component = {Tinkoff}/>,
 						<Route key = {3} path = "/download" component = {Download}/>,
-						<Route key = {4} path = "/upload" component = {Upload}/>
+						<Route key = {4} path = "/upload" component = {Upload}/>,
+						<Route key = {5} path = "/uploadChannel" component = {UploadChannel}/>
 					] :
 					this.props.state.userType == 18 ?
 						<Route path = "/tinkoff" component = {Tinkoff}/> :
@@ -28,11 +30,11 @@ class Childrens extends React.Component {
 			}
 			<Route path = "/forgotPassword" component = {ForgotPassword} />
 			<Redirect to = {
-				!this.props.state.auth ? 
-					"/login" : 
-					(this.props.state.userType == 1 || this.props.state.userType == 18) ? 
-						"/tinkoff" : 
-						"/supervisor" 
+				!this.props.state.auth ?
+					"/login" :
+					(this.props.state.userType == 1 || this.props.state.userType == 18) ?
+						"/tinkoff" :
+						"/supervisor"
 			}/>
 		</Switch>
 	}

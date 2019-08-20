@@ -8,13 +8,24 @@ function formatHeader(header) {
     ogrnDate: 'Дата присвоения ОГРН',
     address: 'Адрес',
     phone: 'Тел',
-    email: 'mail'
+    email: 'mail',
+    fio: 'ФИО'
   };
 
   return Object.keys(keys).filter(
     k => header.toLowerCase()
     .includes(keys[k].toLowerCase())
   )[0] || header;
+}
+
+function formatCompany(c) {
+  if (typeof c.fio === "string") {
+    const fioSplit = c.fio.trim().split(" ");
+    c.surname = fioSplit[0];
+    c.name = fioSplit[1];
+    c.patronymic = fioSplit[2];
+  }
+  return c;
 }
 
 
@@ -52,5 +63,5 @@ module.exports = (workbook) => {
       result = data;
   });
 
-  return result;
+  return result.map(formatCompany);
 }

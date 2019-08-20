@@ -28,7 +28,7 @@ module.exports = modules => (resolve, reject, data) => {
 				modules.reducer.dispatch({
 					type: "checkTelegramUpdates",
 					data: {
-						
+
 					}
 				}).then(resolve).catch(reject);
 			}, 3000);
@@ -38,10 +38,10 @@ module.exports = modules => (resolve, reject, data) => {
 			modules.reducer.dispatch({
 				type: "checkTelegramUpdates",
 				data: {
-					
+
 				}
 			}).then(modules.then).catch(modules.err);
 		}, 3000);
-		reject({message: "ошибка в обновлении телеграма", err});
+		// reject({message: "ошибка в обновлении телеграма", err});
 	});
 }
