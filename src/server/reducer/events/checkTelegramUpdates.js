@@ -42,6 +42,6 @@ module.exports = modules => (resolve, reject, data) => {
 				}
 			}).then(modules.then).catch(modules.err);
 		}, 3000);
-		// reject({message: "ошибка в обновлении телеграма", err});
+		reject({message: "ошибка в обновлении телеграма", err});
 	});
 }

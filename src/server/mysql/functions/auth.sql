@@ -11,11 +11,11 @@ BEGIN
     SELECT user_id, type_id, user_name, user_email, bank_id INTO userID, typeID, userName, userEmail, bankID FROM users WHERE LOWER(user_email) = LOWER(email) AND user_password = pass;
     SELECT connection_id, connection_end, connection_api_id INTO connectionID, connectionEnd, connectionApiID FROM connections WHERE connection_hash = connectionHash;
     IF userID IS NOT NULL AND connectionID IS NOT NULL AND connectionEnd = 0
-        THEN BEGIN 
+        THEN BEGIN
             UPDATE users SET user_auth = 1 WHERE user_id = userID;
             UPDATE connections SET user_id = userID WHERE connection_id = connectionID;
             SELECT user_hash INTO userHash FROM users WHERE user_id = userID;
-            SET responce = JSON_MERGE(responce, 
+            SET responce = JSON_MERGE(responce,
                 JSON_OBJECT(
                     "type", "sendToSocket",
                     "data", JSON_OBJECT(
@@ -41,7 +41,7 @@ BEGIN
                     )
                 )
             );
-            IF typeID = 1 OR typeID = 18 
+            IF typeID = 1 OR typeID = 18
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
@@ -81,10 +81,10 @@ BEGIN
                         ));
                     END IF;
                 END;
-            END IF; 
+            END IF;
             IF typeID = 1 OR typeID = 19
                 THEN BEGIN
-                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID; 
+                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID;
                     SET statisticFilters = JSON_SET(statisticFilters, "$.users", getUsers(bankID));
                     SET responce = JSON_MERGE(responce, JSON_OBJECT(
                         "type", "sendToSocket",
@@ -116,7 +116,8 @@ BEGIN
                                             "banks", getBanks(),
                                             "regions", getRegions(),
                                             "columns", getColumns(),
-                                            "files", getUserFiles(userID)
+                                            "files", getUserFiles(userID),
+                                            "channels", getChannels()
                                         )
                                     )
                                 )
@@ -135,7 +136,7 @@ BEGIN
                 END;
             END IF;
         END;
-        ELSE SET responce = JSON_MERGE(responce, 
+        ELSE SET responce = JSON_MERGE(responce,
             JSON_OBJECT(
             	"type", "sendToSocket",
                 "data", JSON_OBJECT(
@@ -148,7 +149,7 @@ BEGIN
                                 "auth", 0
                             )
                         )
-                    ) 
+                    )
                 )
            	)
         );

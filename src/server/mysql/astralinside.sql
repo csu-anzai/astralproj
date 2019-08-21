@@ -850,7 +850,8 @@ BEGIN
                                             "banks", getBanks(),
                                             "regions", getRegions(),
                                             "columns", getColumns(),
-                                            "files", getUserFiles(userID)
+                                            "files", getUserFiles(userID),
+                                            "channels", getChannels()
                                         )
                                     )
                                 )
@@ -1018,7 +1019,8 @@ BEGIN
                                             "banks", getBanks(),
                                             "regions", getRegions(),
                                             "columns", getColumns(),
-                                            "files", getUserFiles(userID)
+                                            "files", getUserFiles(userID),
+                                            "channels", getChannels()
                                         )
                                     )
                                 )
@@ -1785,6 +1787,33 @@ BEGIN
     RETURN responce;
 END$$
 
+CREATE DEFINER=`root`@`localhost` FUNCTION `getChannels` () RETURNS JSON NO SQL
+BEGIN
+  DECLARE channelID BIGINT(20);
+  DECLARE channelDescription VARCHAR(256);
+  DECLARE channelPriority INT(11);
+  DECLARE responce JSON;
+  DECLARE done TINYINT(1);
+  DECLARE channelsCursor CURSOR FOR SELECT channel_id, channel_description, channel_priority FROM channels;
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+  SET responce = JSON_ARRAY();
+  OPEN channelsCursor;
+    channelsLoop: LOOP
+      FETCH channelsCursor INTO channelID, channelDescription, channelPriority;
+      IF done
+        THEN LEAVE channelsLoop;
+      END IF;
+      SET responce = JSON_MERGE(responce, JSON_OBJECT(
+        "channel_description", channelDescription,
+        "channel_id", channelID,
+        "channel_priority", channelPriority
+      ));
+      ITERATE channelsLoop;
+    END LOOP;
+  CLOSE channelsCursor;
+  RETURN responce;
+END$$
+
 CREATE DEFINER=`root`@`localhost` FUNCTION `getCities` () RETURNS JSON NO SQL
 BEGIN
     DECLARE cityID, bankID INT(11);
@@ -1880,7 +1909,7 @@ BEGIN
   RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `getDataStatistic` (`dateStart` VARCHAR(19) CHARSET utf8, `dateEnd` VARCHAR(19) CHARSET utf8, `banks` JSON, `free` TINYINT(1)) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `getDataStatistic` (`dateStart` VARCHAR(19) CHARSET utf8, `dateEnd` VARCHAR(19) CHARSET utf8, `banks` JSON, `channels` JSON, `free` TINYINT(1)) RETURNS JSON NO SQL
 BEGIN
     DECLARE done TINYINT(1);
     DECLARE companiesCount INT(11);
@@ -1897,7 +1926,9 @@ BEGIN
         companies c
         JOIN templates t ON t.template_id = c.template_id
         JOIN types ty ON ty.type_id = t.type_id
+        JOIN channels ch ON ch.channel_id = t.channel_id
     WHERE
+        IF(channels IS NOT NULL AND JSON_LENGTH(channels) > 0, JSON_CONTAINS(channels, CONCAT(ch.channel_id)) = 1, 1) AND
         IF(banks IS NOT NULL AND JSON_LENGTH(banks) > 0, jsonContainsLeastOne(banks, c.company_json ->> "$.company_banks.*.bank_id"), JSON_LENGTH(c.company_json ->> "$.company_banks") = 0) AND
         IF(free, c.type_id = 10, 1) AND
         DATE(c.company_date_create) BETWEEN DATE(dateStart) AND DATE(dateEnd)
@@ -2093,7 +2124,7 @@ BEGIN
     DECLARE connectionValid, free TINYINT(1);
     DECLARE connectionApiID VARCHAR(128);
     DECLARE dateStart, dateEnd, dataDateStart, dataDateEnd VARCHAR(19);
-    DECLARE responce, state, statistic, types, banks, statuses, users, dataBanks JSON;
+    DECLARE responce, state, statistic, types, banks, statuses, users, dataBanks, channels, dataChannels JSON;
     SET responce = JSON_ARRAY();
     SET connectionValid = checkConnection(connectionHash);
     SELECT connection_api_id INTO connectionApiID FROM connections WHERE connection_hash = connectionHash;
@@ -2104,6 +2135,7 @@ BEGIN
             IF statisticType IN ("working", "data")
                 THEN BEGIN
                     SET types = JSON_EXTRACT(state, "$.statistic.types");
+                    SET channels = JSON_EXTRACT(state, "$.statistic.channels");
                     SET banks = JSON_EXTRACT(state, "$.statistic.banks[*].bank_id");
                     SET statuses = JSON_EXTRACT(state, "$.statistic.bankStatuses");
                     SET users = JSON_EXTRACT(state, "$.statistic.selectedUsers");
@@ -2112,6 +2144,7 @@ BEGIN
                     SET dataDateStart = JSON_UNQUOTE(JSON_EXTRACT(state, "$.statistic.dataDateStart"));
                     SET dataDateEnd = JSON_UNQUOTE(JSON_EXTRACT(state, "$.statistic.dataDateEnd"));
                     SET dataBanks = JSON_EXTRACT(state, "$.statistic.dataBanks");
+                    SET dataChannels = JSON_EXTRACT(state, "$.statistic.dataChannels");
                     SET free = JSON_EXTRACT(state, "$.statistic.dataFree");
                     SET workingCompaniesLimit = JSON_EXTRACT(state, "$.statistic.workingCompaniesLimit");
                     SET workingCompaniesOffset = JSON_EXTRACT(state, "$.statistic.workingCompaniesOffset");
@@ -2125,18 +2158,19 @@ BEGIN
                         "dataDateStart", dataDateStart,
                         "dataDateEnd", dataDateEnd,
                         "dataPeriod", JSON_EXTRACT(state, "$.statistic.dataPeriod"),
+                        "dataChannels", dataChannels,
                         "users", getUsers(bankID),
                         "workingCompaniesLimit", workingCompaniesLimit,
                         "workingCompaniesOffset", workingCompaniesOffset
                     );
                     IF statisticType = "working"
                         THEN SET statistic = JSON_SET(statistic,
-                            "$.working", getWorkingBankStatistic(dateStart, dateEnd, types, users, banks, statuses),
-                            "$.workingCompanies", getWorkingStatisticCompanies(dateStart, dateEnd, types, users, banks, statuses, workingCompaniesLimit, workingCompaniesOffset)
+                            "$.working", getWorkingBankStatistic(dateStart, dateEnd, types, users, banks, statuses, channels),
+                            "$.workingCompanies", getWorkingStatisticCompanies(dateStart, dateEnd, types, users, banks, statuses, channels, workingCompaniesLimit, workingCompaniesOffset)
                         );
                     END IF;
                     IF statisticType = "data"
-                        THEN SET statistic = JSON_SET(statistic, "$.data", getDataStatistic(dataDateStart, dataDateEnd, dataBanks, free));
+                        THEN SET statistic = JSON_SET(statistic, "$.data", getDataStatistic(dataDateStart, dataDateEnd, dataBanks, dataChannels, free));
                     END IF;
                     SET responce = JSON_MERGE(responce, JSON_OBJECT(
                         "type", "sendToSocket",
@@ -2170,7 +2204,7 @@ BEGIN
     RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `getWorkingBankStatistic` (`dateStart` VARCHAR(19) CHARSET utf8, `dateEnd` VARCHAR(19) CHARSET utf8, `companiesTypes` JSON, `users` JSON, `banks` JSON, `statuses` JSON) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `getWorkingBankStatistic` (`dateStart` VARCHAR(19) CHARSET utf8, `dateEnd` VARCHAR(19) CHARSET utf8, `companiesTypes` JSON, `users` JSON, `banks` JSON, `statuses` JSON, `channels` JSON) RETURNS JSON NO SQL
 BEGIN
     DECLARE done TINYINT(1);
     DECLARE responce JSON;
@@ -2186,11 +2220,13 @@ BEGIN
     FROM
         companies c
         JOIN templates t ON t.template_id = c.template_id
+        JOIN channels ch ON ch.channel_id = t.channel_id
         JOIN types ty ON ty.type_id = t.type_id
     WHERE
         c.type_id != 10 AND
         JSON_LENGTH(company_json ->> "$.company_banks") > 0 AND
         IF(companiesTypes IS NOT NULL AND JSON_LENGTH(companiesTypes) > 0, JSON_CONTAINS(companiesTypes, CONCAT(c.type_id)), 1) AND
+        IF(channels IS NOT NULL AND JSON_LENGTH(channels) > 0, JSON_CONTAINS(channels, CONCAT(ch.channel_id)), 1) AND
         IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, JSON_CONTAINS(users, JSON_ARRAY(c.user_id)), 1) AND
         IF(banks IS NOT NULL AND JSON_LENGTH(banks) > 0, jsonContainsLeastOne(JSON_EXTRACT(c.company_json, "$.company_banks.*.bank_id"), banks), 1) AND
         IF(statuses IS NOT NULL AND JSON_LENGTH(statuses) > 0, jsonContainsLeastOne(JSON_EXTRACT(c.company_json, "$.company_banks.*.bank_status_id"), statuses), 1) AND
@@ -2220,7 +2256,7 @@ BEGIN
     RETURN responce;
 END$$
 
-CREATE DEFINER=`root`@`localhost` FUNCTION `getWorkingStatisticCompanies` (`dateStart` VARCHAR(19) CHARSET utf8, `dateEnd` VARCHAR(19) CHARSET utf8, `companiesTypes` JSON, `users` JSON, `banks` JSON, `statuses` JSON, `companiesLimit` INT(11), `companiesOffset` INT(11)) RETURNS JSON NO SQL
+CREATE DEFINER=`root`@`localhost` FUNCTION `getWorkingStatisticCompanies` (`dateStart` VARCHAR(19) CHARSET utf8, `dateEnd` VARCHAR(19) CHARSET utf8, `companiesTypes` JSON, `users` JSON, `banks` JSON, `statuses` JSON, `channels` JSON, `companiesLimit` INT(11), `companiesOffset` INT(11)) RETURNS JSON NO SQL
 BEGIN
     DECLARE done TINYINT(1);
     DECLARE responce, company JSON;
@@ -2232,6 +2268,7 @@ BEGIN
         type_id != 10 AND
         JSON_LENGTH(company_banks) > 0 AND
         IF(companiesTypes IS NOT NULL AND JSON_LENGTH(companiesTypes) > 0, JSON_CONTAINS(companiesTypes, CONCAT(type_id)), 1) AND
+        IF(channels IS NOT NULL AND JSON_LENGTH(channels) > 0, JSON_CONTAINS(channels, CONCAT(channel_id)), 1) AND
         IF(users IS NOT NULL AND JSON_LENGTH(users) > 0, JSON_CONTAINS(users, CONCAT(user_id)), 1) AND
         IF(banks IS NOT NULL AND JSON_ARRAY(banks) > 0, jsonContainsLeastOne(JSON_EXTRACT(company_banks, "$.*.bank_id"), banks), 1) AND
         IF(statuses IS NOT NULL AND JSON_LENGTH(statuses) > 0, jsonContainsLeastOne(JSON_EXTRACT(company_banks, "$.*.bank_status_id"), statuses), 1) AND
@@ -4761,6 +4798,7 @@ CREATE TABLE `telegrams` (
 CREATE TABLE `templates` (
   `template_id` int(11) NOT NULL,
   `type_id` int(11) DEFAULT NULL,
+  `channel_id` int(11) NOT NULL DEFAULT '1',
   `template_columns_count` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 CREATE TABLE `templates_view` (
@@ -4994,6 +5032,7 @@ CREATE TABLE `working_statistic_companies_view` (
 ,`company_date_update` varchar(19)
 ,`type_id` int(11)
 ,`user_id` int(11)
+,`channel_id` bigint(20) unsigned
 );
 CREATE TABLE `working_user_company_view` (
 `user_id` int(11)
@@ -5059,7 +5098,7 @@ DROP TABLE IF EXISTS `users_connections_view`;
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `users_connections_view`  AS  select `c`.`connection_id` AS `connection_id`,`c`.`connection_hash` AS `connection_hash`,`c`.`connection_end` AS `connection_end`,`c`.`connection_api_id` AS `connection_api_id`,`c`.`type_id` AS `connection_type_id`,`tt`.`type_name` AS `connection_type_name`,`u`.`user_id` AS `user_id`,`u`.`type_id` AS `type_id`,`t`.`type_name` AS `type_name`,`u`.`user_auth` AS `user_auth`,`u`.`user_online` AS `user_online`,`u`.`user_email` AS `user_email`,`u`.`bank_id` AS `bank_id`,`u`.`user_sip` AS `user_sip` from (((`connections` `c` left join `users` `u` on((`u`.`user_id` = `c`.`user_id`))) left join `types` `t` on((`t`.`type_id` = `u`.`type_id`))) left join `types` `tt` on((`tt`.`type_id` = `c`.`type_id`))) ;
 DROP TABLE IF EXISTS `working_statistic_companies_view`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `working_statistic_companies_view`  AS  select json_object('company_organization_name',`c`.`company_organization_name`,'company_person_name',`c`.`company_person_name`,'company_person_surname',`c`.`company_person_surname`,'company_person_patronymic',`c`.`company_person_patronymic`,'company_phone',`c`.`company_phone`,'company_inn',`c`.`company_inn`,'company_date_create',`c`.`company_date_create`,'company_date_update',`c`.`company_date_update`,'translate_to',if((`tr`.`translate_to` is not null),`tr`.`translate_to`,`t`.`type_name`)) AS `company_json`,json_unquote(json_extract(`c`.`company_json`,'$.company_banks')) AS `company_banks`,`c`.`company_date_update` AS `company_date_update`,`c`.`type_id` AS `type_id`,`c`.`user_id` AS `user_id` from ((`companies` `c` join `types` `t` on((`t`.`type_id` = `c`.`type_id`))) left join `translates` `tr` on((`tr`.`translate_from` = `t`.`type_name`))) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `working_statistic_companies_view`  AS  select json_object('company_organization_name',`c`.`company_organization_name`,'company_person_name',`c`.`company_person_name`,'company_person_surname',`c`.`company_person_surname`,'company_person_patronymic',`c`.`company_person_patronymic`,'company_phone',`c`.`company_phone`,'company_inn',`c`.`company_inn`,'company_date_create',`c`.`company_date_create`,'company_date_update',`c`.`company_date_update`,'translate_to',if((`tr`.`translate_to` is not null),`tr`.`translate_to`,`t`.`type_name`)) AS `company_json`,json_unquote(json_extract(`c`.`company_json`,'$.company_banks')) AS `company_banks`,`c`.`company_date_update` AS `company_date_update`,`c`.`type_id` AS `type_id`,`c`.`user_id` AS `user_id`,`ch`.`channel_id` AS `channel_id` from ((((`companies` `c` join `types` `t` on((`t`.`type_id` = `c`.`type_id`))) left join `translates` `tr` on((`tr`.`translate_from` = `t`.`type_name`))) join `templates` `tp` on((`tp`.`template_id` = `c`.`template_id`))) join `channels` `ch` on((`ch`.`channel_id` = `tp`.`channel_id`))) ;
 DROP TABLE IF EXISTS `working_user_company_view`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `working_user_company_view`  AS  select `c`.`user_id` AS `user_id`,`c`.`company_json` AS `company_json`,`cl`.`call_date_create` AS `call_date_create` from (`calls` `cl` join `companies` `c` on((`c`.`call_id` = `cl`.`call_id`))) where (`c`.`company_ringing` = 0) order by `cl`.`call_date_create` desc ;
