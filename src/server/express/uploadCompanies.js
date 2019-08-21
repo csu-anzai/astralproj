@@ -4,11 +4,6 @@ const xlsx = require("xlsx");
 const { performance } = require('perf_hooks');
 const formatSheet = require("../../libs/formatSheet.js");
 
-module.exports = env => {
-  const connection = mysql.createConnection(env.mysql);
-  return connection;
-}
-
 module.exports = (req, res) => {
   const workbook = xlsx.read(req.files.file.data, { type: 'buffer', raw: true });
   const table = formatSheet(workbook);

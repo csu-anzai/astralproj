@@ -34,7 +34,7 @@ class Menu extends React.Component {
     this.props.dispatch({type: "changeMenuState"});
   }
 	render(){
-		return <Drawer 
+		return <Drawer
 			open = { this.props.state.menuSwitch || false }
 			docked = { false }
 			onRequestChange = { this.props.dispatch.bind(this, {type: "changeMenuState"}) }
@@ -47,7 +47,7 @@ class Menu extends React.Component {
       >
         {this.props.state.userName && this.props.state.userName.split(" ").map(i => i[0]).join("").slice(0,2)}
       </Avatar>
-      <div 
+      <div
         style = {{
           display: "inline-block",
           verticalAlign: "top",
@@ -76,32 +76,40 @@ class Menu extends React.Component {
 			>
         {
           (this.props.state.userType == 1 || this.props.state.userType == 18) &&
-          <ListItem 
-            primaryText = "Компании" 
+          <ListItem
+            primaryText = "Компании"
             leftIcon = { <Home/> }
             value = "/tinkoff"
           />
         }
         {
           (this.props.state.userType == 1 || this.props.state.userType == 19) &&
-          <ListItem 
-            primaryText = "Статистика" 
+          <ListItem
+            primaryText = "Статистика"
             leftIcon = { <DonutSmall/> }
             value = "/supervisor"
           />
         }
         {
           (this.props.state.userType == 1 || this.props.state.userType == 19) &&
-          <ListItem 
-            primaryText = "Загрузка старой база" 
+          <ListItem
+            primaryText = "Загрузка старой базы"
             leftIcon = { <ArrowUpward/> }
             value = "/upload"
           />
         }
         {
+          (this.props.state.userType == 1 || this.props.state.userType == 19) &&
+          <ListItem
+            primaryText = "Загрузка базы по каналу"
+            leftIcon = { <ArrowUpward/> }
+            value = "/uploadChannel"
+          />
+        }
+        {
           this.props.state.userType == 1 &&
-          <ListItem 
-            primaryText = "Ручная выгрузка" 
+          <ListItem
+            primaryText = "Ручная выгрузка"
             leftIcon = { <FileDownload/> }
             value = "/download"
           />

@@ -1,8 +1,10 @@
 const Express = require("express"),
 			Helmet = require("helmet"),
-			parser = require("body-parser");
-			expressFileupload = require("express-fileupload");
-			uploadCompanies = require("./uploadCompanies.js");
+			parser = require("body-parser"),
+			expressFileupload = require("express-fileupload"),
+			uploadCompanies = require("./uploadCompanies.js"),
+			channels = require("./channels.js"),
+			uploadCompaniesByChannel = require("./uploadCompaniesByChannel.js");
 
 
 let err = require("./../err"),
@@ -32,6 +34,8 @@ module.exports = (env, reducer) => {
 		res.send(false);
 	});
 	express.post("/api/uploadCompanies", uploadCompanies);
+	express.post("/api/uploadCompaniesByChannel", uploadCompaniesByChannel);
+	express.get("/api/channels", channels);
 	express.post("/api/zadarma", (req, res) => {
 		reducer.modules.log.writeLog("zadarma", {
 			type: "in",
@@ -147,7 +151,7 @@ module.exports = (env, reducer) => {
 		reducer.modules.log.writeLog("zadarma", {
 			type: "echo",
 			data: req.query.zd_echo
-		});	
+		});
 	});
 	express.use(Express.static(__dirname + env.express.staticPath));
 	return express;

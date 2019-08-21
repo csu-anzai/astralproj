@@ -50,7 +50,7 @@ BEGIN
                     )
                 )
             ));
-            IF typeID = 1 OR typeID = 18 
+            IF typeID = 1 OR typeID = 18
                 THEN BEGIN
                     SET activeCompanies = getActiveBankUserCompanies(connectionID);
                     SET activeCompaniesLength = JSON_LENGTH(activeCompanies);
@@ -90,10 +90,10 @@ BEGIN
                         ));
                     END IF;
                 END;
-            END IF; 
+            END IF;
             IF typeID = 1 OR typeID = 19
                 THEN BEGIN
-                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID; 
+                    SELECT state_json ->> "$.statistic" INTO statisticFilters FROM states WHERE connection_id = connectionID;
                     SET statisticFilters = JSON_SET(statisticFilters, "$.users", getUsers(bankID));
                     SET responce = JSON_MERGE(responce, JSON_OBJECT(
                         "type", "sendToSocket",
@@ -125,7 +125,8 @@ BEGIN
                                             "banks", getBanks(),
                                             "regions", getRegions(),
                                             "columns", getColumns(),
-                                            "files", getUserFiles(userID)
+                                            "files", getUserFiles(userID),
+                                            "channels", getChannels()
                                         )
                                     )
                                 )
