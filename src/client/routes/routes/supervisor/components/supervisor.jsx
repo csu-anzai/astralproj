@@ -13,6 +13,8 @@ import Refresh from 'material-ui/svg-icons/navigation/refresh';
 import IconButton from 'material-ui/IconButton';
 import ArrowBack from 'material-ui/svg-icons/navigation/arrow-back';
 import ArrowForward from 'material-ui/svg-icons/navigation/arrow-forward';
+import { ws } from '../../../../../env.json';
+
 import {
   Table,
   TableBody,
@@ -28,8 +30,8 @@ const partStyle = {
 	overflowX: "auto"
 };
 const headerStyle = {
-	textAlign: "center", 
-	fontFamily: "Roboto, sans-serif", 
+	textAlign: "center",
+	fontFamily: "Roboto, sans-serif",
 	fontWeight: "normal"
 };
 const datePickerStyle = {
@@ -76,6 +78,8 @@ export default class Supervisor extends React.Component {
 	constructor(props){
 		super(props);
 		this.state = {
+			channels: [],
+			channelsValue: [1],
 			typeToView: this.props.state.statistic && this.props.state.statistic.typeToView || 0,
 			period: this.props.state.statistic && this.props.state.statistic.period || 3,
 			user: this.props.state.statistic && this.props.state.statistic.user || 0,
@@ -90,6 +94,7 @@ export default class Supervisor extends React.Component {
 			selectedIndex: 0
 		}
 		this.changeType = this.changeType.bind(this);
+		this.changeChannel = this.changeChannel.bind(this);
 		this.changePeriod = this.changePeriod.bind(this);
 		this.changeUser = this.changeUser.bind(this);
 		this.changeDataPeriod = this.changeDataPeriod.bind(this);
@@ -114,6 +119,9 @@ export default class Supervisor extends React.Component {
 				]
 			}
 		})
+	}
+	changeChannel(e, key, values){
+		this.setState({ channelsValue: values });
 	}
 	changeType(event, key, payload) {
 		this.props.dispatch({
@@ -325,14 +333,14 @@ export default class Supervisor extends React.Component {
 				datesArr = this.props.state.statistic[type].filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).map(i => i.date) || [],
 				time = type == "data" ? "time" : "hour",
 				timesArr = datesArr.length == 1 ? this.props.state.statistic[type].filter((item, key, self) => self.findIndex(i => i[time] == item[time]) == key).map(i => i[time]) : [],
-	 			newArr = datesArr.length > 1 ? 
-	 				datesArr.map(item => arr.filter(i => i.date == item)).map(item => item.length > 0 ? 
- 						item.reduce((before, after) => ({companies: before.companies + after.companies})).companies : 
- 						0) : 
-	 				datesArr.length == 1 ? 
-	 					timesArr.map(item => arr.filter(i => i[time] == item)).map(item => item.length > 0 ? 
-	 						item.reduce((before, after) => ({companies: before.companies + after.companies})).companies : 
-	 						0) : 
+	 			newArr = datesArr.length > 1 ?
+	 				datesArr.map(item => arr.filter(i => i.date == item)).map(item => item.length > 0 ?
+ 						item.reduce((before, after) => ({companies: before.companies + after.companies})).companies :
+ 						0) :
+	 				datesArr.length == 1 ?
+	 					timesArr.map(item => arr.filter(i => i[time] == item)).map(item => item.length > 0 ?
+	 						item.reduce((before, after) => ({companies: before.companies + after.companies})).companies :
+	 						0) :
 	 					[];
 		return newArr;
 	}
@@ -357,6 +365,12 @@ export default class Supervisor extends React.Component {
 		this.state.selectedIndex == 0 && this.resetStatisticArr("workingCompanies");
 	}
 	componentDidMount(){
+    fetch(`${ws.location}:${ws.port}/api/channels`)
+      .then(r => r.json())
+      .then(r => {
+        this.setState({ channels: r.channels })
+      })
+
 		let component = document.querySelector("#app > div > div:nth-child(2) > div:nth-child(4) > div > div");
 		component && (component.style.overflow = "auto");
 	}
@@ -393,12 +407,12 @@ export default class Supervisor extends React.Component {
 	render(){
 		return <div>
 			<BottomNavigation selectedIndex={this.state.selectedIndex}>
-				<BottomNavigationItem 
+				<BottomNavigationItem
 					label="ОБРАБОТКА ЛИДОВ"
           icon={<Work/>}
           onClick={this.select.bind(this, 0)}
 				/>
-				<BottomNavigationItem 
+				<BottomNavigationItem
 					label="ЗАЛИВКИ В БАЗУ"
           icon={<Cloud/>}
           onClick={this.select.bind(this, 1)}
@@ -408,7 +422,7 @@ export default class Supervisor extends React.Component {
 				textAlign: "center",
 				margin: "10px 0 0"
 			}}>
-				<Refresh 
+				<Refresh
 					style = {{
 						cursor: "pointer"
 					}}
@@ -418,7 +432,15 @@ export default class Supervisor extends React.Component {
 			{
 				this.state.selectedIndex == 0 ?
 					[
-					<div key = {1} style = {partStyle}>
+					<div key={1} style={partStyle}>
+					<SelectField
+        		floatingLabelText="Канал"
+        		multiple={true}
+        		onChange={this.changeChannel}
+        		value={this.state.channelsValue}
+        	>{this.state.channels.map((c, key) => (
+            <MenuItem value={c.id} key={key} primaryText={c.name} />
+          ))}</SelectField>
 					<SelectField
 	          floatingLabelText="Тип компаний"
 	          value={this.props.state.statistic && this.props.state.statistic.types}
@@ -430,7 +452,7 @@ export default class Supervisor extends React.Component {
 	        >
 	        	<MenuItem value = {13} primaryText = "Утверждено" />
 	        	{
-	        		this.props.state.statistic && this.props.state.statistic.types.indexOf(13) > -1 && 
+	        		this.props.state.statistic && this.props.state.statistic.types.indexOf(13) > -1 &&
 		        	<SelectField
 		        		style = {{
 		        			margin: "0 24px"
@@ -521,26 +543,26 @@ export default class Supervisor extends React.Component {
 	        		(
 	        			this.props.state.statistic.working && this.props.state.statistic.working.length > 0 && (this.props.state.statistic.working.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.working[0].date : `${this.props.state.statistic.working[0].date} – ${this.props.state.statistic.working[this.props.state.statistic.working.length - 1].date}`)
 	        		) :
-	        		[<DatePicker 
+	        		[<DatePicker
 	  						key = {0}
 	  						floatingLabelText="Начальная дата"
 	  						style = {datePickerStyle}
 	  						defaultDate = {
-	  							this.props.state.statistic ? 
+	  							this.props.state.statistic ?
 	  								new Date(this.props.state.statistic.dateStart) :
 	  								new Date()
 	  						}
 	  						onChange = {(eny, date) => {
 	  							this.changeDate(date, 1);
 	  						}}
-	  					/>, 
+	  					/>,
 	  					" — ",
-	  					<DatePicker 
+	  					<DatePicker
 	  						key = {1}
 	  						floatingLabelText="Конечная дата"
 	  						style = {datePickerStyle}
 	  						defaultDate = {
-	  							this.props.state.statistic ? 
+	  							this.props.state.statistic ?
 	  								new Date(this.props.state.statistic.dateEnd) :
 	  								new Date()
 	  						}
@@ -554,15 +576,15 @@ export default class Supervisor extends React.Component {
 	        {
 	        	this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.length > 0 &&
 	        	[
-	        		<FlatButton 
+	        		<FlatButton
 	        			key = {0}
               	label = "Создать файл"
               	primary
               	onClick = {this.createFile}
               />,
              	this.props.state.statistic && this.props.state.statistic.fileURL && <a key = {1} href = {this.props.state.statistic.fileURL} target = "_blank">{this.props.state.statistic.fileURL}</a> || "",
-							<Line 
-								key = {2} 
+							<Line
+								key = {2}
 								data = {{
 									labels: this.props.state.statistic && this.props.state.statistic.working && (this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.date == item.date) == key).length == 1 ? this.props.state.statistic.working.map(i => i.hour+":00").filter((i,k,s) => s.indexOf(i) == k) : this.props.state.statistic.working.map(i => i.date)).filter((i,k,s) => s.indexOf(i) == k) || [],
 								  datasets: this.props.state.statistic && this.props.state.statistic.working && this.props.state.statistic.working.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
@@ -682,7 +704,7 @@ export default class Supervisor extends React.Component {
 			          		<TableRowColumn colSpan = {7} style = {{
 			          			textAlign: "right"
 			          		}}>
-			          			<IconButton 
+			          			<IconButton
 			            			title = "сюда"
 			            			disabled = {
 			            				this.props.state.statistic && this.props.state.statistic.hasOwnProperty("workingCompaniesOffset") && this.props.state.statistic.workingCompaniesOffset <= 0 ? true : false
@@ -697,11 +719,11 @@ export default class Supervisor extends React.Component {
 			            			verticalAlign: "top"
 			            		}}>
 			            			{
-			            				this.props.state.statistic && this.props.state.statistic.workingCompanies && 
-			            				`c ${this.props.state.statistic.workingCompaniesOffset == 0 ? 1 : this.props.state.statistic.workingCompaniesOffset} по ${this.props.state.statistic.workingCompaniesOffset + this.props.state.statistic.workingCompanies.length}` 
+			            				this.props.state.statistic && this.props.state.statistic.workingCompanies &&
+			            				`c ${this.props.state.statistic.workingCompaniesOffset == 0 ? 1 : this.props.state.statistic.workingCompaniesOffset} по ${this.props.state.statistic.workingCompaniesOffset + this.props.state.statistic.workingCompanies.length}`
 			            			}
 			            		</div>
-			            		<IconButton 
+			            		<IconButton
 			            			title = "туда"
 			            			disabled = {
 			            				this.props.state.statistic && this.props.state.statistic.workingCompanies && this.props.state.statistic.workingCompanies.length < this.props.state.statistic.workingCompaniesLimit ? true : false
@@ -744,7 +766,7 @@ export default class Supervisor extends React.Component {
 		        		<MenuItem value = {bank.id} primaryText = {bank.name} key = {key} />
 		        	))}
 		        </SelectField>
-		        <Checkbox 
+		        <Checkbox
 		        	label = "Только свободные"
 		        	checked = {this.props.state.statistic && this.props.state.statistic.dataFree != undefined ? (+this.props.state.statistic.dataFree ? true : false) : this.state.dataFree}
 		        	onCheck = {this.changeDataFree}
@@ -770,26 +792,26 @@ export default class Supervisor extends React.Component {
 		        		(
 		        			this.props.state.statistic.data && this.props.state.statistic.data.length > 0 && (this.props.state.statistic.data.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.data[0].date : `${this.props.state.statistic.data[0].date} – ${this.props.state.statistic.data[this.props.state.statistic.data.length - 1].date}`)
 		        		) :
-		        		[<DatePicker 
+		        		[<DatePicker
 		  						key = {0}
 		  						floatingLabelText="Начальная дата"
 		  						style = {datePickerStyle}
 		  						defaultDate = {
-		  							this.props.state.statistic ? 
+		  							this.props.state.statistic ?
 		  								new Date(this.props.state.statistic.dataDateStart) :
 		  								new Date()
 		  						}
 		  						onChange = {(eny, date) => {
 		  							this.changeDataDate(date, 1);
 		  						}}
-		  					/>, 
+		  					/>,
 		  					" — ",
-		  					<DatePicker 
+		  					<DatePicker
 		  						key = {1}
 		  						floatingLabelText="Конечная дата"
 		  						style = {datePickerStyle}
 		  						defaultDate = {
-		  							this.props.state.statistic ? 
+		  							this.props.state.statistic ?
 		  								new Date(this.props.state.statistic.dataDateEnd) :
 		  								new Date()
 		  						}
@@ -802,7 +824,7 @@ export default class Supervisor extends React.Component {
 		        </div>
 		        {
 		        	this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.length > 0 &&
-							<Bar 
+							<Bar
 								data = {{
 							    labels: this.props.state.statistic && this.props.state.statistic.data && (this.props.state.statistic.data.map(i => i.date).filter((item, key, self) => self.indexOf(item) == key).length == 1 ? this.props.state.statistic.data.map(i => i.time).filter((item, key, self) => self.indexOf(item) == key) : this.props.state.statistic.data.map(i => i.date)).filter((item, key, self) => self.indexOf(item) == key) || [],
 									datasets: this.props.state.statistic && this.props.state.statistic.data && this.props.state.statistic.data.filter((item, key, self) => self.findIndex(i => i.template_name == item.template_name) == key).map((template, key) => ({
@@ -820,7 +842,7 @@ export default class Supervisor extends React.Component {
 			                ticks: {
 		                    beginAtZero:true,
 		                    stacked: false
-			                }			        
+			                }
 				            }]
 					        },
 					        tooltips: {

@@ -4,13 +4,7 @@ const xlsx = require("xlsx");
 const { performance } = require('perf_hooks');
 const formatSheet = require("../../libs/formatSheet.js");
 
-module.exports = env => {
-  const connection = mysql.createConnection(env.mysql);
-  return connection;
-}
-
 module.exports = (req, res, body) => {
-
   const stats = {
     counter: 0,
     dubble: 0,
@@ -32,7 +26,6 @@ module.exports = (req, res, body) => {
     }
   }
 
-
   createLeads = (table, templatesId) => table.map((c) => {
     if(c.inn && c.phone && c.name) {
       mysql.query(
@@ -45,6 +38,7 @@ module.exports = (req, res, body) => {
           company_address,
           company_phone,
           company_email,
+          company_view_priority,
           template_id
         ) VALUES (${[
           c['inn'],
@@ -55,6 +49,7 @@ module.exports = (req, res, body) => {
           c['address'],
           c['phone'],
           c['email'],
+          priority,
           templatesId
         ].map(i => mysql.escape(i)).join(', ')})`,
         (error, results, fields) => {
@@ -78,6 +73,7 @@ module.exports = (req, res, body) => {
 
   const channelId = parseInt(req.body.channelId);
   const typeId = table[0].inn.toString().length === 12 ? 11 : 12; // ИП или ООО
+  const priority = req.body.priority || 1;
 
   mysql.query(
     `SELECT template_id FROM templates WHERE type_id = ? AND channel_id = ? LIMIT 1`,

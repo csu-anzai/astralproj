@@ -3,6 +3,7 @@ import Paper from 'material-ui/Paper';
 import RaisedButton from 'material-ui/RaisedButton';
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
+import TextField from 'material-ui/TextField';
 import CircularProgress from 'material-ui/CircularProgress';
 import axios from 'axios';
 import { ws } from '../../../../../env.json';
@@ -16,8 +17,18 @@ export default class Download extends React.Component {
       loading: false,
       stats: false,
       error: false,
+      channels: [],
       errors: 0,
+      priority: 1,
     }
+  }
+
+  componentDidMount() {
+    fetch(`${ws.location}:${ws.port}/api/channels`)
+      .then(r => r.json())
+      .then(r => {
+        this.setState({ channels: r.channels })
+      })
   }
 
   handleChange(e) {
@@ -26,6 +37,7 @@ export default class Download extends React.Component {
     const file = e.currentTarget.files[0];
     formData.append('file', file);
     formData.append('channelId', this.state.channelId);
+    formData.append('priority', this.state.priority);
 
     this.setState({
       loading: true,
@@ -74,16 +86,24 @@ export default class Download extends React.Component {
         }} zDepth={1}>
           <input style={{display: 'none'}} ref="file" type="file" onChange={this.handleChange.bind(this)} />
           <h1>Загрузка лидов по отдельному каналу</h1>
-          <p>Выберите канал и загрузите файл с лидами</p>
+          <p>Выберите канал, приоритет и загрузите файл с лидами. Чем больше приоритет, тем выше будут отображаться лиды в рабочем списке.</p>
           <SelectField
             floatingLabelText="Канал"
             value={this.state.channelId}
             onChange={this.handleChannelChange.bind(this)}
             autoWidth={true}
-          >
-            <MenuItem value={1} primaryText="Первый" />
-            <MenuItem value={2} primaryText="Второй" />
+          >{this.state.channels.map((c, key) => (
+            <MenuItem value={c.id} key={key} primaryText={c.name} />
+          ))}
           </SelectField>
+          <TextField
+            type="number"
+            floatingLabelText="Приоритет (1 - 10)"
+            value={this.state.priority}
+            onChange={(e, value) => {
+              this.setState({priority: value});
+            }}
+          />
           { loading ? <div>
             <p>Обработка: <b>{fileName}</b></p>
             <CircularProgress />

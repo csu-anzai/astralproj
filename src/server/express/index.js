@@ -3,6 +3,7 @@ const Express = require("express"),
 			parser = require("body-parser"),
 			expressFileupload = require("express-fileupload"),
 			uploadCompanies = require("./uploadCompanies.js"),
+			channels = require("./channels.js"),
 			uploadCompaniesByChannel = require("./uploadCompaniesByChannel.js");
 
 
@@ -34,6 +35,7 @@ module.exports = (env, reducer) => {
 	});
 	express.post("/api/uploadCompanies", uploadCompanies);
 	express.post("/api/uploadCompaniesByChannel", uploadCompaniesByChannel);
+	express.get("/api/channels", channels);
 	express.post("/api/zadarma", (req, res) => {
 		reducer.modules.log.writeLog("zadarma", {
 			type: "in",
