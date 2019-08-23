@@ -1,3 +1,7 @@
+const moment = require("moment");
+
+
+
 function formatHeader(header) {
   const keys = {
     surname: 'Фамилия',
@@ -9,7 +13,8 @@ function formatHeader(header) {
     address: 'Адрес',
     phone: 'Тел',
     email: 'mail',
-    fio: 'ФИО'
+    fio: 'ФИО',
+    regDate: "Дата"
   };
 
   return Object.keys(keys).filter(
@@ -24,6 +29,9 @@ function formatCompany(c) {
     c.surname = fioSplit[0];
     c.name = fioSplit[1];
     c.patronymic = fioSplit[2];
+  }
+  if (c.regDate) {
+    c.regDate = moment(c.regDate).format("YYYY-MM-DD");
   }
   return c;
 }

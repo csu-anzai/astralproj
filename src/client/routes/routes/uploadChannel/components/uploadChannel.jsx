@@ -55,7 +55,7 @@ export default class Download extends React.Component {
       this.setState({
         stats: response.data,
         loading: false,
-        error: false
+        error: (response.data.error || false)
       });
     }).catch(err => {
       this.setState({
@@ -118,7 +118,7 @@ export default class Download extends React.Component {
               />
              </p>
           )}
-          {stats && <div>
+          {stats && !error && <div>
             <ul>
               <li>Всего обработано: <b>{stats.counter}</b></li>
               <li>Новых Лидов: <b>{stats.new}</b></li>
@@ -127,7 +127,7 @@ export default class Download extends React.Component {
               <li>Время выполнения: <b>{(stats.timeLoad / 1000).toFixed(3) } секунд</b></li>
             </ul>
           </div>}
-          {error && <p><b style={{color: "red"}}>Ошибка сервера</b></p>}
+          {error && <p><b style={{color: "red"}}>{error.length ? error : "Ошибка сервера"}</b></p>}
         </Paper>
       </div>
     )

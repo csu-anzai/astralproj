@@ -13,7 +13,8 @@ module.exports = (req, res, body) => {
     timeStart: performance.now()
   }
 
-  const workbook = xlsx.read(req.files.file.data, { type: 'buffer', raw: true });
+  const workbook = xlsx.read(req.files.file.data, { type: 'buffer', cellDates: true, raw: true });
+
   const table = formatSheet(workbook);
 
   statsUpdate = () => {
@@ -26,7 +27,7 @@ module.exports = (req, res, body) => {
     }
   }
 
-  createLeads = (table, templatesId) => table.map((c) => {
+  createLeads = (table, templates) => table.map((c) => {
     if(c.inn && c.phone && c.name) {
       mysql.query(
         `INSERT INTO companies (
@@ -38,19 +39,21 @@ module.exports = (req, res, body) => {
           company_address,
           company_phone,
           company_email,
+          company_date_registration,
           company_view_priority,
           template_id
         ) VALUES (${[
-          c['inn'],
-          c['ogrn'],
-          c['name'],
-          c['surname'],
-          c['patronymic'],
-          c['address'],
-          c['phone'],
-          c['email'],
+          c.inn,
+          c.ogrn,
+          c.name,
+          c.surname,
+          c.patronymic,
+          c.address,
+          c.phone,
+          c.email,
+          c.regDate,
           priority,
-          templatesId
+          templates.find(t => t.type == (c.inn.toString().length === 12 ? 11 : 12)).id
         ].map(i => mysql.escape(i)).join(', ')})`,
         (error, results, fields) => {
           if (error) {
@@ -72,24 +75,27 @@ module.exports = (req, res, body) => {
   })
 
   const channelId = parseInt(req.body.channelId);
-  const typeId = table[0].inn.toString().length === 12 ? 11 : 12; // ИП или ООО
+  // const typeId = table[0].inn.toString().length === 12 ? 11 : 12; // ИП или ООО
   const priority = req.body.priority || 1;
 
   mysql.query(
-    `SELECT template_id FROM templates WHERE type_id = ? AND channel_id = ? LIMIT 1`,
-    [typeId, channelId],
+    `SELECT template_id id, type_id type FROM templates WHERE channel_id = ?`,
+    [channelId],
     (error, result, fields) => {
-      if (result.length) {
-        createLeads(table, result[0].template_id);
+      if (result.length == 2) {
+        createLeads(table, result);
       } else {
-        mysql.query(
-          `INSERT INTO templates (type_id, channel_id) VALUES (?, ?);`,
-          [typeId, channelId],
-          (error, result, fields) => {
-            createLeads(table, result.insertId);
-          }
-        );
+        res.send({ error: "Нет шаблонов для канала" })
       }
+      // else {
+      //   mysql.query(
+      //     `INSERT INTO templates (type_id, channel_id) VALUES (?, ?);`,
+      //     [typeId, channelId],
+      //     (error, result, fields) => {
+      //       createLeads(table, result.insertId);
+      //     }
+      //   );
+      // }
     }
   );
 }
