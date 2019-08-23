@@ -9,7 +9,10 @@ connection.query(`
   SELECT
     company_inn inn,
     company_id id,
-    company_json json
+    company_json json,
+    company_person_name name,
+    company_person_surname surname,
+    company_person_patronymic patronymic
   FROM companies
   WHERE
     company_organization_name is NULL AND
@@ -30,7 +33,7 @@ connection.query(`
             body: { "query": c.inn }
         }, (err, res, body) => {
           if(!err) {
-            if (body.suggestions.length) {
+            if (body.suggestions && body.suggestions.length) {
               const { value, data } = body.suggestions[0];
               const name = value;
               const okvedCode = data.okved;
@@ -44,8 +47,8 @@ connection.query(`
               });
 
               connection.query(
-                `UPDATE companies SET company_okved_code = ?, company_okved_name = ?, company_json = ? WHERE company_id = ?;`,
-                [okvedCode, okvedName, json, c.id],
+                `UPDATE companies SET company_organization_name = ?, company_okved_code = ?, company_okved_name = ?, company_json = ? WHERE company_id = ?;`,
+                [name, okvedCode, okvedName, json, c.id],
                 function (err, companies, fields) {
                   if (!err) {
                     console.log(`${c.inn} ${name}, ${okvedCode}, ${okvedName}`.green);
@@ -56,6 +59,33 @@ connection.query(`
               );
             } else {
               console.error(`${c.inn} Нет информации о компании`.red);
+
+              let name = '';
+
+              if (c.inn.length == 12) {
+                name = ["ИП", c.surname, c.name, c.patronymic].join(" ");
+              } else {
+                name = 'ООО "Драйв"';
+              }
+
+
+              const json = JSON.stringify({
+                ...JSON.parse(c.json),
+                company_organization_name: name
+              });
+
+              connection.query(
+                `UPDATE companies SET company_organization_name = ?, company_json = ? WHERE company_id = ?;`,
+                [name, json, c.id],
+                function (err, companies, fields) {
+                  if (!err) {
+                    console.log(`${c.inn} ${name} `.yellow);
+                  } else {
+                    console.error(`${c.inn} Ошибка обновления`.yellow);
+                  }
+                }
+              );
+
             }
           } else {
             console.error(`${c.inn} Ошибка загрузки данных`.red);
