@@ -37,25 +37,16 @@ module.exports = modules => (resolve, reject, data) => {
 			query = JSON.stringify(query, (propKey, value) => {
 				return typeof value != "string" ? value : value.replace(/\"/g, "").replace(/\//g, "");
 			});
-			modules.mysql.query(
-				{
-					sql: `SET @responce = JSON_ARRAY(); CALL newCompanies(?, @responce); SELECT @responce AS a`,
+			modules.reducer.dispatch({
+				type: "procedure",
+				data: {
+					query: "newCompanies",
 					values: [
-						query
+						query,
+						(i == (queries.length - 1) ? 1 : 0)
 					]
-				},
-				(err, responce) => {
-					if (i == queries.length - 1) {
-						err ?
-							reject(err.sqlMessage) :
-							resolve(responce);
-					} else {
-						err ?
-							modules.err(err.sqlMessage) :
-							modules.then(responce);
-					}
 				}
-			);
+			}).then(resolve).catch(reject);
 		}
 	} else {
 		console.log("There are no entries in the file");

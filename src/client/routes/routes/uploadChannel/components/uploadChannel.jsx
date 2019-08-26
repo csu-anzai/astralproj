@@ -124,6 +124,7 @@ export default class Download extends React.Component {
               <li>Новых Лидов: <b>{stats.new}</b></li>
               <li>Дублий: <b>{stats.dubble}</b></li>
               <li>Ошибок: <b>{stats.errors}</b></li>
+              <li>Дополнено из dadata.ru: <b>{stats.dadata}</b></li>
               <li>Время выполнения: <b>{(stats.timeLoad / 1000).toFixed(3) } секунд</b></li>
             </ul>
           </div>}

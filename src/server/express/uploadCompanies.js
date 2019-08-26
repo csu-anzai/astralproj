@@ -35,7 +35,7 @@ module.exports = (req, res) => {
         company_person_patronymic,
         company_address,
         company_old_phone,
-        company_old_email
+        company_old_email,
       ) VALUES (${[
         c['inn'],
         c['ogrn'],

@@ -128,4 +128,10 @@ BEGIN
 			"telegram", 1
 		)
 	));
+	IF last AND insertCompaniesCount > 0
+		THEN SET responce = JSON_MERGE(responce , JSON_OBJECT(
+			"type", "updateCompanyData",
+			"data", JSON_OBJECT()
+		));
+	END IF;
 END
