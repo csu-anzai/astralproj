@@ -14,7 +14,7 @@ connection.query(`
   FROM
     companies
   WHERE
-    company_okved_code is null AND
+    company_okved_code is null
   LIMIT 10`,
   function (err, companies, fields) {
     if(!err) {
