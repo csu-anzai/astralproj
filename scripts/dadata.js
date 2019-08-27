@@ -9,13 +9,16 @@ connection.connect();
 
 connection.query(`
   SELECT
-    company_id id,
+    companies.company_id id,
     company_inn inn
   FROM
     companies
+  LEFT JOIN company_dadata_updates ON
+    companies.company_id = company_dadata_updates.company_id
   WHERE
-    company_okved_code is null
-  LIMIT 10`,
+    company_okved_code is null AND
+    company_dadata_updates.date is null
+  LIMIT 50000`,
   function (err, companies, fields) {
     if(!err) {
       companies.forEach((c, key) => {
@@ -35,6 +38,8 @@ connection.query(`
             const okvedCode = data.okved;
             const okvedName = data.okveds ? data.okveds.find(o => o.code == okvedCode).name : "";
             const address = data.address && data.address.value;
+
+            connection.query(`INSERT INTO company_dadata_updates (company_id) VALUES (?)`, c.id);
 
             if (okvedCode) {
               connection.query(
