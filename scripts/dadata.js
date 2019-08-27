@@ -38,7 +38,7 @@ connection.query(`
             const { value, data } = body.suggestions[0];
             const companyName = value;
             const okvedCode = data.okved;
-            const okvedName = data.okveds ? data.okveds.find(o => o.code == okvedCode).name : "";
+            const okvedName = (data.okveds && (data.okveds.find(o => o.code == okvedCode) || {} ).name) || "";
             const address = data.address && data.address.value;
 
 
