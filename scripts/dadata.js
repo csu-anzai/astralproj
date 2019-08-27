@@ -32,6 +32,8 @@ connection.query(`
           },
           body: { "query": c.inn }
         }, (err, res, body) => {
+          connection.query(`INSERT INTO company_dadata_updates (company_id) VALUES (?)`, c.id);
+
           if (!err && body.suggestions && body.suggestions.length) {
             const { value, data } = body.suggestions[0];
             const companyName = value;
@@ -39,7 +41,6 @@ connection.query(`
             const okvedName = data.okveds ? data.okveds.find(o => o.code == okvedCode).name : "";
             const address = data.address && data.address.value;
 
-            connection.query(`INSERT INTO company_dadata_updates (company_id) VALUES (?)`, c.id);
 
             if (okvedCode) {
               connection.query(
@@ -54,15 +55,15 @@ connection.query(`
                 [companyName, okvedCode, okvedName, address, c.id],
                 function (err, companies, fields) {
                   if (!err) {
-                    console.log(`${c.inn} ${companyName} ${okvedCode} ${address}`.green);
+                    console.log(`${key} ${c.inn} ${companyName} ${okvedCode} ${address}`.green);
                   } else {
-                    console.error(`${c.inn} Ошибка обновления`.red);
+                    console.error(`${key} ${c.inn} Ошибка обновления`.red);
                   }
                 }
               );
             }
           } else {
-            console.log(`${c.inn} Ошибка загрузки данных`.yellow);
+            console.log(`${key} ${c.inn} Ошибка загрузки данных`.yellow);
           }
         });
       });
