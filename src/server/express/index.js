@@ -3,6 +3,7 @@ const Express = require("express"),
 			parser = require("body-parser"),
 			expressFileupload = require("express-fileupload"),
 			uploadCompanies = require("./uploadCompanies.js"),
+			exportLeads = require("./exportLeads.js"),
 			channels = require("./channels.js"),
 			uploadCompaniesByChannel = require("./uploadCompaniesByChannel.js");
 
@@ -33,6 +34,7 @@ module.exports = (env, reducer) => {
 		}
 		res.send(false);
 	});
+	express.get("/api/exportLeads", exportLeads);
 	express.post("/api/uploadCompanies", uploadCompanies);
 	express.post("/api/uploadCompaniesByChannel", uploadCompaniesByChannel);
 	express.get("/api/channels", channels);
