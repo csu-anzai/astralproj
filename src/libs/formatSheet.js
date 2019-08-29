@@ -26,9 +26,16 @@ function formatHeader(header) {
 function formatCompany(c) {
   if (typeof c.fio === "string") {
     const fioSplit = c.fio.trim().split(" ");
-    c.surname = fioSplit[0];
-    c.name = fioSplit[1];
-    c.patronymic = fioSplit[2];
+    if (fioSplit.length == 1) {
+      c.name = fioSplit[0];
+    } else if (fioSplit.length == 2) {
+      c.surname = fioSplit[0];
+      c.name = fioSplit[1];
+    } else {
+      c.surname = fioSplit[0];
+      c.name = fioSplit[1];
+      c.patronymic = fioSplit[2];
+    }
   }
   if (c.regDate) {
     c.regDate = moment(c.regDate).format("YYYY-MM-DD");

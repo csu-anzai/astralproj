@@ -37,7 +37,7 @@ module.exports = (req, res, body) => {
     }
   }
 
-  createLeads = (table, templates) => table.map((c) => {
+  createLeads = (table, templates) => table.map((c, key) => {
     if(c.inn && c.phone && c.name) {
 
       request({
@@ -68,8 +68,6 @@ module.exports = (req, res, body) => {
             companyName = 'ООО "Драйв"';
           }
         }
-
-        console.log(c.inn, companyName);
 
         mysql.query(
           `INSERT INTO companies (
