@@ -6,22 +6,27 @@ const colors = require('colors');
 const connection = mysql.createConnection(require('../src/env.json').mysql);
 connection.connect();
 
+let key = 0;
 
-connection.query(`
-  SELECT
-    companies.company_id id,
-    company_inn inn
-  FROM
-    companies
-  LEFT JOIN company_dadata_updates ON
-    companies.company_id = company_dadata_updates.company_id
-  WHERE
-    company_okved_code is null AND
-    company_dadata_updates.date is null
-  LIMIT 50000`,
-  function (err, companies, fields) {
-    if(!err) {
-      companies.forEach((c, key) => {
+const run = () => {
+  const start = new Date().getTime();
+  connection.query(`
+    SELECT
+      companies.company_id id,
+      company_inn inn,
+      company_address address
+    FROM
+      companies
+    LEFT JOIN company_dadata_updates ON
+      companies.company_id = company_dadata_updates.company_id
+    WHERE
+      company_okved_code is null AND
+      company_dadata_updates.date is null
+    LIMIT 1`,
+    function (err, companies, fields) {
+      key++;
+      if(!err && companies.length > 0) {
+        c = companies[0];
         request({
           url: 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party',
           json: true,
@@ -41,7 +46,6 @@ connection.query(`
             const okvedName = (data.okveds && (data.okveds.find(o => o.code == okvedCode) || {} ).name) || "";
             const address = data.address && data.address.value;
 
-
             if (okvedCode) {
               connection.query(
                 `UPDATE
@@ -52,21 +56,29 @@ connection.query(`
                   company_okved_name = ?,
                   company_address = ?
                 WHERE company_id = ?`,
-                [companyName, okvedCode, okvedName, address, c.id],
+                [companyName, okvedCode, okvedName, (c.address || address), c.id],
                 function (err, companies, fields) {
                   if (!err) {
-                    console.log(`${key} ${c.inn} ${companyName} ${okvedCode} ${address}`.green);
+                    const end = new Date().getTime();
+                    console.log(`${end - start}ms`.white, key.toString().cyan, c.inn.magenta, `${companyName} ${okvedCode} ${address}`.green);
+                    run();
                   } else {
                     console.error(`${key} ${c.inn} Ошибка обновления`.red);
+                    run();
                   }
                 }
               );
+            } else {
+              run();
             }
           } else {
             console.log(`${key} ${c.inn} Ошибка загрузки данных`.yellow);
+            run();
           }
         });
-      });
+      } else console.log("END.");
     }
-  }
-);
+  );
+}
+
+run();
