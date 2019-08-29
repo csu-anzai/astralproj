@@ -9,7 +9,7 @@ connection.connect();
 let key = 0;
 
 const run = () => {
-  const start = new Date().getTime();
+  const startSelect = new Date().getTime();
   connection.query(`
     SELECT
       companies.company_id id,
@@ -24,9 +24,11 @@ const run = () => {
       company_dadata_updates.date is null
     LIMIT 1`,
     function (err, companies, fields) {
+      const endSelect = new Date().getTime();
       key++;
       if(!err && companies.length > 0) {
         c = companies[0];
+        const startDadata = new Date().getTime();
         request({
           url: 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party',
           json: true,
@@ -37,6 +39,7 @@ const run = () => {
           },
           body: { "query": c.inn }
         }, (err, res, body) => {
+          const endDadata = new Date().getTime();
           connection.query(`INSERT INTO company_dadata_updates (company_id) VALUES (?)`, c.id);
 
           if (!err && body.suggestions && body.suggestions.length) {
@@ -46,6 +49,7 @@ const run = () => {
             const okvedName = (data.okveds && (data.okveds.find(o => o.code == okvedCode) || {} ).name) || "";
             const address = data.address && data.address.value;
 
+            const startUpdate = new Date().getTime();
             if (okvedCode) {
               connection.query(
                 `UPDATE
@@ -58,9 +62,16 @@ const run = () => {
                 WHERE company_id = ?`,
                 [companyName, okvedCode, okvedName, (c.address || address), c.id],
                 function (err, companies, fields) {
+                  const endUpdate = new Date().getTime();
                   if (!err) {
-                    const end = new Date().getTime();
-                    console.log(`${end - start}ms`.white, key.toString().cyan, c.inn.magenta, `${companyName} ${okvedCode} ${address}`.green);
+                    console.log(
+                      `${endSelect - startSelect}ms`.white,
+                      `${endDadata - startDadata}ms`,
+                      `${endUpdate - startUpdate}ms`,
+                      key.toString().cyan,
+                      c.inn.magenta,
+                      `${companyName} ${okvedCode} ${address}`.green
+                    );
                     run();
                   } else {
                     console.error(`${key} ${c.inn} Ошибка обновления`.red);
