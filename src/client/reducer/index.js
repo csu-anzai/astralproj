@@ -7,6 +7,9 @@ export default (store = Map(), action) => {
 		}
 		case "changePage": return store.set("page", action.data.page);
 		case "set": return fromJS(action.data);
+		case "setIn": {
+			return store.setIn(action.data.path, action.data.value);
+		}
 		case "merge": return store.merge(fromJS(action.data));
 		case "mergeDeep": return store.mergeDeep(fromJS(action.data));
 		case "push": {
@@ -15,7 +18,7 @@ export default (store = Map(), action) => {
 			store = store.set(action.data.name, arr);
 			return store;
 		}
-		case "updateArray": {			
+		case "updateArray": {
 			let arr = store.get(action.data.name);
 			let index = arr.findIndex(item => {
 				item = item.toJS();

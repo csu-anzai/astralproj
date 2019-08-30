@@ -94,7 +94,8 @@ export default class Tinkoff extends React.Component {
 			selectedBanks: [],
 			workDialog: false,
 			searchFilialsValues: [],
-			addInfo: false
+			addInfo: false,
+			companyClickTime: 0
 		};
 		this.refresh = this.refresh.bind(this);
 		this.setDistributionFilter = this.setDistributionFilter.bind(this);
@@ -117,6 +118,31 @@ export default class Tinkoff extends React.Component {
 			selectedIndex: index
 		});
 	};
+
+	handleCompanyClick (row, column) {
+		const dateNow = Date.now();
+		if (dateNow - this.state.companyClickTime <= 250 ) {
+			this.props.dispatch({
+				type: "setIn",
+				data: {
+					path: ["selectedCompany"],
+					value: this.props.state.companies[row]
+				}
+			});
+		}
+		this.setState({ companyClickTime: dateNow });
+	}
+
+	handleCompanyClose () {
+		this.props.dispatch({
+			type: "setIn",
+			data: {
+				path: ["selectedCompany"],
+				value: false
+			}
+		});
+	}
+
 	refresh(){
 		this.props.dispatch({
 			type: "query",
@@ -360,6 +386,7 @@ export default class Tinkoff extends React.Component {
 			}
 		});
 		this.closeDialog();
+		this.handleCompanyClose();
 	}
 	closeWorkDialog(bool){
 		this.setState({
@@ -486,6 +513,7 @@ export default class Tinkoff extends React.Component {
           />
 				</BottomNavigation>
 				<Table
+					onCellClick={this.handleCompanyClick.bind(this)}
           fixedHeader={false}
           fixedFooter={false}
           selectable={false}
@@ -1359,6 +1387,205 @@ export default class Tinkoff extends React.Component {
 			    						]
         	}
         </Dialog>
+        <Dialog
+        	style={{zIndex: 1300}}
+				  title = {
+				    <div>
+				      <span>Лид</span>
+				      <div style = {{float: "right", margin: "-15px"}}>
+				        <IconButton>
+				          <NavigationClose onClick={this.handleCompanyClose.bind(this)}/>
+				        </IconButton>
+				      </div>
+				    </div>
+				  }
+				  modal = {false}
+				  open = {this.props.state.selectedCompany}
+				  onRequestClose = {this.closeWorkDialog}
+				  autoScrollBodyContent={true}
+				  actions = {this.props.state.selectedCompany && Object.keys(this.props.state.selectedCompany).length > 0 && [
+				    <IconButton
+				      tooltip = "звонок"
+				      tooltipPosition = "top-center"
+				      disabled = {
+				        this.props.state.selectedCompany &&
+				        (
+				          ([38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.selectedCompany.call_internal_type_id) > -1 ||
+				          [38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.selectedCompany.call_destination_type_id) > -1) &&
+				          this.props.state.selectedCompany.type_id != 13
+				        ) ?
+				        false :
+				        true
+				      }
+				      onClick = {this.call.bind(this, this.props.state.selectedCompany && this.props.state.selectedCompany.company_id)}
+				    >
+				      {
+				        this.props.state.selectedCompany && (
+				        (
+				          [38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.selectedCompany.call_internal_type_id) > -1 ||
+				          [38,40,41,42,46,47,48,49,50,51,52,53,null].indexOf(this.props.state.selectedCompany.call_destination_type_id) > -1
+				        ) ?
+				        <DialerSip color="#00BFA5"/> :
+				        this.props.state.selectedCompany.call_destination_type_id == 34 ?
+				        <PhoneForwarded color="#00BFA5"/> :
+				        (
+				          this.props.state.selectedCompany.call_internal_type_id == 39 ||
+				          this.props.state.selectedCompany.call_destination_type_id == 39
+				        ) ?
+				        <PhoneInTalk color="#00BFA5"/> :
+				        (
+				          [33,43,34].indexOf(this.props.state.selectedCompany.call_internal_type_id) > -1 ||
+				          [33,43].indexOf(this.props.state.selectedCompany.call_destination_type_id) > -1
+				        ) &&
+				        <SettingsPhone color="#00BFA5"/>
+				        )
+				      }
+				    </IconButton>,
+				    <IconButton
+				      tooltip = "оформить заявку"
+				      tooltipPosition = "top-center"
+				      onClick = {this.companyCheck.bind(this, this.props.state.selectedCompany, 0)}
+				      disabled = {(this.props.state.selectedCompany && this.props.state.selectedCompany.type_id == 13) ? true : false}
+				    >
+				      <Check color="#a4c639"/>
+				    </IconButton>,
+				    <IconButton
+				      tooltip = "перезвонить позднее"
+				      tooltipPosition = "top-center"
+				      onClick = {this.companyCheck.bind(this, this.props.state.selectedCompany, 1)}
+				      disabled = {this.props.state.selectedCompany.type_id == 13 ? true : false}
+				    >
+				      <Phone color="#EF6C00"/>
+				    </IconButton>,
+				    <IconButton
+				      tooltip = {
+				        this.props.state.selectedCompany &&
+				        this.props.state.selectedCompany.type_id == 35 ?
+				          "недозвон (в общий список)" :
+				          "недозвон (в конец рабочего списка)"
+				      }
+				      tooltipPosition = "top-center"
+				      onClick = {this.changeType.bind(this, this.props.state.selectedCompany && this.props.state.selectedCompany.company_id, this.props.state.selectedCompany && this.props.state.selectedCompany.type_id == 35 ? 36 : 35)}
+				      disabled = {this.props.state.selectedCompany.type_id == 13 ? true : false}
+				    >
+				      {
+				        this.props.state.selectedCompany &&
+				        this.props.state.selectedCompany.type_id == 35 ?
+				          <CallEnd color="#C51162"/> :
+				          <History color="#283593"/>
+				      }
+				    </IconButton>,
+				    <IconButton
+				      tooltip = "не подходит"
+				      tooltipPosition = "top-center"
+				      onClick = {this.changeType.bind(this, this.props.state.selectedCompany && this.props.state.selectedCompany.company_id, 14)}
+				      disabled = {this.props.state.selectedCompany.type_id == 13 ? true : false}
+				    >
+				      <DeleteForever color="#E53935"/>
+				    </IconButton>,
+				    <IconButton
+				      tooltip = "трудный клиент"
+				      tooltipPosition = "top-center"
+				      onClick = {this.changeType.bind(this, this.props.state.selectedCompany && this.props.state.selectedCompany.company_id, 37)}
+				      disabled = {this.props.state.selectedCompany.type_id == 13 ? true : false}
+				    >
+				      <SadFace color="#607D8B"/>
+				    </IconButton>,
+
+				    <IconButton
+				      tooltip = "удалить из базы"
+				      tooltipPosition = "top-center"
+				      onClick = {this.deleteCompanyDialog.bind(this, this.props.state.selectedCompany && this.props.state.selectedCompany.company_id)}
+				    >
+				      <RemoveCircle color="#9a2c2c"/>
+				    </IconButton>,
+				    <IconButton
+				      tooltip = "Редактировать информацию"
+				      tooltipPosition = "top-center"
+				      onClick = {this.companyCheck.bind(this, this.props.state.selectedCompany, 4)}
+				      disabled = {
+				        this.props.state.selectedCompany &&
+				        this.props.state.selectedCompany.type_id == 13 ?
+				          true :
+				          false
+				      }
+				    >
+				      <Create color="#da66da"/>
+				    </IconButton>
+				  ]}
+				>
+				  {
+				    this.props.state.selectedCompany && Object.keys(this.props.state.selectedCompany).length > 0 ? [
+				      <div key = {0} style = {{margin: "20px 0", padding: "0 10px"}}>Ф.И.О: {this.props.state.selectedCompany && [this.props.state.selectedCompany.company_person_name, this.props.state.selectedCompany.company_person_surname, this.props.state.selectedCompany.company_person_patronymic].join(" ")}</div>,
+				      <Divider key = {1}/>,
+				      <div key = {2} style = {{margin: "20px 0", padding: "0 10px"}}>Город: {this.props.state.selectedCompany && this.props.state.selectedCompany.city_name}</div>,
+				      <Divider key = {3}/>,
+				      <div key = {4} style = {{margin: "20px 0", padding: "0 10px"}}>Тип компании: {this.props.state.selectedCompany && this.props.state.selectedCompany.template_type_id == 11 ? "ИП" : "ООО"}</div>,
+				      <Divider key = {5}/>,
+				      <div key = {6} style = {{margin: "20px 0", padding: "0 10px"}}>Подходит для банков: {this.props.state.selectedCompany && Object.keys(this.props.state.selectedCompany.company_banks).map(i => this.props.state.selectedCompany.company_banks[i].bank_name).join(" ")}</div>,
+				      <Divider key = {7}/>,
+				      this.state.addInfo ? <div
+				        key = {8}
+				      >
+				        <div
+				          style = {{
+				            margin: "20px 0",
+				            padding: "0 10px"
+				          }}
+				        >
+				          Список: {
+				            this.props.state.selectedCompany ? (
+				            [9,35].indexOf(this.props.state.selectedCompany.type_id) > -1 ?
+				              "В работе" :
+				            this.props.state.selectedCompany.type_id == 14 ?
+				              "Не интересно" :
+				              this.props.state.selectedCompany.type_id == 13 ?
+				              "Утверждено" :
+				              this.props.state.selectedCompany.type_id == 23 ?
+				                "Перезвонить" :
+				                this.props.state.selectedCompany.type_id == 36 ?
+				                  "Нет связи" :
+				                  this.props.state.selectedCompany.type_id == 37 ?
+				                  "Сложные" :
+				                    this.props.state.selectedCompany.type_id == 24 &&
+				                    "Дубликаты") : "–"
+				          }
+				        </div>
+				        <Divider/>
+				        <div style = {{margin: "20px 0", padding: "0 10px"}}>Компания: {this.props.state.selectedCompany && this.props.state.selectedCompany.company_organization_name}</div>
+				        <Divider/>
+				        <div style = {{margin: "20px 0", padding: "0 10px"}}>Регион: {this.props.state.selectedCompany && this.props.state.selectedCompany.region_name}</div>
+				        <Divider/>
+				        <div style = {{margin: "20px 0", padding: "0 10px"}}>Телефон: {this.props.state.selectedCompany && this.props.state.selectedCompany.company_phone}</div>
+				        <Divider/>
+				        <div style = {{margin: "20px 0", padding: "0 10px"}}>ИНН: {this.props.state.selectedCompany && this.props.state.selectedCompany.company_inn}</div>
+				        <Divider/>
+				        <div style = {{margin: "20px 0", padding: "0 10px"}}>
+				          Статусы обработки: {
+				            this.props.state.selectedCompany && Object.keys(this.props.state.selectedCompany.company_banks).map(key => this.props.state.selectedCompany.company_banks[key]).map((bank, key) => (<div style = {{margin: "5px 0", color: (bank.type_id == 15 || !bank.type_id) ? "inherit" : bank.type_id == 16 ? "green" : "red"}} key = {key}>{`${bank.bank_name}: ${bank.company_bank_status || "–"}`}</div>))
+				          }
+				        </div>
+				        <Divider/>
+				        <div style = {{margin: "20px 0", padding: "0 10px"}}>Дата перезвона: {this.props.state.selectedCompany && this.props.state.selectedCompany.company_date_call_back || "–"}</div>
+				        <Divider/>
+				        <div style = {{margin: "20px 0", padding: "0 10px"}}>Коментарий: {this.props.state.selectedCompany && this.props.state.selectedCompany.company_comment || "–"}</div>
+				        <Divider/>
+				      </div> : "",
+				      <FlatButton
+				        label = "дополнительно"
+				        key = {9}
+				        onClick = {this.addInfo}
+				        style = {{
+				          marginTop: "10px",
+				          float: "right"
+				        }}
+				        labelPosition = "after"
+				        icon = {this.state.addInfo ? <ArrowTop/> : <ArrowDown/>}
+				      />
+				    ] : "Не удалось найти последний не распределенный вызов"
+				  }
+				  <br/>
+				</Dialog>
         <Dialog
         	title = {
         		<div>

@@ -9,8 +9,22 @@ import Reducer from './reducer';
 import Main from './routes';
 import io from 'socket.io-client';
 import env from './../env.json';
+import logger from 'redux-logger';
+
+const middlewares = [];
+
+if (process.env.NODE_ENV === `development`) {
+  const { createLogger } = require(`redux-logger`);
+  middlewares.push(createLogger({
+	  stateTransformer: state => ({
+			...state,
+			app: state.app.toJS()
+		})
+	}));
+}
+
 const history = createHashHistory();
-const middleware = syncHistory(history);
+const syncHistoryMiddleware = syncHistory(history);
 const socket = io(`${env.ws.location}:${env.ws.port}`);
 const socketMiddleware = socket => store => next => action => {
 	if (action.socket) {
@@ -21,8 +35,12 @@ const socketMiddleware = socket => store => next => action => {
 }
 const Store = createStore(combineReducers({
 	app: Reducer,
-	routing: routeReducer
-}), applyMiddleware(middleware, socketMiddleware(socket)));
+	routing: routeReducer,
+}), applyMiddleware(
+	...middlewares,
+	syncHistoryMiddleware,
+	socketMiddleware(socket),
+));
 socket.on("message", data => {
 	for(let i = 0; i < data.length; i++) {
 		if(data[i].type != "redirect"){
