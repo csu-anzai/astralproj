@@ -1,5 +1,6 @@
 const env = require('../../env.json');
 const request = require('request');
+const moment = require('moment');
 const mysql = require('mysql').createConnection(env.mysql);
 const xlsx = require("xlsx");
 const { performance } = require('perf_hooks');
@@ -53,6 +54,7 @@ module.exports = (req, res, body) => {
         let companyName = "";
         let okvedCode = "";
         let okvedName = "";
+        let realDateReg = null;
 
         if (!err && body.suggestions && body.suggestions.length) {
           stats.dadata++;
@@ -61,6 +63,8 @@ module.exports = (req, res, body) => {
           okvedCode = data.okved;
           okvedName = data.okveds ? data.okveds.find(o => o.code == data.okved).name : "";
           if (!c.address) c.address = data.address && data.address.value;
+
+          realDateReg = (data.state && data.state.registration_date) ? moment(data.state.registration_date).format("YYYY-MM-DD") : null;
         } else {
           if (c.inn.length == 12) {
             companyName = ["ИП", c.surname, c.name, c.patronymic].join(" ");
@@ -80,6 +84,7 @@ module.exports = (req, res, body) => {
             company_phone,
             company_email,
             company_date_registration,
+            company_real_date_registration,
             company_organization_name,
             company_okved_code,
             company_okved_name,
@@ -95,6 +100,7 @@ module.exports = (req, res, body) => {
             c.phone,
             c.email,
             c.regDate,
+            realDateReg,
             companyName,
             okvedCode,
             okvedName,
