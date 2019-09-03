@@ -64,7 +64,7 @@ const run = () => {
                         `${endUpdate - startUpdate}ms`,
                         key.toString().cyan,
                         c.inn.magenta,
-                        c.dateRegistarion.yellow,
+                        (c.dateRegistarion || "-").yellow,
                         realDateRegistration.green
                       );
                       key++; i == l && run();
