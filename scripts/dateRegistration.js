@@ -41,7 +41,6 @@ const run = () => {
             body: { "query": c.inn }
           }, (err, res, body) => {
             const endDadata = new Date().getTime();
-            connection.query(`INSERT INTO company_dadata_updates (company_id) VALUES (?)`, c.id);
 
             if (!err && body.suggestions && body.suggestions.length) {
               const { value, data } = body.suggestions[0];
@@ -77,9 +76,10 @@ const run = () => {
                 );
               } else {
                 key++; i == l && run();
-                console.log(`${key} ${c.inn} Нет информации про дату регистрации`.yellow);
+                console.log(`${key} ${c.inn} Нет информации про дату регистрации`.red);
               }
             } else {
+              connection.query(`UPDATE companies SET company_real_date_registration = null WHERE company_id = ?`, c.id);
               console.log(`${key} ${c.inn} Ошибка загрузки данных`.yellow);
               key++; i == l && run();
             }
