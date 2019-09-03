@@ -21,7 +21,8 @@ const run = () => {
     ON companies.template_id = templates.template_id
     WHERE
       templates.channel_id = 2 AND
-      companies.company_real_date_registration is null
+      companies.company_real_date_registration is null AND
+      companies.company_date_update < now() - INTERVAL 10 MINUTE
     LIMIT 10`,
     function (err, companies, fields) {
       const endSelect = new Date().getTime();
