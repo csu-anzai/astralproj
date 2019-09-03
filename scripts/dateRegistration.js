@@ -79,9 +79,10 @@ const run = () => {
                 console.log(`${key} ${c.inn} Нет информации про дату регистрации`.red);
               }
             } else {
-              connection.query(`UPDATE companies SET company_real_date_registration = null WHERE company_id = ?`, c.id);
-              console.log(`${key} ${c.inn} Ошибка загрузки данных`.yellow);
-              key++; i == l && run();
+              connection.query(`UPDATE companies SET company_real_date_registration = null WHERE company_id = ?`, c.id, () => {
+                console.log(`${key} ${c.inn} Ошибка загрузки данных`.yellow);
+                key++; i == l && run();
+              });
             }
           });
 
