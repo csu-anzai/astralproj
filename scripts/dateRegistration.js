@@ -21,8 +21,7 @@ const run = () => {
     ON companies.template_id = templates.template_id
     WHERE
       templates.channel_id = 2 AND
-      companies.company_real_date_registration is null AND
-      companies.company_date_update < now() - INTERVAL 30 MINUTE
+      companies.company_real_date_registration is null
     LIMIT 1`,
     function (err, companies, fields) {
       const endSelect = new Date().getTime();
@@ -80,7 +79,7 @@ const run = () => {
               }
             } else {
               console.log(`${key} ${c.inn} Ошибка загрузки данных`.yellow);
-              connection.query(`UPDATE companies SET company_real_date_registration = null WHERE company_id = ?`, c.id, (err, a, c) => {
+              connection.query(`UPDATE companies SET company_real_date_registration = ? WHERE company_id = ?`, ["0", c.id], (err, a, c) => {
                 if (err) console.log("Ошибка пустого обновления".red);
                 key++; i == l && run();
               });
