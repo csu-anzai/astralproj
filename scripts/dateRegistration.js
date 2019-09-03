@@ -22,8 +22,8 @@ const run = () => {
     WHERE
       templates.channel_id = 2 AND
       companies.company_real_date_registration is null AND
-      companies.company_date_update < now() - INTERVAL 10 MINUTE
-    LIMIT 10`,
+      companies.company_date_update < now() - INTERVAL 30 MINUTE
+    LIMIT 1`,
     function (err, companies, fields) {
       const endSelect = new Date().getTime();
       if(!err && companies.length > 0) {
@@ -79,12 +79,13 @@ const run = () => {
                 console.log(`${key} ${c.inn} Нет информации про дату регистрации`.red);
               }
             } else {
-              connection.query(`UPDATE companies SET company_real_date_registration = null WHERE company_id = ?`, c.id, () => {
-                console.log(`${key} ${c.inn} Ошибка загрузки данных`.yellow);
+              console.log(`${key} ${c.inn} Ошибка загрузки данных`.yellow);
+              connection.query(`UPDATE companies SET company_real_date_registration = null WHERE company_id = ?`, c.id, (err, a, c) => {
+                if (err) console.log("Ошибка пустого обновления".red);
                 key++; i == l && run();
               });
             }
-          });
+          }) ;
 
         })
       } else console.log("END.");
